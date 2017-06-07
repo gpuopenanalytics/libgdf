@@ -12,6 +12,11 @@ SOURCE_BRANCH=master
 #   return 0
 # fi
 
+if [ -z "$MY_UPLOAD_KEY" ]; then
+    echo "No upload key"
+    return 0
+fi
+
 echo "Upload"
 echo ${UPLOADFILE}
 anaconda -t ${MY_UPLOAD_KEY} upload -u gpuopenanalytics -l dev --force ${UPLOADFILE}
