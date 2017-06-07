@@ -6,11 +6,11 @@ set -e
 
 SOURCE_BRANCH=master
 
-# # Pull requests or commits to other branches shouldn't upload
-# if [ ${TRAVIS_PULL_REQUEST} != false -o ${TRAVIS_BRANCH} != ${SOURCE_BRANCH} ]; then
-#   echo "Skipping upload"
-#   return 0
-# fi
+# Pull requests or commits to other branches shouldn't upload
+if [ ${TRAVIS_PULL_REQUEST} != false -o ${TRAVIS_BRANCH} != ${SOURCE_BRANCH} ]; then
+  echo "Skipping upload"
+  return 0
+fi
 
 if [ -z "$MY_UPLOAD_KEY" ]; then
     echo "No upload key"
