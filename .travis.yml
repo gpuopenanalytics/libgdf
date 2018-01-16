@@ -12,30 +12,43 @@ env:
 matrix:
   include:
     - env: CUDA=8.0.61-1
+    # These packages will work with all versions of CUDA
     - env: CUDA=8.0.61-1 BUILD_CFFI=1 PYTHON=3.6
     - env: CUDA=8.0.61-1 BUILD_CFFI=1 PYTHON=3.5
     - env: CUDA=8.0.61-1 BUILD_CFFI=1 PYTHON=2.7
 
 before_install:
-  - source ./travisci/install-cuda-trusty.sh
-  # install miniconda
+  - docker run -d --name ubuntu-build -v $(pwd):/travis ubuntu:xenial tail -f /dev/null
   - travis_retry wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
+  # Install outside container
   - ./miniconda.sh -b
   - export PATH=$HOME/miniconda3/bin:$PATH
+  # And inside container
+  - docker exec -t ubuntu-build bash -c "cd /travis;
+    echo export CUDA=${CUDA} BUILD_CFFI=${BUILD_CFFI} PYTHON=${PYTHON} > docker_env_local.sh;
+    cat ./travisci/docker_env.sh >> docker_env_local.sh;
+    source docker_env_local.sh; 
+    source ./travisci/install-cuda-xenial.sh;
+    ./miniconda.sh -b"
 
 install:
   # check
-  - nvcc --version
-  - conda --version
-  # install conda build
   - conda install conda-build anaconda-client --yes
+  - docker exec -t ubuntu-build bash -c 'source /travis/docker_env_local.sh;
+    nvcc --version;
+    conda --version;
+    conda install conda-build anaconda-client --yes'
+
 script:
   # build ligdf
-  - source ./travisci/build_libgdf.sh
+  - docker exec -t ubuntu-build bash -c "cd /travis; 
+    source /travis/docker_env_local.sh;
+    source ./travisci/build_libgdf.sh"
   # build libgdf_cffi
-  - source ./travisci/build_libgdf_cffi.sh
+  - docker exec -t ubuntu-build bash -c "cd /travis;
+    source /travis/docker_env_local.sh;
+    source ./travisci/build_libgdf_cffi.sh"
 
 after_success:
   - source ./travisci/upload.sh
-
