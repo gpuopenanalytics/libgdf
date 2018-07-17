@@ -1,6 +1,7 @@
 #=============================================================================
 # Copyright 2018 BlazingDB, Inc.
 #     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
+#     Copyright 2018 Cristhian Alberto Gonzales Castillo <cristhian@blazingdb.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +24,7 @@ project(arrow-download NONE)
 
 include(ExternalProject)
 
-set(ARROW_VERSION "apache-arrow-0.7.1")
+set(ARROW_VERSION "apache-arrow-0.9.0")
 
 if (NOT "$ENV{PARQUET_ARROW_VERSION}" STREQUAL "")
     set(ARROW_VERSION "$ENV{PARQUET_ARROW_VERSION}")
@@ -34,13 +35,6 @@ message(STATUS "Using Apache Arrow version: ${ARROW_VERSION}")
 set(ARROW_URL "https://github.com/apache/arrow/archive/${ARROW_VERSION}.tar.gz")
 
 set(ARROW_CMAKE_ARGS
-    #Arrow dependencies
-    -DARROW_WITH_LZ4=OFF
-    -DARROW_WITH_ZSTD=OFF
-    -DARROW_WITH_BROTLI=OFF
-    -DARROW_WITH_SNAPPY=OFF
-    -DARROW_WITH_ZLIB=OFF
-
     #Build settings
     -DARROW_BUILD_STATIC=ON
     -DARROW_BUILD_SHARED=OFF
@@ -48,13 +42,15 @@ set(ARROW_CMAKE_ARGS
     -DARROW_BUILD_TESTS=OFF
     -DARROW_TEST_MEMCHECK=OFF
     -DARROW_BUILD_BENCHMARKS=OFF
+    -DARROW_BUILD_UTILITIES=OFF
 
     #Arrow modules
     -DARROW_IPC=ON
-    -DARROW_COMPUTE=OFF
+    -DARROW_COMPUTE=ON
     -DARROW_GPU=OFF
     -DARROW_JEMALLOC=OFF
     -DARROW_HDFS=OFF
+    -DARROW_BOOST_USE_SHARED=ON
     -DARROW_BOOST_VENDORED=OFF
     -DARROW_PYTHON=OFF
 )
