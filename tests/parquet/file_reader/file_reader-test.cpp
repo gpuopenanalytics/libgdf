@@ -22,6 +22,7 @@
 
 #include <gtest/gtest.h>
 
+#include <gdf/parquet/column_reader.h>
 #include <gdf/parquet/file_reader.h>
 
 #ifndef PARQUET_FILE_PATH
@@ -46,8 +47,8 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
         std::shared_ptr<parquet::ColumnReader> column;
 
         column = row_group->Column(0);
-        parquet::BoolReader *bool_reader =
-          static_cast<parquet::BoolReader *>(column.get());
+        gdf::parquet::BoolReader *bool_reader =
+          static_cast<gdf::parquet::BoolReader *>(column.get());
         i = 0;
         while (bool_reader->HasNext()) {
             bool         value;
@@ -61,8 +62,8 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
         }
 
         column = row_group->Column(1);
-        parquet::Int64Reader *int64_reader =
-          static_cast<parquet::Int64Reader *>(column.get());
+        gdf::parquet::Int64Reader *int64_reader =
+          static_cast<gdf::parquet::Int64Reader *>(column.get());
         i = 0;
         while (int64_reader->HasNext()) {
             std::int64_t value;
@@ -81,8 +82,8 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
         }
 
         column = row_group->Column(2);
-        parquet::DoubleReader *double_reader =
-          static_cast<parquet::DoubleReader *>(column.get());
+        gdf::parquet::DoubleReader *double_reader =
+          static_cast<gdf::parquet::DoubleReader *>(column.get());
         i = 0;
         while (double_reader->HasNext()) {
             double       value;
