@@ -481,3 +481,15 @@ gdf_error gdf_group_by_count(int ncols,                    // # columns
                                                          //(multi-gather based on indices, which are needed anyway)
                              gdf_column* out_col_agg,      //aggregation result
                              gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+
+/**  IO
+ *
+ *
+ */
+gdf_column ** read_csv(
+		const char 	*fileName, 			// in: the file to be loaded
+		const char 	delimiter,			// in: the delimiter
+		const int	num_cols,			// in: number of columns
+		const char 	**col_names,		// in: ordered array of column names
+		const char	**dtypes			// in: ordered array of dtypes
+		);

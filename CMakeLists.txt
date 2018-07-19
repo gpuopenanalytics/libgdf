@@ -120,6 +120,7 @@ cuda_add_library(gdf SHARED
     src/segmented_sorting.cu
     src/datetimeops.cu
     src/sqls_ops.cu
+    src/io/csvReader.cu    
 )
 
 
