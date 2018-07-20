@@ -107,7 +107,7 @@ gdf_error allocateTypeN(void *gpu, long N);
 //
 gdf_error launch_determineRecAndFields(raw_csv_t * data);  // breaks out fields and computed blocks - make main code cleaner
 
-__global__ void determineRecAndFields(char *data, uint64_t * r_bits, uint64_t *f_bits, const char delim, long num_bytes, int * rec_count);
+__global__ void determineRecAndFields(char *data, uint64_t * r_bits, uint64_t *f_bits, const char delim, long num_bytes, long num_bits, int * rec_count);
 
 gdf_error launch_FieldBuilder(raw_csv_t * csv, fields_info_t *info);
 
@@ -119,6 +119,7 @@ __global__ void buildFieldList(
 		long * 		offsets,
 		int *		recPerChunck,
 		char 		delim,
+		int		num_row,
 		int 		num_col,
 		int *		rec_id,
 		int *		col_id,
@@ -602,19 +603,19 @@ gdf_error launch_determineRecAndFields(raw_csv_t * csvData) {
 	// Using the number of bitmaps as the size - data index is bitmap ID * 64
 	int blocks = (numBitmaps + (threads -1)) / threads ;
 
-	determineRecAndFields <<< blocks, threads >>> (data, r_bits, f_bits, delim, num_bytes, rec_count);
+	determineRecAndFields <<< blocks, threads >>> (data, r_bits, f_bits, delim, num_bytes, numBitmaps, rec_count);
 
 	CUDA_TRY(cudaGetLastError());
 	return GDF_SUCCESS;
 }
 
 
-__global__ void determineRecAndFields(char *data, uint64_t * r_bits, uint64_t *f_bits, const char delim, long num_bytes, int * rec_count) {
+__global__ void determineRecAndFields(char *data, uint64_t * r_bits, uint64_t *f_bits, const char delim, long num_bytes, long num_bits, int * rec_count) {
 
 	// thread IDs range per block, so also need the block id
 	int tid = threadIdx.x + (blockDim.x * blockIdx.x);
 
-	if ( tid > num_bytes)
+	if ( tid >= num_bits)
 		return;
 
 	// data ID - multiple of 64
@@ -672,6 +673,7 @@ gdf_error launch_FieldBuilder(raw_csv_t * csv, fields_info_t *info)
 			csv->offsets,
 			csv->recPerChunck,
 			csv->delimiter,
+			csv->num_records,
 			csv->num_cols,
 			info->rec_id,
 			info->col_id,
@@ -691,6 +693,7 @@ __global__ void buildFieldList(
 		long * 		offsets,
 		int *		recPerChunck,
 		const char delim,
+		int 		num_row,
 		int 		num_col,
 		int *		field_rec_id,
 		int *		field_col_idx,
@@ -705,7 +708,7 @@ __global__ void buildFieldList(
 	int	tid  = threadIdx.x + (blockDim.x * blockIdx.x);		// this is the data chunk index;  NOTE not the record ID
 
 	// we can have more threads than data, make sure we are not past the end of the data
-	if ( tid > num_chunks)
+	if ( tid >= num_chunks)
 		return;
 
 	int records_to_process 	= recPerChunck[tid];	// how many records are within this 64-byte chunk
@@ -738,6 +741,8 @@ __global__ void buildFieldList(
 		return;		// this is just the end of file indicator
 
 	for ( int n = 0; n < records_to_process; n++) {
+		// never go out of bounds
+		if (rec_id >= num_row) break;
 
 		++bit_idx;
 		end_offset 		= findSetBit(tid, r_bits, bit_idx);
