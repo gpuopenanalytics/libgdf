@@ -15,12 +15,16 @@
 # limitations under the License.
 #=============================================================================
 
-function(GDF_ADD_PARQUET_TEST TARGET)
-    list(REMOVE_AT ARGV 0)
-    add_executable(${TARGET} ${ARGV})
-    target_link_libraries(${TARGET} GTest::GTest GTest::Main Apache::ParquetCpp)
-    gtest_add_tests(${TARGET} "" AUTO)
-endfunction()
+GDF_ADD_PARQUET_TEST(decoding-test
+    decoding-test.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/column_reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/page_reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp)
 
-add_subdirectory(file_reader)
-add_subdirectory(decoding)
+set(PARQUET_FILE_FOR_DECODING_PATH
+    ${CMAKE_SOURCE_DIR}/tests/parquet/decoding/file_for_decoding.parquet)
+
+target_compile_definitions(decoding-test
+    PUBLIC -DPARQUET_FILE_FOR_DECODING_PATH="${PARQUET_FILE_FOR_DECODING_PATH}")

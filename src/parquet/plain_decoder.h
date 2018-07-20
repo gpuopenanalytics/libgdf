@@ -150,7 +150,7 @@ public:
             if (!bit_reader_.GetValue(1, &val)) {
                 ::parquet::ParquetException::EofException();
             }
-            arrow::BitUtil::SetArrayBit(buffer, i, val);
+            ::arrow::BitUtil::SetArrayBit(buffer, i, val);
         }
         num_values_ -= max_values;
         return max_values;

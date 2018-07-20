@@ -29,7 +29,7 @@ ConfigureDictionary(
   const ::parquet::Page *                                page,
   std::unordered_map<int, std::shared_ptr<DecoderType>> &decoders,
   const ::parquet::ColumnDescriptor *const               column_descriptor,
-  arrow::MemoryPool *const                               pool,
+  ::arrow::MemoryPool *const                               pool,
   DecoderType **                                         out_decoder) {
     const ::parquet::DictionaryPage *dictionary_page =
       static_cast<const ::parquet::DictionaryPage *>(page);

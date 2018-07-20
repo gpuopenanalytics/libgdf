@@ -16,6 +16,7 @@
  */
 
 #include "arrow/util/rle-encoding.h"
+#include "../arrow/rle_decoder.h"
 
 namespace parquet {
 class ColumnDescriptor;
@@ -46,7 +47,9 @@ public:
         std::uint8_t bit_width = *data;
         ++data;
         --len;
-        idx_decoder_ = ::arrow::RleDecoder(data, len, bit_width);
+        std::cout << "Custom DictionaryDecoder\n";
+        //idx_decoder_ = ::arrow::RleDecoder(data, len, bit_width);
+        idx_decoder_ = gdf::arrow::internal::RleDecoder(data, len, bit_width);
     }
 
     int
@@ -87,7 +90,7 @@ private:
 
     std::shared_ptr<::parquet::PoolBuffer> byte_array_data_;
 
-    ::arrow::RleDecoder idx_decoder_;
+    gdf::arrow::internal::RleDecoder idx_decoder_;
 };
 
 template <typename Type>
