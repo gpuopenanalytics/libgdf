@@ -28,6 +28,8 @@ class ColumnReader : public ::parquet::ColumnReader {
 public:
     typedef typename DataType::c_type T;
 
+    bool HasNext();
+
     std::int64_t ReadBatch(std::int64_t  batchSize,
                            std::int16_t *definitionLevels,
                            std::int16_t *repetitionLevels,
@@ -35,10 +37,7 @@ public:
                            std::int64_t *valuesRead);
 
 private:
-    std::int64_t ReadValues(std::int64_t batch_size, T *out);
-
     bool ReadNewPage() final;
-    void ConfigureDictionary(const ::parquet::DictionaryPage *page);
 
     typedef ::parquet::Decoder<DataType>                  DecoderType;
     std::unordered_map<int, std::shared_ptr<DecoderType>> decoders_;

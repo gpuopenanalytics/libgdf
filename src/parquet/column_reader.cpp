@@ -23,42 +23,68 @@
 namespace gdf {
 namespace parquet {
 
-template <class DataType>
-void
-ColumnReader<DataType>::ConfigureDictionary(
-  const ::parquet::DictionaryPage *page) {
-    int encoding = static_cast<int>(page->encoding());
-    if (page->encoding() == ::parquet::Encoding::PLAIN_DICTIONARY
-        || page->encoding() == ::parquet::Encoding::PLAIN) {
+template <class DataType, class DecoderType>
+static inline void
+ConfigureDictionary(
+  const ::parquet::Page *                                page,
+  std::unordered_map<int, std::shared_ptr<DecoderType>> &decoders,
+  const ::parquet::ColumnDescriptor *const               column_descriptor,
+  arrow::MemoryPool *const                               pool,
+  DecoderType **                                         out_decoder) {
+    const ::parquet::DictionaryPage *dictionary_page =
+      static_cast<const ::parquet::DictionaryPage *>(page);
+
+    int encoding = static_cast<int>(dictionary_page->encoding());
+    if (dictionary_page->encoding() == ::parquet::Encoding::PLAIN_DICTIONARY
+        || dictionary_page->encoding() == ::parquet::Encoding::PLAIN) {
         encoding = static_cast<int>(::parquet::Encoding::RLE_DICTIONARY);
     }
 
-    auto it = decoders_.find(encoding);
-    if (it != decoders_.end()) {
+    auto it = decoders.find(encoding);
+    if (it != decoders.end()) {
         throw ::parquet::ParquetException(
           "Column cannot have more than one dictionary.");
     }
 
-    if (page->encoding() == ::parquet::Encoding::PLAIN_DICTIONARY
-        || page->encoding() == ::parquet::Encoding::PLAIN) {
-        internal::PlainDecoder<DataType> dictionary(descr_);
-        dictionary.SetData(page->num_values(), page->data(), page->size());
+    if (dictionary_page->encoding() == ::parquet::Encoding::PLAIN_DICTIONARY
+        || dictionary_page->encoding() == ::parquet::Encoding::PLAIN) {
+        internal::PlainDecoder<DataType> dictionary(column_descriptor);
+        dictionary.SetData(
+          dictionary_page->num_values(), page->data(), page->size());
         auto decoder = std::make_shared<internal::DictionaryDecoder<DataType>>(
-          descr_, pool_);
+          column_descriptor, pool);
         decoder->SetDict(&dictionary);
-        decoders_[encoding] = decoder;
+        decoders[encoding] = decoder;
     } else {
         ::parquet::ParquetException::NYI(
           "only plain dictionary encoding has been implemented");
     }
 
-    current_decoder_ = decoders_[encoding].get();
+    *out_decoder = decoders[encoding].get();
 }
 
-static bool
+static inline bool
 IsDictionaryIndexEncoding(const ::parquet::Encoding::type &e) {
     return e == ::parquet::Encoding::RLE_DICTIONARY
            || e == ::parquet::Encoding::PLAIN_DICTIONARY;
+}
+
+template <class DecoderType, class T>
+static inline std::int64_t
+ReadValues(DecoderType *decoder, std::int64_t batch_size, T *out) {
+    std::int64_t num_decoded =
+      decoder->Decode(out, static_cast<int>(batch_size));
+    return num_decoded;
+}
+
+template <class DataType>
+bool
+ColumnReader<DataType>::HasNext() {
+    if (num_buffered_values_ == 0
+        || num_decoded_values_ == num_buffered_values_) {
+        if (!ReadNewPage() || num_buffered_values_ == 0) { return false; }
+    }
+    return true;
 }
 
 template <class DataType>
@@ -71,18 +97,19 @@ ColumnReader<DataType>::ReadNewPage() {
         if (!current_page_) { return false; }
 
         if (current_page_->type() == ::parquet::PageType::DICTIONARY_PAGE) {
-            ConfigureDictionary(static_cast<const ::parquet::DictionaryPage *>(
-              current_page_.get()));
+            ConfigureDictionary<DataType>(current_page_.get(),
+                                          decoders_,
+                                          descr_,
+                                          pool_,
+                                          &current_decoder_);
             continue;
         } else if (current_page_->type() == ::parquet::PageType::DATA_PAGE) {
             const ::parquet::DataPage *page =
               static_cast<const ::parquet::DataPage *>(current_page_.get());
 
             num_buffered_values_ = page->num_values();
-
-            num_decoded_values_ = 0;
-
-            buffer = page->data();
+            num_decoded_values_  = 0;
+            buffer               = page->data();
 
             std::int64_t data_size = page->size();
 
@@ -194,19 +221,11 @@ ColumnReader<DataType>::ReadBatch(std::int64_t  batch_size,
         }
     }
 
-    *values_read              = ReadValues(values_to_read, values);
+    *values_read = ReadValues(current_decoder_, values_to_read, values);
     std::int64_t total_values = std::max(num_def_levels, *values_read);
     ConsumeBufferedValues(total_values);
 
     return total_values;
-}
-
-template <class DataType>
-inline std::int64_t
-ColumnReader<DataType>::ReadValues(std::int64_t batch_size, T *out) {
-    std::int64_t num_decoded =
-      current_decoder_->Decode(out, static_cast<int>(batch_size));
-    return num_decoded;
 }
 
 template class ColumnReader<::parquet::BooleanType>;
