@@ -20,6 +20,8 @@
 
 #include <parquet/column_reader.h>
 
+#include <gdf/gdf.h>
+
 namespace gdf {
 namespace parquet {
 
@@ -35,6 +37,8 @@ public:
                            std::int16_t *repetitionLevels,
                            T *           values,
                            std::int64_t *valuesRead);
+
+    void MakeGdfColumn(std::shared_ptr<gdf_column> *out);
 
 private:
     bool ReadNewPage() final;

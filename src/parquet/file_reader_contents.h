@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include <parquet/file_reader.h>
+#include <parquet/file/reader.h>
 
 namespace gdf {
 namespace parquet {

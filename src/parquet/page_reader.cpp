@@ -25,20 +25,20 @@ namespace parquet {
 namespace internal {
 
 namespace {
-
 template <class T>
 inline void
 DeserializeThriftMsg(const std::uint8_t *buf,
                      std::uint32_t *     len,
                      T *                 deserialized_msg) {
-    std::shared_ptr<apache::thrift::transport::TMemoryBuffer> tmem_transport(
+    boost::shared_ptr<apache::thrift::transport::TMemoryBuffer> tmem_transport(
       new apache::thrift::transport::TMemoryBuffer(
         const_cast<std::uint8_t *>(buf), *len));
     apache::thrift::protocol::TCompactProtocolFactoryT<
       apache::thrift::transport::TMemoryBuffer>
-                                                         tproto_factory;
-    std::shared_ptr<apache::thrift::protocol::TProtocol> tproto =
+                                                           tproto_factory;
+    boost::shared_ptr<apache::thrift::protocol::TProtocol> tproto =
       tproto_factory.getProtocol(tmem_transport);
+
     try {
         deserialized_msg->read(tproto.get());
     } catch (std::exception &e) {
@@ -46,8 +46,10 @@ DeserializeThriftMsg(const std::uint8_t *buf,
         ss << "Couldn't deserialize thrift: " << e.what() << "\n";
         throw ::parquet::ParquetException(ss.str());
     }
+
     std::uint32_t bytes_left = tmem_transport->available_read();
-    *len                     = *len - bytes_left;
+
+    *len = *len - bytes_left;
 }
 
 static inline ::parquet::Encoding::type
@@ -104,10 +106,7 @@ PageReader::NextPage() {
 
         buffer = stream_->Read(compressed_len, &bytes_read);
         if (bytes_read != compressed_len) {
-            std::stringstream ss;
-            ss << "Page was smaller (" << bytes_read << ") than expected ("
-               << compressed_len << ")";
-            ::parquet::ParquetException::EofException(ss.str());
+            ::parquet::ParquetException::EofException();
         }
 
         if (decompressor_ != nullptr) {
@@ -190,11 +189,6 @@ PageReader::NextPage() {
         }
     }
     return std::shared_ptr<::parquet::Page>(nullptr);
-}
-
-void
-PageReader::set_max_page_header_size(std::uint32_t size) {
-    max_page_header_size_ = size;
 }
 
 }  // namespace internal

@@ -92,7 +92,7 @@ bool
 ColumnReader<DataType>::ReadNewPage() {
     const std::uint8_t *buffer;
 
-    while (true) {
+    for (;;) {
         current_page_ = pager_->NextPage();
         if (!current_page_) { return false; }
 
@@ -226,6 +226,32 @@ ColumnReader<DataType>::ReadBatch(std::int64_t  batch_size,
     ConsumeBufferedValues(total_values);
 
     return total_values;
+}
+
+template <class DataType>
+struct ParquetTraits {};
+
+#define TYPE_TRAITS_FACTORY(ParquetType, GdfDType)                            \
+    template <>                                                               \
+    struct ParquetTraits<ParquetType> {                                       \
+        static constexpr gdf_dtype gdfDType = GdfDType;                       \
+    }
+
+TYPE_TRAITS_FACTORY(::parquet::BooleanType, GDF_invalid);
+TYPE_TRAITS_FACTORY(::parquet::Int32Type, GDF_INT32);
+TYPE_TRAITS_FACTORY(::parquet::Int64Type, GDF_INT64);
+TYPE_TRAITS_FACTORY(::parquet::Int96Type, GDF_invalid);
+TYPE_TRAITS_FACTORY(::parquet::FloatType, GDF_FLOAT32);
+TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
+TYPE_TRAITS_FACTORY(::parquet::ByteArrayType, GDF_invalid);
+TYPE_TRAITS_FACTORY(::parquet::FLBAType, GDF_invalid);
+#undef TYPE_TRAITS_FACTORY
+
+template <class DataType>
+void
+ColumnReader<DataType>::MakeGdfColumn(std::shared_ptr<gdf_column> *out) {
+    constexpr std::size_t size = static_cast<std::size_t>(
+      ::parquet::type_traits<DataType::type_num>::value_byte_size);
 }
 
 template class ColumnReader<::parquet::BooleanType>;
