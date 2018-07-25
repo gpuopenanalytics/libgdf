@@ -25,7 +25,7 @@ namespace parquet {
 
 template <class DataType, class DecoderType>
 static inline void
-ConfigureDictionary(
+_ConfigureDictionary(
   const ::parquet::Page *                                page,
   std::unordered_map<int, std::shared_ptr<DecoderType>> &decoders,
   const ::parquet::ColumnDescriptor *const               column_descriptor,
@@ -64,14 +64,14 @@ ConfigureDictionary(
 }
 
 static inline bool
-IsDictionaryIndexEncoding(const ::parquet::Encoding::type &e) {
+_IsDictionaryIndexEncoding(const ::parquet::Encoding::type &e) {
     return e == ::parquet::Encoding::RLE_DICTIONARY
            || e == ::parquet::Encoding::PLAIN_DICTIONARY;
 }
 
 template <class DecoderType, class T>
 static inline std::int64_t
-ReadValues(DecoderType *decoder, std::int64_t batch_size, T *out) {
+_ReadValues(DecoderType *decoder, std::int64_t batch_size, T *out) {
     std::int64_t num_decoded =
       decoder->Decode(out, static_cast<int>(batch_size));
     return num_decoded;
@@ -97,11 +97,11 @@ ColumnReader<DataType>::ReadNewPage() {
         if (!current_page_) { return false; }
 
         if (current_page_->type() == ::parquet::PageType::DICTIONARY_PAGE) {
-            ConfigureDictionary<DataType>(current_page_.get(),
-                                          decoders_,
-                                          descr_,
-                                          pool_,
-                                          &current_decoder_);
+            _ConfigureDictionary<DataType>(current_page_.get(),
+                                           decoders_,
+                                           descr_,
+                                           pool_,
+                                           &current_decoder_);
             continue;
         } else if (current_page_->type() == ::parquet::PageType::DATA_PAGE) {
             const ::parquet::DataPage *page =
@@ -137,7 +137,7 @@ ColumnReader<DataType>::ReadNewPage() {
 
             ::parquet::Encoding::type encoding = page->encoding();
 
-            if (IsDictionaryIndexEncoding(encoding)) {
+            if (_IsDictionaryIndexEncoding(encoding)) {
                 encoding = ::parquet::Encoding::RLE_DICTIONARY;
             }
 
@@ -221,7 +221,7 @@ ColumnReader<DataType>::ReadBatch(std::int64_t  batch_size,
         }
     }
 
-    *values_read = ReadValues(current_decoder_, values_to_read, values);
+    *values_read = _ReadValues(current_decoder_, values_to_read, values);
     std::int64_t total_values = std::max(num_def_levels, *values_read);
     ConsumeBufferedValues(total_values);
 
@@ -247,11 +247,76 @@ TYPE_TRAITS_FACTORY(::parquet::ByteArrayType, GDF_invalid);
 TYPE_TRAITS_FACTORY(::parquet::FLBAType, GDF_invalid);
 #undef TYPE_TRAITS_FACTORY
 
+static inline std::uint8_t
+_ByteWithBit(std::ptrdiff_t i) {
+    return (std::uint8_t[]){1, 2, 4, 8, 16, 32, 64, 128}[i];
+}
+
+static inline void
+_TurnBitOn(std::uint8_t *const bits, std::ptrdiff_t i) {
+    bits[i / 8] |= _ByteWithBit(i % 8);
+}
+
+static inline std::size_t
+_CeilToByteLength(std::size_t n) {
+    return (n + 7) & ~7;
+}
+
+static inline std::size_t
+_BytesLengthToBitmapLength(std::size_t n) {
+    return _CeilToByteLength(n) / 8;
+}
+
+static inline std::size_t
+_GenerateNullBitmap(const std::int16_t *const levels,
+                    const std::size_t         levels_length,
+                    std::uint8_t *const       null_bitmap_ptr) {
+    static constexpr std::int16_t file_level = 1;  // TODO: max
+    std::size_t                   null_count = 0;
+
+    for (std::size_t i = 0; i < levels_length; i++) {
+        if (levels[i] == file_level) {
+            _TurnBitOn(null_bitmap_ptr, i);
+        } else {
+            DCHECK_LT(levels[i], file_level);
+            null_count += 1;
+        }
+    }
+
+    return null_count;
+}
+
 template <class DataType>
-void
-ColumnReader<DataType>::MakeGdfColumn(std::shared_ptr<gdf_column> *out) {
-    constexpr std::size_t size = static_cast<std::size_t>(
+std::size_t
+ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
+                                      std::shared_ptr<gdf_column> *out) {
+    constexpr std::size_t type_size = static_cast<std::size_t>(
       ::parquet::type_traits<DataType::type_num>::value_byte_size);
+
+    std::int64_t values_read;
+
+    std::int16_t *levels = new std::int16_t[values_to_read];
+
+    gdf_column *column = new gdf_column;
+
+    column->data = new std::uint8_t[type_size * values_to_read];
+
+    ReadBatch(static_cast<std::int64_t>(values_to_read),
+              levels,
+              nullptr,
+              static_cast<T *>(column->data),
+              &values_read);
+
+    std::size_t levels_length = _BytesLengthToBitmapLength(values_read);
+    column->valid             = new std::uint8_t[levels_length];
+    _GenerateNullBitmap(levels, values_read, column->valid);
+
+    column->size  = static_cast<gdf_size_type>(values_read);
+    column->dtype = ParquetTraits<DataType>::gdfDType;
+
+    out->reset(column);
+
+    return static_cast<std::size_t>(values_read);
 }
 
 template class ColumnReader<::parquet::BooleanType>;

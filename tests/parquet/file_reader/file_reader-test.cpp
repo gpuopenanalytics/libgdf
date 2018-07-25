@@ -98,10 +98,33 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
     }
 }
 
-TEST(FileReaderTest, Test) {
+TEST(FileReaderTest, Read) {
     std::unique_ptr<gdf::parquet::FileReader> reader =
       gdf::parquet::FileReader::OpenFile(PARQUET_FILE_PATH);
 
     checkMetadata(reader->metadata());
     checkRowGroups(reader);
+}
+
+TEST(FileReaderTest, GdfColumn) {
+    std::unique_ptr<gdf::parquet::FileReader> reader =
+      gdf::parquet::FileReader::OpenFile(PARQUET_FILE_PATH);
+
+    std::shared_ptr<gdf::parquet::Int64Reader> column_reader =
+      std::static_pointer_cast<gdf::parquet::Int64Reader>(
+        reader->RowGroup(0)->Column(1));
+
+    ASSERT_TRUE(column_reader->HasNext());
+
+    std::shared_ptr<gdf_column> column;
+    std::size_t values_read = column_reader->ReadGdfColumn(20, &column);
+
+    ASSERT_TRUE(static_cast<bool>(column));
+    EXPECT_EQ(20, values_read);
+
+    for (std::size_t i = 0; i < 20; i++) {
+        std::int64_t expected = static_cast<std::int64_t>(i) * 1000000000000;
+        std::int64_t value    = static_cast<std::int64_t *>(column->data)[i];
+        EXPECT_EQ(expected, value);
+    }
 }

@@ -38,7 +38,8 @@ public:
                            T *           values,
                            std::int64_t *valuesRead);
 
-    void MakeGdfColumn(std::shared_ptr<gdf_column> *out);
+    std::size_t ReadGdfColumn(std::size_t                  sizeToRead,
+                              std::shared_ptr<gdf_column> *out);
 
 private:
     bool ReadNewPage() final;
