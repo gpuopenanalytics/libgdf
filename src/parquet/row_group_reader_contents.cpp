@@ -58,7 +58,7 @@ RowGroupReaderContents::GetColumnPageReader(int i) {
     const ::parquet::ApplicationVersion &version =
       file_metadata_->writer_version();
     if (version.VersionLt(
-          ::parquet::ApplicationVersion::PARQUET_816_FIXED_VERSION())) {
+          ::parquet::ApplicationVersion::PARQUET_816_FIXED_VERSION)) {
         std::int64_t bytes_remaining =
           source_->Size() - (col_start + col_length);
         std::int64_t padding =

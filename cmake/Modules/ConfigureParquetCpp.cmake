@@ -36,8 +36,6 @@ set(BROTLI_STATIC_LIB_DEC ${BROTLI_TRANSITIVE_DEPENDENCY_PREFIX}/libbrotlidec.a)
 set(BROTLI_STATIC_LIB_COMMON ${BROTLI_TRANSITIVE_DEPENDENCY_PREFIX}/libbrotlicommon.a)
 set(SNAPPY_STATIC_LIB ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/snappy_ep/src/snappy_ep-install/lib/libsnappy.a)
 set(ZLIB_STATIC_LIB ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/zlib_ep/src/zlib_ep-install/lib/libz.a)
-set(LZ4_STATIC_LIB ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/lz4_ep-prefix/src/lz4_ep/lib/liblz4.a)
-set(ZSTD_STATIC_LIB ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/zstd_ep-prefix/src/zstd_ep/lib/libzstd.a)
 set(ARROW_HOME ${ARROW_ROOT})
 
 set(ENV{BROTLI_STATIC_LIB_ENC} ${BROTLI_STATIC_LIB_ENC})
@@ -45,8 +43,6 @@ set(ENV{BROTLI_STATIC_LIB_DEC} ${BROTLI_STATIC_LIB_DEC})
 set(ENV{BROTLI_STATIC_LIB_COMMON} ${BROTLI_STATIC_LIB_COMMON})
 set(ENV{SNAPPY_STATIC_LIB} ${SNAPPY_STATIC_LIB})
 set(ENV{ZLIB_STATIC_LIB} ${ZLIB_STATIC_LIB})
-set(ENV{LZ4_STATIC_LIB} ${LZ4_STATIC_LIB})
-set(ENV{ZSTD_STATIC_LIB} ${ZSTD_STATIC_LIB})
 set(ENV{ARROW_HOME} ${ARROW_HOME})
 
 execute_process(
@@ -76,13 +72,11 @@ target_link_libraries(Apache::Thrift INTERFACE ${THRIFT_ROOT}/lib/libthrift.a)
 add_library(Apache::Arrow INTERFACE IMPORTED)
 target_include_directories(Apache::Arrow INTERFACE ${ARROW_ROOT}/include)
 target_link_libraries(Apache::Arrow INTERFACE ${ARROW_ROOT}/lib/libarrow.a
-    ${BROTLI_TRANSITIVE_DEPENDENCY_PREFIX}/libbrotlienc.a
-    ${BROTLI_TRANSITIVE_DEPENDENCY_PREFIX}/libbrotlidec.a
-    ${BROTLI_TRANSITIVE_DEPENDENCY_PREFIX}/libbrotlicommon.a
-    ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/snappy_ep/src/snappy_ep-install/lib/libsnappy.a
-    ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/zlib_ep/src/zlib_ep-install/lib/libz.a
-    ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/lz4_ep-prefix/src/lz4_ep/lib/liblz4.a
-    ${ARROW_TRANSITIVE_DEPENDENCIES_PREFIX}/zstd_ep-prefix/src/zstd_ep/lib/libzstd.a
+    ${BROTLI_STATIC_LIB_ENC}
+    ${BROTLI_STATIC_LIB_DEC}
+    ${BROTLI_STATIC_LIB_COMMON}
+    ${SNAPPY_STATIC_LIB}
+    ${ZLIB_STATIC_LIB}
 )
 
 add_library(Apache::ParquetCpp INTERFACE IMPORTED)

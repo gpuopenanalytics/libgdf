@@ -18,7 +18,7 @@
 #ifndef _GDF_PARQUET_FILE_READER_H
 #define _GDF_PARQUET_FILE_READER_H
 
-#include <parquet/file_reader.h>
+#include <parquet/file/reader.h>
 
 namespace gdf {
 namespace parquet {
