@@ -270,9 +270,9 @@ _BytesLengthToBitmapLength(std::size_t n) {
 static inline std::size_t
 _GenerateNullBitmap(const std::int16_t *const levels,
                     const std::size_t         levels_length,
+                    const std::int16_t        file_level,
                     std::uint8_t *const       null_bitmap_ptr) {
-    static constexpr std::int16_t file_level = 1;  // TODO: max
-    std::size_t                   null_count = 0;
+    std::size_t null_count = 0;
 
     for (std::size_t i = 0; i < levels_length; i++) {
         if (levels[i] == file_level) {
@@ -309,7 +309,8 @@ ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
 
     std::size_t levels_length = _BytesLengthToBitmapLength(values_read);
     column->valid             = new std::uint8_t[levels_length];
-    _GenerateNullBitmap(levels, values_read, column->valid);
+    _GenerateNullBitmap(
+      levels, values_read, descr_->max_definition_level(), column->valid);
 
     column->size  = static_cast<gdf_size_type>(values_read);
     column->dtype = ParquetTraits<DataType>::gdfDType;

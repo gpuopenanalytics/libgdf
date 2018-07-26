@@ -17,6 +17,7 @@
 
 GDF_ADD_PARQUET_TEST(file_reader-test
     file_reader-test.cpp
+    single_column_file-test.cpp
     ${CMAKE_SOURCE_DIR}/src/parquet/column_reader.cpp
     ${CMAKE_SOURCE_DIR}/src/parquet/file_reader.cpp
     ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
