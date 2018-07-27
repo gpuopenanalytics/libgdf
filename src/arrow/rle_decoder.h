@@ -213,7 +213,7 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
   }
 
   int indices[batch_size];
-  int actual_read = gdf::arrow::decode(
+  int actual_read = gdf::arrow::decode_using_gpu(
         this->bit_reader_.get_buffer(),
         this->bit_reader_.get_buffer_len(), 
         rleRuns,  
@@ -224,26 +224,11 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
         remainderBitOffsets,
         remainderSetSize,
         remainderOutputOffsets,
+        isRleVector,
         bit_width_, 
         &indices[0], 
         batch_size
-      );
-
-  // int actual_read = gdf::arrow::decode_using_gpu(
-  //       this->bit_reader_.get_buffer(),
-  //       this->bit_reader_.get_buffer_len(), 
-  //       rleRuns,  
-  //       rleValues,
-  //       unpack32InputOffsets,
-  //       unpack32OutputOffsets,
-  //       remainderInputOffsets,
-  //       remainderBitOffsets,
-  //       remainderSetSize,
-  //       remainderOutputOffsets,
-  //       bit_width_, 
-  //       &indices[0], 
-  //       batch_size
-  //     );
+      ); 
   for (int i = 0; i < batch_size; ++i) {
     values[i] = dictionary[indices[i]];
   }

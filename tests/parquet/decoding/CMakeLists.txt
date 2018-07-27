@@ -22,7 +22,7 @@ GDF_ADD_PARQUET_TEST(decoding-test
     ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
     ${CMAKE_SOURCE_DIR}/src/parquet/page_reader.cpp
     ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp
-    ${CMAKE_SOURCE_DIR}/src/arrow/cu-decoder.cuh
+    ${CMAKE_SOURCE_DIR}/src/arrow/cu-decoder.cu
 )
 
 set(PARQUET_FILE_FOR_DECODING_PATH
