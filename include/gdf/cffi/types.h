@@ -1,6 +1,9 @@
 typedef size_t gdf_size_type;
 typedef gdf_size_type gdf_index_type;
 typedef unsigned char gdf_valid_type;
+typedef	int64_t	gdf_date64;
+typedef	int32_t	gdf_date32;
+typedef	int32_t	gdf_categoty;
 
 typedef enum {
     GDF_invalid=0,
@@ -13,6 +16,8 @@ typedef enum {
     GDF_DATE32,   // int32_t days since the UNIX epoch
     GDF_DATE64,   // int64_t milliseconds since the UNIX epoch
     GDF_TIMESTAMP,// Exact timestamp encoded with int64 since UNIX epoch (Default unit millisecond)
+    GDF_CATEGORY,
+    GDF_STRING,
     N_GDF_TYPES, /* additional types should go BEFORE N_GDF_TYPES */
 } gdf_dtype;
 
@@ -28,6 +33,7 @@ typedef enum {
     GDF_JOIN_DTYPE_MISMATCH,
     GDF_JOIN_TOO_MANY_COLUMNS,
     GDF_UNSUPPORTED_METHOD,
+    GDF_C_ERROR,
 } gdf_error;
 
 typedef enum {
@@ -53,6 +59,8 @@ typedef struct gdf_column_{
     gdf_size_type size;
     gdf_dtype dtype;
     gdf_dtype_extra_info dtype_info;
+    gdf_size_type 	null_count;			// host-side:	number of null records
+    char *			col_name;			// host-side:	null terminated string
 } gdf_column;
 
 typedef enum {
