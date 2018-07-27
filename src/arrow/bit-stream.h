@@ -92,6 +92,12 @@ namespace internal {
           return max_bytes_ - (byte_offset_ + static_cast<int>(::arrow::BitUtil::Ceil(bit_offset_, 8)));
         }
 
+        const uint8_t* get_buffer () {
+          return buffer_;
+        }
+        int get_buffer_len() {
+          return max_bytes_;
+        }
         /// Maximum byte length of a vlq encoded int
         static const int MAX_VLQ_BYTE_LEN = 5;
 

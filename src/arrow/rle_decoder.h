@@ -14,9 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef GDF_ARROW_UTIL_RLE_DECODER_H
+#define GDF_ARROW_UTIL_RLE_DECODER_H
 
 #include <arrow/util/bit-stream-utils.h>
 #include "bit-stream.h"
+#include "cu-decoder.cuh"
 
 namespace parquet {
 class ColumnDescriptor;
@@ -122,11 +125,12 @@ inline int RleDecoder::GetBatch(T* values, int batch_size) {
   return values_read;
 }
 
+
 template <typename T>
 inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batch_size) {
   DCHECK_GE(bit_width_, 0);
   int values_read = 0;
-
+  
   std::vector<uint16_t> isRleVector;
   std::vector<uint32_t> rleRuns; // esto seria los repeat_count_ para cuando es RLE y literal_coun$
   std::vector<uint64_t> rleValues; // esto seria los current_value_ para cuando es RLE y 0 para cu$
@@ -134,6 +138,9 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
   int numBitpacked;
   std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
   std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets;
+
+
+
 
   while (values_read < batch_size) {
     if (repeat_count_ > 0) {
@@ -168,33 +175,79 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
                                       unpack32InputOffsets, unpack32OutputOffsets,
                                       remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets);
 
-      int actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
+      //@todo: change this with the thrust version
+      std::cout << "values_read:" << values_read << " \n";
+      std::cout << "bit_width_:" << bit_width_ << " \n";
+      std::cout << "literal_batch:" << literal_batch << " \n";
+
+      int actual_read;
+     
+      actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
+     
       DCHECK_EQ(actual_read, literal_batch);
+      std::cout << "indices: \n";
       for (int i = 0; i < literal_batch; ++i) {
+        std::cout << indices[i] << ", ";
         values[values_read + i] = dictionary[indices[i]];
       }
+      std::cout << "\n\n";
       literal_count_ -= literal_batch;
       values_read += literal_batch;
     } else {
       if (!NextCounts<T>()) return values_read;
     }
-
-    std::cout<<"rleRuns[i]"<<" | "<<"rleValues[i]"<<std::endl;
-    for (int i = 0; i < rleRuns.size(); i++){
-      std::cout<<rleRuns[i]<<" | "<<rleValues[i] <<  ((isRleVector[i]) ? " | rle" : " | bit") << std::endl;
-    }
-
-    std::cout<<"unpack32InputOffsets[i]"<<" | "<<"unpack32OutputOffsets[i]"<<std::endl;
-    for (int i = 0; i < unpack32InputOffsets.size(); i++){
-      std::cout<<unpack32InputOffsets[i]<<" | "<<unpack32OutputOffsets[i]<<std::endl;
-    }
-
-    std::cout<<"remainderInputOffsets[i]"<<" | "<<"remainderBitOffsets[i]"<<" | "<<"remainderSetSize[i]"<<" | "<<"remainderOutputOffsets[i]"<<std::endl;
-    for (int i = 0; i < remainderInputOffsets.size(); i++){
-      std::cout<<remainderInputOffsets[i]<<" | "<<remainderBitOffsets[i]<<" | "<<remainderSetSize[i]<<" | "<<remainderOutputOffsets[i]<<std::endl;
-    }
+  }
+   std::cout<<"rleRuns[i]"<<" | "<<"rleValues[i]"<<std::endl;
+  for (int i = 0; i < rleRuns.size(); i++){
+    std::cout<<rleRuns[i]<<" | "<<rleValues[i] <<  ((isRleVector[i]) ? " | rle" : " | bit") << std::endl;
   }
 
+  std::cout<<"unpack32InputOffsets[i]"<<" | "<<"unpack32OutputOffsets[i]"<<std::endl;
+  for (int i = 0; i < unpack32InputOffsets.size(); i++){
+    std::cout<<unpack32InputOffsets[i]<<" | "<<unpack32OutputOffsets[i]<<std::endl;
+  }
+
+  std::cout<<"remainderInputOffsets[i]"<<" | "<<"remainderBitOffsets[i]"<<" | "<<"remainderSetSize[i]"<<" | "<<"remainderOutputOffsets[i]"<<std::endl;
+  for (int i = 0; i < remainderInputOffsets.size(); i++){
+    std::cout<<remainderInputOffsets[i]<<" | "<<remainderBitOffsets[i]<<" | "<<remainderSetSize[i]<<" | "<<remainderOutputOffsets[i]<<std::endl;
+  }
+
+  int indices[batch_size];
+  int actual_read = gdf::arrow::decode(
+        this->bit_reader_.get_buffer(),
+        this->bit_reader_.get_buffer_len(), 
+        rleRuns,  
+        rleValues,
+        unpack32InputOffsets,
+        unpack32OutputOffsets,
+        remainderInputOffsets,
+        remainderBitOffsets,
+        remainderSetSize,
+        remainderOutputOffsets,
+        bit_width_, 
+        &indices[0], 
+        batch_size
+      );
+
+  // int actual_read = gdf::arrow::decode_using_gpu(
+  //       this->bit_reader_.get_buffer(),
+  //       this->bit_reader_.get_buffer_len(), 
+  //       rleRuns,  
+  //       rleValues,
+  //       unpack32InputOffsets,
+  //       unpack32OutputOffsets,
+  //       remainderInputOffsets,
+  //       remainderBitOffsets,
+  //       remainderSetSize,
+  //       remainderOutputOffsets,
+  //       bit_width_, 
+  //       &indices[0], 
+  //       batch_size
+  //     );
+  for (int i = 0; i < batch_size; ++i) {
+    values[i] = dictionary[indices[i]];
+  }
+  std::cout << "\n";
   return values_read;
 }
 
@@ -300,3 +353,4 @@ bool RleDecoder::NextCounts() {
 }  // namespace internal
 }  // namespace parquet
 }  // namespace gdf
+#endif

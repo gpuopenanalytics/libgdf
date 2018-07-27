@@ -17,9 +17,8 @@
 
 function(GDF_ADD_PARQUET_TEST TARGET)
     list(REMOVE_AT ARGV 0)
-    add_executable(${TARGET} ${ARGV})
-    target_link_libraries(${TARGET} GTest::GTest GTest::Main Apache::ParquetCpp)
-    gtest_add_tests(${TARGET} "" AUTO)
+    cuda_add_executable(${TARGET} ${ARGV})
+    target_link_libraries(${TARGET} GTest::GTest GTest::Main Apache::ParquetCpp   )
 endfunction()
 
 add_subdirectory(file_reader)

@@ -322,11 +322,11 @@ ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
 template class ColumnReader<::parquet::BooleanType>;
 template class ColumnReader<::parquet::Int32Type>;
 template class ColumnReader<::parquet::Int64Type>;
-template class ColumnReader<::parquet::Int96Type>;
+//template class ColumnReader<::parquet::Int96Type>;
 template class ColumnReader<::parquet::FloatType>;
 template class ColumnReader<::parquet::DoubleType>;
-template class ColumnReader<::parquet::ByteArrayType>;
-template class ColumnReader<::parquet::FLBAType>;
+// template class ColumnReader<::parquet::ByteArrayType>;
+// template class ColumnReader<::parquet::FLBAType>;
 
 }  // namespace parquet
 }  // namespace gdf

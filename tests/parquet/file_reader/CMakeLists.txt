@@ -21,7 +21,9 @@ GDF_ADD_PARQUET_TEST(file_reader-test
     ${CMAKE_SOURCE_DIR}/src/parquet/file_reader.cpp
     ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
     ${CMAKE_SOURCE_DIR}/src/parquet/page_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp)
+    ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp
+    ${CMAKE_SOURCE_DIR}/src/arrow/cu-decoder.cuh
+    )
 
 set(PARQUET_FILE_PATH
     ${CMAKE_SOURCE_DIR}/tests/parquet/file_reader/reader-test.parquet)
