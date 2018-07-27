@@ -31,7 +31,7 @@
 #endif
 
 inline static void
-checkMetadata(const std::shared_ptr<const parquet::FileMetaData> &metadata) {
+checkMetadata(const std::shared_ptr<const ::parquet::FileMetaData> &metadata) {
     EXPECT_EQ(1, metadata->num_row_groups());
     EXPECT_EQ(3, metadata->num_columns());
 }
@@ -39,7 +39,7 @@ checkMetadata(const std::shared_ptr<const parquet::FileMetaData> &metadata) {
 inline static void
 checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
     for (int r = 0; r < reader->metadata()->num_row_groups(); ++r) {
-        const std::shared_ptr<parquet::RowGroupReader> row_group =
+        const std::shared_ptr<::parquet::RowGroupReader> row_group =
           reader->RowGroup(r);
 
         std::int64_t                           values_read = 0;
