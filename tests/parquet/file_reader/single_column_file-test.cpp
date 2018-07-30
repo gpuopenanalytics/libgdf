@@ -17,6 +17,8 @@
 
 #include <sstream>
 
+#include <boost/filesystem.hpp>
+
 #include <arrow/io/file.h>
 #include <arrow/util/logging.h>
 
@@ -66,7 +68,7 @@ SingleColumnFileTest<DataType>::TearDown() {
 
 template <class DataType>
 SingleColumnFileTest<DataType>::SingleColumnFileTest()
-  : filename(std::tmpnam(nullptr)) {}
+  : filename(boost::filesystem::unique_path().native()) {}
 
 template <class DataType>
 void
@@ -138,16 +140,17 @@ TYPED_TEST(SingleColumnFileTest, ReadAll) {
 
     ASSERT_TRUE(column_reader->HasNext());
 
+    std::size_t                 rowsPerGroup = this->kRowsPerGroup;
     std::shared_ptr<gdf_column> column;
     std::size_t                 values_read =
-      column_reader->ReadGdfColumn(this->kRowsPerGroup, &column);
+      column_reader->ReadGdfColumn(rowsPerGroup, &column);
 
     ASSERT_TRUE(static_cast<bool>(column));
-    EXPECT_EQ(this->kRowsPerGroup / 2, values_read);
+    EXPECT_EQ(rowsPerGroup, values_read);
 
-    for (std::int64_t i = 0; i < 20; i++) {
+    for (std::size_t i = 0; i < rowsPerGroup; i++) {
         std::int64_t expected = this->GenerateValue(i);
         std::int64_t value    = static_cast<std::int64_t *>(column->data)[i];
-        EXPECT_EQ(expected, value);
+        if (i % 2) { EXPECT_EQ(expected, value); }
     }
 }

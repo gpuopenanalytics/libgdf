@@ -32,11 +32,15 @@ public:
 
     bool HasNext();
 
-    std::int64_t ReadBatch(std::int64_t  batchSize,
-                           std::int16_t *definitionLevels,
-                           std::int16_t *repetitionLevels,
-                           T *           values,
-                           std::int64_t *valuesRead);
+    std::int64_t ReadBatchSpaced(std::int64_t  batch_size,
+                                 std::int16_t *def_levels,
+                                 std::int16_t *rep_levels,
+                                 T *           values,
+                                 std::uint8_t *valid_bits,
+                                 std::int64_t  valid_bits_offset,
+                                 std::int64_t *levels_read,
+                                 std::int64_t *values_read,
+                                 std::int64_t *null_count);
 
     std::size_t ReadGdfColumn(std::size_t                  sizeToRead,
                               std::shared_ptr<gdf_column> *out);
