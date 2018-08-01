@@ -147,7 +147,7 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
       int repeat_batch =
           std::min(batch_size - values_read, static_cast<int>(repeat_count_));
   
-        std::cout<<"repeat_batch: "<<repeat_batch<<std::endl;
+        // std::cout<<"repeat_batch: "<<repeat_batch<<std::endl;
         rleRuns.push_back(repeat_batch);
         isRleVector.push_back(1);
         rleValues.push_back(current_value_);
@@ -165,7 +165,7 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
       int indices[buffer_size];
       literal_batch = std::min(literal_batch, buffer_size);
       
-      std::cout<<"literal_batch: "<<literal_batch<<std::endl;
+      // std::cout<<"literal_batch: "<<literal_batch<<std::endl;
       rleRuns.push_back(literal_batch);
       isRleVector.push_back(0);
       rleValues.push_back(0);
@@ -175,19 +175,16 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
                                       unpack32InputOffsets, unpack32OutputOffsets,
                                       remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets);
 
-      //@todo: change this with the thrust version
-      std::cout << "values_read:" << values_read << " \n";
-      std::cout << "bit_width_:" << bit_width_ << " \n";
-      std::cout << "literal_batch:" << literal_batch << " \n";
+      // std::cout << "values_read:" << values_read << " \n";
+      // std::cout << "bit_width_:" << bit_width_ << " \n";
+      // std::cout << "literal_batch:" << literal_batch << " \n";
 
       int actual_read;
      
       actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
      
       DCHECK_EQ(actual_read, literal_batch);
-      std::cout << "indices: \n";
       for (int i = 0; i < literal_batch; ++i) {
-        std::cout << indices[i] << ", ";
         values[values_read + i] = dictionary[indices[i]];
       }
       std::cout << "\n\n";
@@ -197,20 +194,20 @@ inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values, int batc
       if (!NextCounts<T>()) return values_read;
     }
   }
-   std::cout<<"rleRuns[i]"<<" | "<<"rleValues[i]"<<std::endl;
-  for (int i = 0; i < rleRuns.size(); i++){
-    std::cout<<rleRuns[i]<<" | "<<rleValues[i] <<  ((isRleVector[i]) ? " | rle" : " | bit") << std::endl;
-  }
+  // std::cout<<"rleRuns[i]"<<" | "<<"rleValues[i]"<<std::endl;
+  // for (int i = 0; i < rleRuns.size(); i++){
+  //   std::cout<<rleRuns[i]<<" | "<<rleValues[i] <<  ((isRleVector[i]) ? " | rle" : " | bit") << std::endl;
+  // }
 
-  std::cout<<"unpack32InputOffsets[i]"<<" | "<<"unpack32OutputOffsets[i]"<<std::endl;
-  for (int i = 0; i < unpack32InputOffsets.size(); i++){
-    std::cout<<unpack32InputOffsets[i]<<" | "<<unpack32OutputOffsets[i]<<std::endl;
-  }
+  // std::cout<<"unpack32InputOffsets[i]"<<" | "<<"unpack32OutputOffsets[i]"<<std::endl;
+  // for (int i = 0; i < unpack32InputOffsets.size(); i++){
+  //   std::cout<<unpack32InputOffsets[i]<<" | "<<unpack32OutputOffsets[i]<<std::endl;
+  // }
 
-  std::cout<<"remainderInputOffsets[i]"<<" | "<<"remainderBitOffsets[i]"<<" | "<<"remainderSetSize[i]"<<" | "<<"remainderOutputOffsets[i]"<<std::endl;
-  for (int i = 0; i < remainderInputOffsets.size(); i++){
-    std::cout<<remainderInputOffsets[i]<<" | "<<remainderBitOffsets[i]<<" | "<<remainderSetSize[i]<<" | "<<remainderOutputOffsets[i]<<std::endl;
-  }
+  // std::cout<<"remainderInputOffsets[i]"<<" | "<<"remainderBitOffsets[i]"<<" | "<<"remainderSetSize[i]"<<" | "<<"remainderOutputOffsets[i]"<<std::endl;
+  // for (int i = 0; i < remainderInputOffsets.size(); i++){
+  //   std::cout<<remainderInputOffsets[i]<<" | "<<remainderBitOffsets[i]<<" | "<<remainderSetSize[i]<<" | "<<remainderOutputOffsets[i]<<std::endl;
+  // }
 
   int indices[batch_size];
   int actual_read = gdf::arrow::decode_using_gpu(

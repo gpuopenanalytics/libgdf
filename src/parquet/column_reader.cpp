@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include <typeinfo>
 #include <gdf/parquet/column_reader.h>
 
 #include "dictionary_decoder.h"
@@ -51,10 +51,20 @@ _ConfigureDictionary(
         internal::PlainDecoder<DataType> dictionary(column_descriptor);
         dictionary.SetData(
           dictionary_page->num_values(), page->data(), page->size());
-        auto decoder = std::make_shared<internal::DictionaryDecoder<DataType>>(
-          column_descriptor, pool);
-        decoder->SetDict(&dictionary);
-        decoders[encoding] = decoder;
+        
+        // std::cout << "datatype: " << typeid(DataType).name() << std::endl;
+        // std::cout << "datatype: " << typeid(::parquet::Int32Type).name() << std::endl;
+        if (typeid(DataType) == typeid(::parquet::Int32Type) ) {
+            auto decoder = std::make_shared<internal::DictionaryDecoder<DataType, gdf::arrow::internal::RleDecoder>>(
+            column_descriptor, pool);
+            decoder->SetDict(&dictionary);
+            decoders[encoding] = decoder;
+        } else {
+            auto decoder = std::make_shared<internal::DictionaryDecoder<DataType, ::arrow::RleDecoder>>(
+            column_descriptor, pool);
+            decoder->SetDict(&dictionary);
+            decoders[encoding] = decoder;
+        }
     } else {
         ::parquet::ParquetException::NYI(
           "only plain dictionary encoding has been implemented");
