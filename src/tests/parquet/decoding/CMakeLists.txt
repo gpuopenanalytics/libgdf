@@ -15,20 +15,10 @@
 # limitations under the License.
 #=============================================================================
 
-GDF_ADD_PARQUET_TEST(decoding-test
-    decoding-test.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/column_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/page_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp
-    ${CMAKE_SOURCE_DIR}/src/arrow/cu-decoder.cu
-)
+GDF_ADD_PARQUET_TEST(decoding-test decoding-test.cpp)
 
 set(PARQUET_FILE_FOR_DECODING_PATH
     ${CMAKE_SOURCE_DIR}/src/tests/parquet/decoding/file_for_decoding.parquet)
 
 target_compile_definitions(decoding-test
     PUBLIC -DPARQUET_FILE_FOR_DECODING_PATH="${PARQUET_FILE_FOR_DECODING_PATH}")
-target_include_directories(decoding-test
-    PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)

@@ -17,37 +17,20 @@
 
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
-set(file_reader_SRCS
-    ${CMAKE_SOURCE_DIR}/src/parquet/api.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/column_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/page_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp
-    ${CMAKE_SOURCE_DIR}/src/arrow/cu-decoder.cu
-    )
-
 set(PARQUET_FILE_PATH
     ${CMAKE_SOURCE_DIR}/src/tests/parquet/file_reader/reader-test.parquet)
 
 GDF_ADD_PARQUET_TEST(file_reader-test
     single_column_file-test.cpp
-    api-test.cpp
-    ${file_reader_SRCS})
+    api-test.cpp)
 
 target_compile_definitions(file_reader-test
     PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
-target_include_directories(file_reader-test
-    PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
 target_link_libraries(file_reader-test Boost::filesystem)
 
-GDF_ADD_PARQUET_BENCHMARK(file_reader-benchmark
-	file_reader-benchmark.cpp
-    ${file_reader_SRCS})
+GDF_ADD_PARQUET_BENCHMARK(file_reader-benchmark file_reader-benchmark.cpp)
 
 if (GDF_BENCHMARK)
 target_compile_definitions(file_reader-benchmark
     PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
-target_include_directories(file_reader-benchmark
-    PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
 endif()

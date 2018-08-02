@@ -47,10 +47,21 @@ target_link_libraries(Google::Benchmark::Main INTERFACE
     ${BENCHMARK_ROOT}/lib/libbenchmark_main.a)
 endif()
 
+set(file_reader_SRCS
+    ${CMAKE_SOURCE_DIR}/src/parquet/api.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/column_reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/page_reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp
+    ${CMAKE_SOURCE_DIR}/src/arrow/cu-decoder.cu)
+
 function(GDF_ADD_PARQUET_BENCHMARK TARGET)
     if(GDF_BENCHMARK)
         list(REMOVE_AT ARGV 0)
-        cuda_add_executable(${TARGET} ${ARGV})
+        cuda_add_executable(${TARGET} ${ARGV} ${file_reader_SRCS})
+        target_include_directories(${TARGET}
+            PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
         target_link_libraries(${TARGET}
             Google::Benchmark Google::Benchmark::Main
             Threads::Threads Apache::ParquetCpp)
@@ -59,8 +70,10 @@ endfunction()
 
 function(GDF_ADD_PARQUET_TEST TARGET)
     list(REMOVE_AT ARGV 0)
-    cuda_add_executable(${TARGET} ${ARGV})
-    target_link_libraries(${TARGET} GTest::GTest GTest::Main Apache::ParquetCpp   )
+    cuda_add_executable(${TARGET} ${ARGV} ${file_reader_SRCS})
+    target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
+    target_link_libraries(${TARGET} GTest::GTest GTest::Main Apache::ParquetCpp)
+    gtest_discover_tests(${TARGET})
 endfunction()
 
 add_subdirectory(file_reader)
