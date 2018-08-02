@@ -30,3 +30,5 @@ set(PARQUET_FILE_FOR_DECODING_PATH
 
 target_compile_definitions(decoding-test
     PUBLIC -DPARQUET_FILE_FOR_DECODING_PATH="${PARQUET_FILE_FOR_DECODING_PATH}")
+target_include_directories(decoding-test
+    PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)

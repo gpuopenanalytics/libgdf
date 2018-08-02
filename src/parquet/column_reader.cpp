@@ -261,6 +261,52 @@ _ReadValuesSpaced(DecoderType * decoder,
                                  valid_bits_offset);
 }
 
+template <class DataType>
+inline std::int64_t
+ColumnReader<DataType>::ReadBatch(std::int64_t  batch_size,
+                                  std::int16_t *def_levels,
+                                  std::int16_t *rep_levels,
+                                  T *           values,
+                                  std::int64_t *values_read) {
+    if (!HasNext()) {
+        *values_read = 0;
+        return 0;
+    }
+
+    batch_size =
+      std::min(batch_size, num_buffered_values_ - num_decoded_values_);
+
+    std::int64_t num_def_levels = 0;
+    std::int64_t num_rep_levels = 0;
+
+    std::int64_t values_to_read = 0;
+
+    if (descr_->max_definition_level() > 0 && def_levels) {
+        num_def_levels = ReadDefinitionLevels(batch_size, def_levels);
+        for (std::int64_t i = 0; i < num_def_levels; ++i) {
+            if (def_levels[i] == descr_->max_definition_level()) {
+                ++values_to_read;
+            }
+        }
+    } else {
+        values_to_read = batch_size;
+    }
+
+    if (descr_->max_repetition_level() > 0 && rep_levels) {
+        num_rep_levels = ReadRepetitionLevels(batch_size, rep_levels);
+        if (def_levels && num_def_levels != num_rep_levels) {
+            throw ::parquet::ParquetException(
+              "Number of decoded rep / def levels did not match");
+        }
+    }
+
+    *values_read = _ReadValues(current_decoder_, values_to_read, values);
+    std::int64_t total_values = std::max(num_def_levels, *values_read);
+    ConsumeBufferedValues(total_values);
+
+    return total_values;
+}
+
 template <typename DataType>
 inline std::int64_t
 ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,

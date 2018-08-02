@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-#include <gdf/parquet/column_reader.h>
-#include <gdf/parquet/file_reader.h>
-
 #include <benchmark/benchmark.h>
+
+#include "column_reader.h"
+#include "file_reader.h"
 
 #ifndef PARQUET_FILE_PATH
 #error PARQUET_FILE_PATH must be defined for precompiling

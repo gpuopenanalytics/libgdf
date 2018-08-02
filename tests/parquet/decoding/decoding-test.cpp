@@ -22,8 +22,8 @@
 
 #include <gtest/gtest.h>
 
-#include <gdf/parquet/column_reader.h>
-#include <gdf/parquet/file_reader.h>
+#include "column_reader.h"
+#include "file_reader.h"
 
 
 static constexpr int NUM_ROWS_PER_ROW_GROUP = 500;
@@ -48,7 +48,7 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
         std::int64_t                           values_read = 0;
         int                                    i;
         std::shared_ptr<parquet::ColumnReader> column;
-        
+
         {
             column = row_group->Column(0);
             gdf::parquet::Int32Reader *int32_reader =
@@ -81,7 +81,7 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
             {
                 std::cout << valuesBuffer[i] << ",";
             }
-            std::cout << "\n";            
+            std::cout << "\n";
         }
 
         // {
@@ -109,10 +109,10 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
         //         std::cout << "rows_read: " << rows_read << std::endl;
         //         rows_read_total += rows_read;
         //     }
-        // }  
+        // }
     }
 }
- 
+
 
 inline static std::shared_ptr<parquet::schema::GroupNode> createSchema() {
     parquet::schema::NodeVector fields{

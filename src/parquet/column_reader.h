@@ -32,6 +32,12 @@ public:
 
     bool HasNext();
 
+    std::int64_t ReadBatch(std::int64_t  batchSize,
+                           std::int16_t *definitionLevels,
+                           std::int16_t *repetitionLevels,
+                           T *           values,
+                           std::int64_t *valuesRead);
+
     std::int64_t ReadBatchSpaced(std::int64_t  batch_size,
                                  std::int16_t *def_levels,
                                  std::int16_t *rep_levels,
