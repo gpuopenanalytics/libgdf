@@ -45,7 +45,9 @@ GDF_ADD_PARQUET_BENCHMARK(file_reader-benchmark
 	file_reader-benchmark.cpp
     ${file_reader_SRCS})
 
+if (GDF_BENCHMARK)
 target_compile_definitions(file_reader-benchmark
     PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
 target_include_directories(file_reader-benchmark
     PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
+endif()
