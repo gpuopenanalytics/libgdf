@@ -37,7 +37,7 @@ ExternalProject_Add(parquetcpp
         -DPARQUET_ARROW_LINKAGE=static
         -DPARQUET_BUILD_SHARED=OFF
         -DPARQUET_BUILD_TESTS=OFF
-    GIT_REPOSITORY git@github.com:apache/parquet-cpp.git
+    GIT_REPOSITORY https://github.com/apache/parquet-cpp.git
     GIT_TAG apache-parquet-cpp-1.3.1
     INSTALL_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/parquetcpp-install"
     SOURCE_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/parquetcpp-src"
