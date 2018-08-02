@@ -42,5 +42,6 @@ add_subdirectory(foo-sample)
 add_subdirectory(datetime)
 add_subdirectory(hashing)
 add_subdirectory(sqls)
+add_subdirectory(parquet)
 
 message(STATUS "******** Tests are ready ********")

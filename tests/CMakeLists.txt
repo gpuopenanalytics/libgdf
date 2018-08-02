@@ -38,7 +38,6 @@ enable_testing()
 # -------------------
 message(STATUS "******** Configuring tests ********")
 
-add_subdirectory(parquet)
 add_subdirectory(unaryops)
 add_subdirectory(filterops_numeric)
 
