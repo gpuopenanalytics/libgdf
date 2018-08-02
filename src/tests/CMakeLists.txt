@@ -43,5 +43,7 @@ add_subdirectory(datetime)
 add_subdirectory(hashing)
 add_subdirectory(sqls)
 add_subdirectory(parquet)
+add_subdirectory(unaryops)
+add_subdirectory(filterops_numeric)
 
 message(STATUS "******** Tests are ready ********")
