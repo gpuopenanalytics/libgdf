@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include <typeinfo>
+
 #include <arrow/util/bit-util.h>
 
 #include "column_reader.h"
@@ -30,7 +32,7 @@ _ConfigureDictionary(
   const ::parquet::Page *                                page,
   std::unordered_map<int, std::shared_ptr<DecoderType>> &decoders,
   const ::parquet::ColumnDescriptor *const               column_descriptor,
-  arrow::MemoryPool *const                               pool,
+  ::arrow::MemoryPool *const                             pool,
   DecoderType **                                         out_decoder) {
     const ::parquet::DictionaryPage *dictionary_page =
       static_cast<const ::parquet::DictionaryPage *>(page);
@@ -52,10 +54,23 @@ _ConfigureDictionary(
         internal::PlainDecoder<DataType> dictionary(column_descriptor);
         dictionary.SetData(
           dictionary_page->num_values(), page->data(), page->size());
-        auto decoder = std::make_shared<internal::DictionaryDecoder<DataType>>(
-          column_descriptor, pool);
-        decoder->SetDict(&dictionary);
-        decoders[encoding] = decoder;
+
+        // std::cout << "datatype: " << typeid(DataType).name() << std::endl;
+        // std::cout << "datatype: " << typeid(::parquet::Int32Type).name() << std::endl;
+        if (typeid(DataType) == typeid(::parquet::Int32Type)) {
+            auto decoder = std::make_shared<
+              internal::DictionaryDecoder<DataType,
+                                          gdf::arrow::internal::RleDecoder>>(
+              column_descriptor, pool);
+            decoder->SetDict(&dictionary);
+            decoders[encoding] = decoder;
+        } else {
+            auto decoder = std::make_shared<
+              internal::DictionaryDecoder<DataType, ::arrow::RleDecoder>>(
+              column_descriptor, pool);
+            decoder->SetDict(&dictionary);
+            decoders[encoding] = decoder;
+        }
     } else {
         ::parquet::ParquetException::NYI(
           "only plain dictionary encoding has been implemented");
@@ -369,7 +384,7 @@ ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
 
     column->data = new std::uint8_t[type_size * values_to_read];
 
-    std::size_t bitmap_length = arrow::BitUtil::BytesForBits(values_to_read);
+    std::size_t bitmap_length = ::arrow::BitUtil::BytesForBits(values_to_read);
 
     column->valid = new std::uint8_t[bitmap_length];
 
@@ -401,11 +416,11 @@ ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
 template class ColumnReader<::parquet::BooleanType>;
 template class ColumnReader<::parquet::Int32Type>;
 template class ColumnReader<::parquet::Int64Type>;
-template class ColumnReader<::parquet::Int96Type>;
+//template class ColumnReader<::parquet::Int96Type>;
 template class ColumnReader<::parquet::FloatType>;
 template class ColumnReader<::parquet::DoubleType>;
-template class ColumnReader<::parquet::ByteArrayType>;
-template class ColumnReader<::parquet::FLBAType>;
+// template class ColumnReader<::parquet::ByteArrayType>;
+// template class ColumnReader<::parquet::FLBAType>;
 
 }  // namespace parquet
 }  // namespace gdf

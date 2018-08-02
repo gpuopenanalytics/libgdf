@@ -16,6 +16,7 @@
  */
 
 #include "arrow/util/rle-encoding.h"
+#include "../arrow/rle_decoder.h"
 
 namespace parquet {
 class ColumnDescriptor;
@@ -25,7 +26,7 @@ namespace gdf {
 namespace parquet {
 namespace internal {
 
-template <typename Type>
+template <typename Type, typename RleDecoder>
 class DictionaryDecoder : public ::parquet::Decoder<Type> {
 public:
     typedef typename Type::c_type T;
@@ -46,7 +47,7 @@ public:
         std::uint8_t bit_width = *data;
         ++data;
         --len;
-        idx_decoder_ = ::arrow::RleDecoder(data, len, bit_width);
+        idx_decoder_ = RleDecoder(data, len, bit_width);
     }
 
     int
@@ -87,12 +88,12 @@ private:
 
     std::shared_ptr<::parquet::PoolBuffer> byte_array_data_;
 
-    ::arrow::RleDecoder idx_decoder_;
+    RleDecoder idx_decoder_;
 };
 
-template <typename Type>
+template <typename Type, typename RleDecoder>
 inline void
-DictionaryDecoder<Type>::SetDict(::parquet::Decoder<Type> *dictionary) {
+DictionaryDecoder<Type, RleDecoder>::SetDict(::parquet::Decoder<Type> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
     dictionary_.Resize(num_dictionary_values);
     dictionary->Decode(&dictionary_[0], num_dictionary_values);
@@ -100,7 +101,7 @@ DictionaryDecoder<Type>::SetDict(::parquet::Decoder<Type> *dictionary) {
 
 template <>
 inline void
-DictionaryDecoder<::parquet::BooleanType>::SetDict(
+DictionaryDecoder<::parquet::BooleanType, ::arrow::RleDecoder>::SetDict(
   ::parquet::Decoder<::parquet::BooleanType> *dictionary) {
     ::parquet::ParquetException::NYI(
       "Dictionary encoding is not implemented for boolean values");
@@ -108,7 +109,7 @@ DictionaryDecoder<::parquet::BooleanType>::SetDict(
 
 template <>
 inline void
-DictionaryDecoder<::parquet::ByteArrayType>::SetDict(
+DictionaryDecoder<::parquet::ByteArrayType, ::arrow::RleDecoder>::SetDict(
   ::parquet::Decoder<::parquet::ByteArrayType> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
     dictionary_.Resize(num_dictionary_values);
@@ -134,7 +135,7 @@ DictionaryDecoder<::parquet::ByteArrayType>::SetDict(
 
 template <>
 inline void
-DictionaryDecoder<::parquet::FLBAType>::SetDict(
+DictionaryDecoder<::parquet::FLBAType, ::arrow::RleDecoder>::SetDict(
   ::parquet::Decoder<::parquet::FLBAType> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
     dictionary_.Resize(num_dictionary_values);
