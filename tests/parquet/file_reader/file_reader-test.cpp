@@ -22,8 +22,8 @@
 
 #include <gtest/gtest.h>
 
-#include <gdf/parquet/column_reader.h>
-#include <gdf/parquet/file_reader.h>
+#include "column_reader.h"
+#include "file_reader.h"
 
 #ifndef PARQUET_FILE_PATH
 #error PARQUET_FILE_PATH must be defined for precompiling
@@ -92,8 +92,7 @@ checkRowGroup(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
                                         &nulls_count);
         EXPECT_EQ(1, rows_read);
         EXPECT_EQ(1, values_read);
-        std::int64_t expected =
-          static_cast<std::int64_t>(i) * 1000000000000;
+        std::int64_t expected = static_cast<std::int64_t>(i) * 1000000000000;
         EXPECT_EQ(expected, value);
         EXPECT_EQ(static_cast<std::int16_t>((i % 2) == 0), repetition_level);
         i++;

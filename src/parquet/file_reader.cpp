@@ -17,8 +17,7 @@
 
 #include <arrow/io/file.h>
 
-#include <gdf/parquet/file_reader.h>
-
+#include "file_reader.h"
 #include "file_reader_contents.h"
 
 namespace gdf {
@@ -30,7 +29,7 @@ FileReader::OpenFile(
   const ::parquet::ReaderProperties &             properties,
   const std::shared_ptr<::parquet::FileMetaData> &metadata) {
     FileReader *const reader = new FileReader();
-		reader->parquetFileReader_.reset(new ::parquet::ParquetFileReader());
+    reader->parquetFileReader_.reset(new ::parquet::ParquetFileReader());
 
     std::shared_ptr<::arrow::io::ReadableFile> file;
 

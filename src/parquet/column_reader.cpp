@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-#include <gdf/parquet/column_reader.h>
+#include <arrow/util/bit-util.h>
 
+#include "column_reader.h"
 #include "dictionary_decoder.h"
 #include "plain_decoder.h"
 
@@ -354,16 +355,6 @@ TYPE_TRAITS_FACTORY(::parquet::ByteArrayType, GDF_invalid);
 TYPE_TRAITS_FACTORY(::parquet::FLBAType, GDF_invalid);
 #undef TYPE_TRAITS_FACTORY
 
-static inline std::size_t
-_CeilToByteLength(std::size_t n) {
-    return (n + 7) & ~7;
-}
-
-static inline std::size_t
-_BytesLengthToBitmapLength(std::size_t n) {
-    return _CeilToByteLength(n) / 8;
-}
-
 template <class DataType>
 std::size_t
 ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
@@ -378,8 +369,9 @@ ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
 
     column->data = new std::uint8_t[type_size * values_to_read];
 
-    std::size_t bitmap_length = _BytesLengthToBitmapLength(values_to_read);
-    column->valid             = new std::uint8_t[bitmap_length];
+    std::size_t bitmap_length = arrow::BitUtil::BytesForBits(values_to_read);
+
+    column->valid = new std::uint8_t[bitmap_length];
 
     std::int64_t values_read;
     std::int64_t levels_read;

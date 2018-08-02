@@ -28,10 +28,10 @@
 #include <parquet/schema.h>
 #include <parquet/types.h>
 
-#include <gdf/parquet/column_reader.h>
-#include <gdf/parquet/file_reader.h>
-
 #include <gtest/gtest.h>
+
+#include "column_reader.h"
+#include "file_reader.h"
 
 template <class DataType>
 class SingleColumnFileTest : public ::testing::Test {
