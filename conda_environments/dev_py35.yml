@@ -26,3 +26,5 @@ dependencies:
 - numba=0.34.0.dev=np112py35_316
 - cmake=3.6.3=0
 - arrow-cpp=0.7.1
+- flex=2.6.4
+- bison=3.0.5

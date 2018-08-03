@@ -66,24 +66,20 @@ set(PARQUETCPP_SOURCE_DIR ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty
 find_package(Boost REQUIRED COMPONENTS regex)
 
 add_library(Apache::Thrift INTERFACE IMPORTED)
-target_include_directories(Apache::Thrift INTERFACE ${THRIFT_ROOT}/include)
-target_link_libraries(Apache::Thrift INTERFACE ${THRIFT_ROOT}/lib/libthrift.a)
+set_target_properties(Apache::Thrift
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${THRIFT_ROOT}/include)
+set_target_properties(Apache::Thrift
+    PROPERTIES INTERFACE_LINK_LIBRARIES ${THRIFT_ROOT}/lib/libthrift.a)
 
 add_library(Apache::Arrow INTERFACE IMPORTED)
-target_include_directories(Apache::Arrow INTERFACE ${ARROW_ROOT}/include)
-target_link_libraries(Apache::Arrow INTERFACE ${ARROW_ROOT}/lib/libarrow.a
-    ${BROTLI_STATIC_LIB_ENC}
-    ${BROTLI_STATIC_LIB_DEC}
-    ${BROTLI_STATIC_LIB_COMMON}
-    ${SNAPPY_STATIC_LIB}
-    ${ZLIB_STATIC_LIB}
-)
+set_target_properties(Apache::Arrow
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${ARROW_ROOT}/include)
+set_target_properties(Apache::Arrow
+    PROPERTIES INTERFACE_LINK_LIBRARIES "${ARROW_ROOT}/lib/libarrow.a;${BROTLI_STATIC_LIB_ENC};${BROTLI_STATIC_LIB_DEC};${BROTLI_STATIC_LIB_COMMON};${SNAPPY_STATIC_LIB};${ZLIB_STATIC_LIB}")
 
 add_library(Apache::ParquetCpp INTERFACE IMPORTED)
-target_include_directories(Apache::ParquetCpp INTERFACE ${PARQUETCPP_ROOT}/include ${PARQUETCPP_BINARY_DIR}/src ${PARQUETCPP_SOURCE_DIR}/src)
-target_link_libraries(Apache::ParquetCpp INTERFACE
-    ${PARQUETCPP_ROOT}/lib/libparquet.a
-    Apache::Arrow
-    Apache::Thrift
-    Boost::regex
-)
+set_target_properties(Apache::ParquetCpp
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+        "${PARQUETCPP_ROOT}/include;${PARQUETCPP_BINARY_DIR}/src;${PARQUETCPP_SOURCE_DIR}/src")
+set_target_properties(Apache::ParquetCpp
+    PROPERTIES INTERFACE_LINK_LIBRARIES "${PARQUETCPP_ROOT}/lib/libparquet.a;Apache::Arrow;Apache::Thrift;Boost::regex")
