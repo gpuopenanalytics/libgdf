@@ -45,7 +45,10 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
         const std::shared_ptr<parquet::RowGroupReader> row_group =
           reader->RowGroup(r);
 
-        std::int64_t                           values_read = 0;
+        std::int64_t levels_read;
+        std::int64_t values_read = 0;
+        std::int64_t nulls_count;
+
         int                                    i;
         std::shared_ptr<parquet::ColumnReader> column;
 
@@ -67,11 +70,15 @@ checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
             int64_t rows_read_total = 0;
             while (rows_read_total < amountToRead) {
                 int64_t rows_read =
-                        int32_reader->ReadBatch(amountToRead,
-                                                    dresult.data(),
-                                                    rresult.data(),
-                                                    (int32_t *) (&(valuesBuffer[rows_read_total])),
-                                                    &values_read
+                        int32_reader->ReadBatchSpaced(amountToRead,
+                                                      dresult.data(),
+                                                      rresult.data(),
+                                                      (int32_t *) (&(valuesBuffer[rows_read_total])),
+                                                      valid_bits.data(),
+                                                      0,
+                                                      &levels_read,
+                                                      &values_read,
+                                                      &nulls_count
                         );
                 std::cout << "rows_read: " << rows_read << std::endl;
                 rows_read_total += rows_read;
