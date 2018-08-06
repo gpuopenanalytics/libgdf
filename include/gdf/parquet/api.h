@@ -34,6 +34,6 @@ BEGIN_NAMESPACE_GDF_PARQUET
 extern "C" gdf_error
 read_parquet_file(const char *const  filename,
                   gdf_column **const out_gdf_columns,
-                  std::size_t *const out_gdf_columns_length);
+                  size_t *const out_gdf_columns_length);
 
 END_NAMESPACE_GDF_PARQUET
