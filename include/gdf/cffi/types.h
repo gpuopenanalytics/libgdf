@@ -30,6 +30,7 @@ typedef enum {
     GDF_JOIN_DTYPE_MISMATCH,
     GDF_JOIN_TOO_MANY_COLUMNS,
     GDF_UNSUPPORTED_METHOD,
+    GDF_IO_ERROR,
 } gdf_error;
 
 typedef enum {

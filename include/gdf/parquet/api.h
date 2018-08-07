@@ -31,9 +31,16 @@
 
 BEGIN_NAMESPACE_GDF_PARQUET
 
-extern "C" gdf_error
-read_parquet_file(const char *const  filename,
-                  gdf_column **const out_gdf_columns,
-                  size_t *const out_gdf_columns_length);
+/// \brief Read parquet file into array of gdf columns
+/// \param[in] filename path to parquet file
+/// \param[in] engine backend to use for reading
+/// \param[in] columns will be read from the file
+/// \param[out] out_gdf_columns array
+/// \param[out] out_gdf_columns_length number of columns
+extern "C" gdf_error read_parquet(const char *const        filename,
+                                  const char *const        engine,
+                                  const char *const *const columns,
+                                  gdf_column **const       out_gdf_columns,
+                                  size_t *const out_gdf_columns_length);
 
 END_NAMESPACE_GDF_PARQUET
