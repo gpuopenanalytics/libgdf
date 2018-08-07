@@ -49,54 +49,6 @@ PARQUET_PHYSICAL_TRAITS_FACTORY(FIXED_LEN_BYTE_ARRAY, invalid);
 
 #undef PARQUET_PHYSICAL_TRAITS_FACTORY
 
-template <::parquet::Type::type TYPE>
-static inline std::size_t
-_ReadBatch(const std::shared_ptr<::parquet::ColumnReader> &column_reader,
-           const std::size_t                               num_rows,
-           std::int16_t *const                             definition_levels,
-           std::int16_t *const                             repetition_levels,
-           const gdf_column &                              _gdf_column) {
-    const std::shared_ptr<
-      gdf::parquet::ColumnReader<::parquet::DataType<TYPE>>> &reader =
-      std::static_pointer_cast<
-        gdf::parquet::ColumnReader<::parquet::DataType<TYPE>>>(column_reader);
-
-    typedef typename ::parquet::type_traits<TYPE>::value_type value_type;
-
-    value_type *const values =
-      static_cast<value_type *const>(_gdf_column.data);
-    std::uint8_t *const valid_bits =
-      static_cast<std::uint8_t *const>(_gdf_column.valid);
-
-    static std::int64_t levels_read = 0;
-    static std::int64_t values_read = 0;
-    static std::int64_t nulls_count = 0;
-
-    static const std::size_t min_batch_size = 4096;
-    std::size_t              batch          = 0;
-    std::size_t              batch_actual   = 0;
-    std::size_t              batch_size     = 8;
-    std::size_t              total_read     = 0;
-    do {
-        batch = reader->ReadBatchSpaced(
-          batch_size,
-          definition_levels,
-          repetition_levels,
-          values + batch_actual,
-          valid_bits + static_cast<std::ptrdiff_t>(batch_actual / 8),
-          0,
-          &levels_read,
-          &values_read,
-          &nulls_count);
-        total_read += static_cast<std::size_t>(values_read);
-        batch_actual += batch;
-        batch_size = std::max(batch_size * 2, min_batch_size);
-    } while (batch > 0 || levels_read > 0);
-    DCHECK_GE(num_rows, total_read);
-
-    return total_read;
-}
-
 struct ParquetTypeHash {
     template <class T>
     std::size_t
@@ -190,11 +142,12 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
             switch (column_reader->type()) {
 #define WHEN(TYPE)                                                            \
     case ::parquet::Type::TYPE:                                               \
-        _ReadBatch<::parquet::Type::TYPE>(column_reader,                      \
-                                          num_rows,                           \
-                                          definition_levels,                  \
-                                          repetition_levels,                  \
-                                          _gdf_column);                       \
+        DCHECK_GE(                                                            \
+          num_rows,                                                           \
+          std::static_pointer_cast<gdf::parquet::ColumnReader<                \
+            ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader)       \
+            ->ToGdfColumn(                                                    \
+              definition_levels, repetition_levels, _gdf_column));            \
         break
                 WHEN(BOOLEAN);
                 WHEN(INT32);
@@ -323,7 +276,7 @@ _CreateGdfColumns(const std::size_t num_columns) try {
 
 class ColumnNames {
 public:
-    ColumnNames(const std::unique_ptr<FileReader> &file_reader) {
+    explicit ColumnNames(const std::unique_ptr<FileReader> &file_reader) {
         const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
           file_reader->metadata();
 
@@ -362,7 +315,7 @@ private:
 
 class ColumnFilter {
 public:
-    ColumnFilter(const char *const *const raw_names) {
+    explicit ColumnFilter(const char *const *const raw_names) {
         if (raw_names != nullptr) {
             for (const char *const *name_ptr = raw_names; *name_ptr != nullptr;
                  name_ptr++) {

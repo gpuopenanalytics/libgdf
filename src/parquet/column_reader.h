@@ -45,6 +45,10 @@ public:
     std::size_t ReadGdfColumn(std::size_t                  sizeToRead,
                               std::shared_ptr<gdf_column> *out);
 
+    std::size_t ToGdfColumn(std::int16_t *const definition_levels,
+                            std::int16_t *const repetition_levels,
+                            const gdf_column &  column);
+
 private:
     bool ReadNewPage() final;
 

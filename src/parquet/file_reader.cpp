@@ -24,10 +24,8 @@ namespace gdf {
 namespace parquet {
 
 std::unique_ptr<FileReader>
-FileReader::OpenFile(
-  const std::string &                             path,
-  const ::parquet::ReaderProperties &             properties,
-  const std::shared_ptr<::parquet::FileMetaData> &metadata) {
+FileReader::OpenFile(const std::string &                path,
+                     const ::parquet::ReaderProperties &properties) {
     FileReader *const reader = new FileReader();
     reader->parquetFileReader_.reset(new ::parquet::ParquetFileReader());
 

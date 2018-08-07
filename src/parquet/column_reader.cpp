@@ -409,6 +409,44 @@ ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
     return static_cast<std::size_t>(values_read);
 }
 
+template <class DataType>
+std::size_t
+ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels,
+                                    std::int16_t *const repetition_levels,
+                                    const gdf_column &  column) {
+    typename DataType::c_type *const values =
+      static_cast<typename DataType::c_type *const>(column.data);
+    std::uint8_t *const valid_bits = static_cast<std::uint8_t *>(column.valid);
+
+    static std::int64_t levels_read = 0;
+    static std::int64_t values_read = 0;
+    static std::int64_t nulls_count = 0;
+
+    static const std::size_t min_batch_size = 4096;
+    std::size_t              batch          = 0;
+    std::size_t              batch_actual   = 0;
+    std::size_t              batch_size     = 8;
+    std::size_t              total_read     = 0;
+
+    do {
+        batch = ReadBatchSpaced(
+          batch_size,
+          definition_levels,
+          repetition_levels,
+          values + batch_actual,
+          valid_bits + static_cast<std::ptrdiff_t>(batch_actual / 8),
+          0,
+          &levels_read,
+          &values_read,
+          &nulls_count);
+        total_read += static_cast<std::size_t>(values_read);
+        batch_actual += batch;
+        batch_size = std::max(batch_size * 2, min_batch_size);
+    } while (batch > 0 || levels_read > 0);
+
+    return total_read;
+}
+
 template class ColumnReader<::parquet::BooleanType>;
 template class ColumnReader<::parquet::Int32Type>;
 template class ColumnReader<::parquet::Int64Type>;

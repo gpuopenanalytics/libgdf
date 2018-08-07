@@ -95,7 +95,7 @@ SingleColumnFileTest<DataType>::GenerateFile() {
           static_cast<::parquet::TypedColumnWriter<DataType> *>(
             row_group_writer->NextColumn());
         std::int16_t repetition_level = 0;
-        for (std::int64_t i = 0; i < kRowsPerGroup; i++) {
+        for (std::size_t i = 0; i < kRowsPerGroup; i++) {
             std::int64_t value            = GenerateValue(i);
             std::int16_t definition_level = i % 2 ? 1 : 0;
             writer->WriteBatch(

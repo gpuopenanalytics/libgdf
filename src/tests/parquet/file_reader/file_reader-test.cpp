@@ -56,17 +56,16 @@ checkRowGroup(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
       static_cast<gdf::parquet::BoolReader *>(column.get());
     i = 0;
     while (bool_reader->HasNext()) {
-        bool         value;
-        std::int64_t rows_read =
-          bool_reader->ReadBatchSpaced(1,
-                                       &definition_level,
-                                       &repetition_level,
-                                       &value,
-                                       &valid_bits,
-                                       0,
-                                       &levels_read,
-                                       &values_read,
-                                       &nulls_count);
+        bool value;
+        bool_reader->ReadBatchSpaced(1,
+                                     &definition_level,
+                                     &repetition_level,
+                                     &value,
+                                     &valid_bits,
+                                     0,
+                                     &levels_read,
+                                     &values_read,
+                                     &nulls_count);
         bool expected = (i % 2) == 0;
         EXPECT_EQ(expected, value);
         i++;
@@ -78,16 +77,15 @@ checkRowGroup(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
     i = 0;
     while (int64_reader->HasNext()) {
         std::int64_t value;
-        std::int64_t rows_read =
-          int64_reader->ReadBatchSpaced(1,
-                                        &definition_level,
-                                        &repetition_level,
-                                        &value,
-                                        &valid_bits,
-                                        0,
-                                        &levels_read,
-                                        &values_read,
-                                        &nulls_count);
+        int64_reader->ReadBatchSpaced(1,
+                                      &definition_level,
+                                      &repetition_level,
+                                      &value,
+                                      &valid_bits,
+                                      0,
+                                      &levels_read,
+                                      &values_read,
+                                      &nulls_count);
         std::int64_t expected = static_cast<std::int64_t>(i) * 1000000000000;
         EXPECT_EQ(expected, value);
         i++;
@@ -98,17 +96,16 @@ checkRowGroup(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
       static_cast<gdf::parquet::DoubleReader *>(column.get());
     i = 0;
     while (double_reader->HasNext()) {
-        double       value;
-        std::int64_t rows_read =
-          double_reader->ReadBatchSpaced(1,
-                                         &definition_level,
-                                         &repetition_level,
-                                         &value,
-                                         &valid_bits,
-                                         0,
-                                         &levels_read,
-                                         &values_read,
-                                         &nulls_count);
+        double value;
+        double_reader->ReadBatchSpaced(1,
+                                       &definition_level,
+                                       &repetition_level,
+                                       &value,
+                                       &valid_bits,
+                                       0,
+                                       &levels_read,
+                                       &values_read,
+                                       &nulls_count);
         double expected = i * 0.001;
         EXPECT_EQ(expected, value);
         i++;
