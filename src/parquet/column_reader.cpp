@@ -33,7 +33,7 @@ _ConfigureDictionary(
   ::arrow::MemoryPool *const                             pool,
   DecoderType **                                         out_decoder) {
     const ::parquet::DictionaryPage *dictionary_page =
-      static_cast<const ::parquet::DictionaryPage *>(page);
+      dynamic_cast<const ::parquet::DictionaryPage *>(page);
 
     int encoding = static_cast<int>(dictionary_page->encoding());
     if (dictionary_page->encoding() == ::parquet::Encoding::PLAIN_DICTIONARY
@@ -264,18 +264,18 @@ _ReadValuesSpaced(DecoderType * decoder,
 template <typename DataType>
 inline std::int64_t
 ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
-                                        std::int16_t *def_levels,
-                                        std::int16_t *rep_levels,
+                                        std::int16_t *definition_levels,
+                                        std::int16_t *repetition_levels,
                                         T *           values,
                                         std::uint8_t *valid_bits,
                                         std::int64_t  valid_bits_offset,
                                         std::int64_t *levels_read,
                                         std::int64_t *values_read,
-                                        std::int64_t *null_count_out) {
+                                        std::int64_t *nulls_count) {
     if (!HasNext()) {
-        *levels_read    = 0;
-        *values_read    = 0;
-        *null_count_out = 0;
+        *levels_read = 0;
+        *values_read = 0;
+        *nulls_count = 0;
         return 0;
     }
 
@@ -285,11 +285,11 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
 
     if (descr_->max_definition_level() > 0) {
         std::int64_t num_def_levels =
-          ReadDefinitionLevels(batch_size, def_levels);
+          ReadDefinitionLevels(batch_size, definition_levels);
 
         if (descr_->max_repetition_level() > 0) {
             std::int64_t num_rep_levels =
-              ReadRepetitionLevels(batch_size, rep_levels);
+              ReadRepetitionLevels(batch_size, repetition_levels);
             if (num_def_levels != num_rep_levels) {
                 throw ::parquet::ParquetException(
                   "Number of decoded rep / def levels did not match");
@@ -302,7 +302,7 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
         if (!has_spaced_values) {
             int values_to_read = 0;
             for (std::int64_t i = 0; i < num_def_levels; ++i) {
-                if (def_levels[i] == descr_->max_definition_level()) {
+                if (definition_levels[i] == descr_->max_definition_level()) {
                     ++values_to_read;
                 }
             }
@@ -315,7 +315,7 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
         } else {
             std::int16_t max_definition_level = descr_->max_definition_level();
             std::int16_t max_repetition_level = descr_->max_repetition_level();
-            _DefinitionLevelsToBitmap(def_levels,
+            _DefinitionLevelsToBitmap(definition_levels,
                                       num_def_levels,
                                       max_definition_level,
                                       max_repetition_level,
@@ -330,16 +330,16 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
                                              valid_bits,
                                              valid_bits_offset);
         }
-        *levels_read    = num_def_levels;
-        *null_count_out = null_count;
+        *levels_read = num_def_levels;
+        *nulls_count = null_count;
 
     } else {
         total_values = _ReadValues(current_decoder_, batch_size, values);
         for (std::int64_t i = 0; i < total_values; i++) {
             ::arrow::BitUtil::SetBit(valid_bits, valid_bits_offset + i);
         }
-        *null_count_out = 0;
-        *levels_read    = total_values;
+        *nulls_count = 0;
+        *levels_read = total_values;
     }
 
     ConsumeBufferedValues(*levels_read);
@@ -364,50 +364,8 @@ TYPE_TRAITS_FACTORY(::parquet::FloatType, GDF_FLOAT32);
 TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
 TYPE_TRAITS_FACTORY(::parquet::ByteArrayType, GDF_invalid);
 TYPE_TRAITS_FACTORY(::parquet::FLBAType, GDF_invalid);
+
 #undef TYPE_TRAITS_FACTORY
-
-template <class DataType>
-std::size_t
-ColumnReader<DataType>::ReadGdfColumn(std::size_t values_to_read,
-                                      std::shared_ptr<gdf_column> *out) {
-    constexpr std::size_t type_size = static_cast<std::size_t>(
-      ::parquet::type_traits<DataType::type_num>::value_byte_size);
-
-    std::int16_t *definition_levels = new std::int16_t[values_to_read];
-    std::int16_t *repetition_levels = new std::int16_t[values_to_read];
-
-    gdf_column *column = new gdf_column;
-
-    column->data = new std::uint8_t[type_size * values_to_read];
-
-    std::size_t bitmap_length = ::arrow::BitUtil::BytesForBits(values_to_read);
-
-    column->valid = new std::uint8_t[bitmap_length];
-
-    std::int64_t values_read;
-    std::int64_t levels_read;
-    std::int64_t null_count;
-
-    ReadBatchSpaced(static_cast<std::int64_t>(values_to_read),
-                    definition_levels,
-                    repetition_levels,
-                    static_cast<T *>(column->data),
-                    static_cast<std::uint8_t *>(column->valid),
-                    0,
-                    &levels_read,
-                    &values_read,
-                    &null_count);
-
-    column->size  = static_cast<gdf_size_type>(values_read);
-    column->dtype = ParquetTraits<DataType>::gdfDType;
-
-    out->reset(column);
-
-    delete[] definition_levels;
-    delete[] repetition_levels;
-
-    return static_cast<std::size_t>(values_read);
-}
 
 template <class DataType>
 std::size_t
