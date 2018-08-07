@@ -46,7 +46,13 @@ inline static void
 readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
     const std::shared_ptr<::parquet::RowGroupReader> row_group =
       reader->RowGroup(0);
+
+    std::int16_t definition_level;
+    std::int16_t repetition_level;
+    std::uint8_t valid_bits;
+    std::int64_t levels_read;
     std::int64_t values_read = 0;
+    std::int64_t nulls_count;
 
     std::shared_ptr<parquet::ColumnReader> column;
 
@@ -55,7 +61,15 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
       static_cast<typename Readers<T>::BoolReader *>(column.get());
     while (bool_reader->HasNext()) {
         bool value;
-        bool_reader->ReadBatch(1, nullptr, nullptr, &value, &values_read);
+        bool_reader->ReadBatchSpaced(1,
+                                     &definition_level,
+                                     &repetition_level,
+                                     &value,
+                                     &valid_bits,
+                                     0,
+                                     &levels_read,
+                                     &values_read,
+                                     &nulls_count);
     }
 
     column = row_group->Column(1);
@@ -63,10 +77,15 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
       static_cast<typename Readers<T>::Int64Reader *>(column.get());
     while (int64_reader->HasNext()) {
         std::int64_t value;
-        std::int16_t definition_level;
-        std::int16_t repetition_level;
-        int64_reader->ReadBatch(
-          1, &definition_level, &repetition_level, &value, &values_read);
+        int64_reader->ReadBatchSpaced(1,
+                                      &definition_level,
+                                      &repetition_level,
+                                      &value,
+                                      &valid_bits,
+                                      0,
+                                      &levels_read,
+                                      &values_read,
+                                      &nulls_count);
     }
 
     column = row_group->Column(2);
@@ -74,7 +93,15 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
       static_cast<typename Readers<T>::DoubleReader *>(column.get());
     while (double_reader->HasNext()) {
         double value;
-        double_reader->ReadBatch(1, nullptr, nullptr, &value, &values_read);
+        double_reader->ReadBatchSpaced(1,
+                                       &definition_level,
+                                       &repetition_level,
+                                       &value,
+                                       &valid_bits,
+                                       0,
+                                       &levels_read,
+                                       &values_read,
+                                       &nulls_count);
     }
 }
 

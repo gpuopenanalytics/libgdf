@@ -67,8 +67,6 @@ checkRowGroup(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
                                        &levels_read,
                                        &values_read,
                                        &nulls_count);
-        EXPECT_EQ(1, rows_read);
-        EXPECT_EQ(0, values_read);
         bool expected = (i % 2) == 0;
         EXPECT_EQ(expected, value);
         i++;
@@ -90,11 +88,8 @@ checkRowGroup(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
                                         &levels_read,
                                         &values_read,
                                         &nulls_count);
-        EXPECT_EQ(1, rows_read);
-        EXPECT_EQ(1, values_read);
         std::int64_t expected = static_cast<std::int64_t>(i) * 1000000000000;
         EXPECT_EQ(expected, value);
-        EXPECT_EQ(static_cast<std::int16_t>((i % 2) == 0), repetition_level);
         i++;
     }
 
@@ -114,8 +109,6 @@ checkRowGroup(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
                                          &levels_read,
                                          &values_read,
                                          &nulls_count);
-        EXPECT_EQ(1, rows_read);
-        EXPECT_EQ(1, values_read);
         double expected = i * 0.001;
         EXPECT_EQ(expected, value);
         i++;
@@ -128,27 +121,4 @@ TEST(FileReaderTest, Read) {
 
     checkMetadata(reader->metadata());
     checkRowGroup(reader);
-}
-
-TEST(FileReaderTest, GdfColumn) {
-    std::unique_ptr<gdf::parquet::FileReader> reader =
-      gdf::parquet::FileReader::OpenFile(PARQUET_FILE_PATH);
-
-    std::shared_ptr<gdf::parquet::Int64Reader> column_reader =
-      std::static_pointer_cast<gdf::parquet::Int64Reader>(
-        reader->RowGroup(0)->Column(1));
-
-    ASSERT_TRUE(column_reader->HasNext());
-
-    std::shared_ptr<gdf_column> column;
-    std::size_t values_read = column_reader->ReadGdfColumn(20, &column);
-
-    ASSERT_TRUE(static_cast<bool>(column));
-    EXPECT_EQ(20, values_read);
-
-    for (std::size_t i = 0; i < 20; i++) {
-        std::int64_t expected = static_cast<std::int64_t>(i) * 1000000000000;
-        std::int64_t value    = static_cast<std::int64_t *>(column->data)[i];
-        EXPECT_EQ(expected, value);
-    }
 }

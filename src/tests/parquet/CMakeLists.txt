@@ -36,15 +36,14 @@ file(MAKE_DIRECTORY ${BENCHMARK_ROOT}/lib)
 
 add_library(Google::Benchmark INTERFACE IMPORTED)
 add_dependencies(Google::Benchmark benchmark_ep)
-target_include_directories(Google::Benchmark INTERFACE
-    ${BENCHMARK_ROOT}/include)
-target_link_libraries(Google::Benchmark INTERFACE
-	${BENCHMARK_ROOT}/lib/libbenchmark.a)
+set_target_properties(Google::Benchmark
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${BENCHMARK_ROOT}/include)
+set_target_properties(Google::Benchmark
+    PROPERTIES INTERFACE_LINK_LIBRARIES ${BENCHMARK_ROOT}/lib/libbenchmark.a)
 
 add_library(Google::Benchmark::Main INTERFACE IMPORTED)
-target_link_libraries(Google::Benchmark::Main INTERFACE
-    Google::Benchmark
-    ${BENCHMARK_ROOT}/lib/libbenchmark_main.a)
+set_target_properties(Google::Benchmark::Main
+    PROPERTIES INTERFACE_LINK_LIBRARIES ${BENCHMARK_ROOT}/lib/libbenchmark_main.a)
 endif()
 
 set(file_reader_SRCS
