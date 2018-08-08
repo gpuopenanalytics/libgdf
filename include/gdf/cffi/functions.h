@@ -321,8 +321,15 @@ gdf_error gdf_extract_datetime_minute(gdf_column *input, gdf_column *output);
 gdf_error gdf_extract_datetime_second(gdf_column *input, gdf_column *output);
 
 
-/* binary operators */
+/**
+ * Binary Operations
+ */
+gdf_error gdf_scalar_operation(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope);
 
+gdf_error gdf_vector_operation(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope);
+
+
+/* binary operators */
 /* arith */
 
 gdf_error gdf_add_generic(gdf_column *lhs, gdf_column *rhs, gdf_column *output);

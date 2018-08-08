@@ -71,6 +71,45 @@ typedef enum {
   N_GDF_AGG_OPS, /* additional aggregation ops should go BEFORE N_GDF_... */
 } gdf_agg_op;
 
+
+enum gdf_binary_operator {
+    GDF_ADD,
+    GDF_SUB,
+    GDF_MUL,
+    GDF_DIV,
+    GDF_TRUE_DIV,
+    GDF_FLOOR_DIV,
+    GDF_MOD,
+    GDF_POW,
+    //GDF_COMBINE,
+    //GDF_COMBINE_FIRST,
+    //GDF_ROUND,
+    GDF_EQUAL,
+    GDF_NOT_EQUAL,
+    GDF_LESS,
+    GDF_GREATER,
+    GDF_LESS_EQUAL,
+    GDF_GREATER_EQUAL,
+    //GDF_PRODUCT,
+    //GDF_DOT
+};
+
+
+struct gdf_scalar {
+    union gdf_data {
+        std::int8_t  si08;
+        std::int16_t si16;
+        std::int32_t si32;
+        std::int64_t si64;
+        float        fp32;
+        double       fp64;
+    };
+
+    gdf_data  data;
+    gdf_dtype type;
+};
+
+
 /* additonal flags */
 typedef struct gdf_context_{
   int flag_sorted;        /* 0 = No, 1 = yes */

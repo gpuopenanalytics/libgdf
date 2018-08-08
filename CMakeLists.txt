@@ -73,6 +73,7 @@ else()
 endif()
 
 include_directories(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cub"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/moderngpu/src"
@@ -107,6 +108,12 @@ if(HT_LEGACY_ALLOCATOR)
 endif()
 
 
+## Binary Operators
+add_subdirectory(src/binary)
+get_directory_property(gdfs_source_files DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/binary DEFINITION gdfs_source_files)
+##
+
+
 cuda_add_library(gdf SHARED
     src/binaryops.cu
     src/column.cpp
@@ -121,6 +128,7 @@ cuda_add_library(gdf SHARED
     src/segmented_sorting.cu
     src/datetimeops.cu
     src/sqls_ops.cu
+    ${gdfs_source_files}
 )
 
 target_link_libraries(gdf arrow)
