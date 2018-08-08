@@ -33,7 +33,7 @@ _ConfigureDictionary(
   ::arrow::MemoryPool *const                             pool,
   DecoderType **                                         out_decoder) {
     const ::parquet::DictionaryPage *dictionary_page =
-      dynamic_cast<const ::parquet::DictionaryPage *>(page);
+      static_cast<const ::parquet::DictionaryPage *>(page);
 
     int encoding = static_cast<int>(dictionary_page->encoding());
     if (dictionary_page->encoding() == ::parquet::Encoding::PLAIN_DICTIONARY
@@ -53,20 +53,14 @@ _ConfigureDictionary(
         dictionary.SetData(
           dictionary_page->num_values(), page->data(), page->size());
 
-        if (DataType::type_num == ::parquet::Int32Type::type_num) {
-            auto decoder = std::make_shared<
-              internal::DictionaryDecoder<DataType,
-                                          gdf::arrow::internal::RleDecoder>>(
-              column_descriptor, pool);
-            decoder->SetDict(&dictionary);
-            decoders[encoding] = decoder;
-        } else {
-            auto decoder = std::make_shared<
-              internal::DictionaryDecoder<DataType, ::arrow::RleDecoder>>(
-              column_descriptor, pool);
-            decoder->SetDict(&dictionary);
-            decoders[encoding] = decoder;
-        }
+        auto decoder = std::make_shared<internal::DictionaryDecoder<
+          DataType,
+          typename std::conditional<
+            std::is_same<DataType, ::parquet::Int32Type>::value,
+            gdf::arrow::internal::RleDecoder,
+            ::arrow::RleDecoder>::type>>(column_descriptor, pool);
+        decoder->SetDict(&dictionary);
+        decoders[encoding] = decoder;
     } else {
         ::parquet::ParquetException::NYI(
           "only plain dictionary encoding has been implemented");

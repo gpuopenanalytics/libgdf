@@ -28,7 +28,7 @@ namespace parquet {
 template <class DataType>
 class ColumnReader : public ::parquet::ColumnReader {
 public:
-    typedef typename DataType::c_type T;
+    using T = typename DataType::c_type;
 
     bool HasNext();
 
@@ -49,7 +49,8 @@ public:
 private:
     bool ReadNewPage() final;
 
-    typedef ::parquet::Decoder<DataType>                  DecoderType;
+    using DecoderType = ::parquet::Decoder<DataType>;
+
     std::unordered_map<int, std::shared_ptr<DecoderType>> decoders_;
     DecoderType *                                         current_decoder_;
 };
