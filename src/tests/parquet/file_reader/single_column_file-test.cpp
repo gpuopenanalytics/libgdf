@@ -33,13 +33,17 @@
 #include "column_reader.h"
 #include "file_reader.h"
 
+#include <gdf/gdf.h>
+
 template <class DataType>
 class SingleColumnFileTest : public ::testing::Test {
 protected:
+    using TYPE = typename DataType::c_type;
+
     SingleColumnFileTest();
 
-    void         GenerateFile();
-    std::int64_t GenerateValue(std::size_t i);
+    void GenerateFile();
+    TYPE GenerateValue(std::size_t i);
 
     virtual void SetUp() override;
     virtual void TearDown() override;
@@ -52,7 +56,12 @@ private:
     std::shared_ptr<::parquet::schema::GroupNode> CreateSchema();
 };
 
-TYPED_TEST_CASE(SingleColumnFileTest, ::testing::Types<::parquet::Int64Type>);
+using Types = ::testing::Types<::parquet::BooleanType,
+                               ::parquet::Int32Type,
+                               ::parquet::Int64Type,
+                               ::parquet::FloatType,
+                               ::parquet::DoubleType>;
+TYPED_TEST_CASE(SingleColumnFileTest, Types);
 
 template <class DataType>
 void
@@ -95,8 +104,8 @@ SingleColumnFileTest<DataType>::GenerateFile() {
           static_cast<::parquet::TypedColumnWriter<DataType> *>(
             row_group_writer->NextColumn());
         std::int16_t repetition_level = 0;
-        for (std::int64_t i = 0; i < kRowsPerGroup; i++) {
-            std::int64_t value            = GenerateValue(i);
+        for (std::size_t i = 0; i < kRowsPerGroup; i++) {
+            TYPE         value            = GenerateValue(i);
             std::int16_t definition_level = i % 2 ? 1 : 0;
             writer->WriteBatch(
               1, &definition_level, &repetition_level, &value);
@@ -110,9 +119,9 @@ SingleColumnFileTest<DataType>::GenerateFile() {
     }
 }
 
-template <class DatatType>
+template <class DataType>
 std::shared_ptr<::parquet::schema::GroupNode>
-SingleColumnFileTest<DatatType>::CreateSchema() {
+SingleColumnFileTest<DataType>::CreateSchema() {
     return std::static_pointer_cast<::parquet::schema::GroupNode>(
       ::parquet::schema::GroupNode::Make(
         "schema",
@@ -120,14 +129,14 @@ SingleColumnFileTest<DatatType>::CreateSchema() {
         ::parquet::schema::NodeVector{::parquet::schema::PrimitiveNode::Make(
           "field",
           ::parquet::Repetition::OPTIONAL,
-          DatatType::type_num,
+          DataType::type_num,
           ::parquet::LogicalType::NONE)}));
 }
 
-template <class DatatType>
-std::int64_t
-SingleColumnFileTest<DatatType>::GenerateValue(std::size_t i) {
-    return static_cast<std::int64_t>(i) * 1000000000000;
+template <class DataType>
+typename SingleColumnFileTest<DataType>::TYPE
+SingleColumnFileTest<DataType>::GenerateValue(std::size_t i) {
+    return static_cast<TYPE>(i) * 1000000000000;
 }
 
 TYPED_TEST(SingleColumnFileTest, ReadAll) {
@@ -135,22 +144,37 @@ TYPED_TEST(SingleColumnFileTest, ReadAll) {
       gdf::parquet::FileReader::OpenFile(this->filename);
 
     std::shared_ptr<gdf::parquet::ColumnReader<TypeParam>> column_reader =
-      std::static_pointer_cast<gdf::parquet::Int64Reader>(
+      std::static_pointer_cast<gdf::parquet::ColumnReader<TypeParam>>(
         reader->RowGroup(0)->Column(0));
 
     ASSERT_TRUE(column_reader->HasNext());
 
-    std::size_t                 rowsPerGroup = this->kRowsPerGroup;
-    std::shared_ptr<gdf_column> column;
-    std::size_t                 values_read =
-      column_reader->ReadGdfColumn(rowsPerGroup, &column);
+    using value_type = typename TypeParam::c_type;
 
-    ASSERT_TRUE(static_cast<bool>(column));
-    EXPECT_EQ(rowsPerGroup, values_read);
+    const std::size_t rowsPerGroup = this->kRowsPerGroup;
+
+    gdf_column column{
+      .data       = new std::uint8_t[rowsPerGroup * sizeof(value_type)],
+      .valid      = new std::uint8_t[rowsPerGroup],
+      .size       = 0,
+      .dtype      = GDF_invalid,
+      .null_count = 0,
+      .dtype_info = {},
+    };
+    std::int16_t definition_levels[rowsPerGroup];
+    std::int16_t repetition_levels[rowsPerGroup];
+
+    const std::size_t total_read =
+      column_reader->ToGdfColumn(definition_levels, repetition_levels, column);
+
+    EXPECT_EQ(rowsPerGroup, total_read);
 
     for (std::size_t i = 0; i < rowsPerGroup; i++) {
-        std::int64_t expected = this->GenerateValue(i);
-        std::int64_t value    = static_cast<std::int64_t *>(column->data)[i];
+        value_type   expected = this->GenerateValue(i);
+        std::int64_t value    = static_cast<value_type *>(column.data)[i];
         if (i % 2) { EXPECT_EQ(expected, value); }
     }
+
+    delete[] static_cast<std::uint8_t *>(column.data);
+    delete[] column.valid;
 }

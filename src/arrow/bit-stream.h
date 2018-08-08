@@ -123,6 +123,45 @@ namespace arrow {
             int bit_offset_; // Offset in buffered_values_
         };
 
+
+
+        template <typename T>
+        inline void GetValue_(int num_bits, T* v, int max_bytes, const uint8_t* buffer,
+                            int* bit_offset, int* byte_offset, uint64_t* buffered_values) {
+            #ifdef _MSC_VER
+            #pragma warning(push)
+            #pragma warning(disable : 4800)
+            #endif
+            *v = static_cast<T>(::arrow::BitUtil::TrailingBits(*buffered_values, *bit_offset + num_bits) >>
+                                *bit_offset);
+            #ifdef _MSC_VER
+            #pragma warning(pop)
+            #endif
+            *bit_offset += num_bits;
+            if (*bit_offset >= 64) {
+                *byte_offset += 8;
+                *bit_offset -= 64;
+
+                int bytes_remaining = max_bytes - *byte_offset;
+                if (ARROW_PREDICT_TRUE(bytes_remaining >= 8)) {
+                memcpy(buffered_values, buffer + *byte_offset, 8);
+                } else {
+                memcpy(buffered_values, buffer + *byte_offset, bytes_remaining);
+                }
+            #ifdef _MSC_VER
+            #pragma warning(push)
+            #pragma warning(disable : 4800 4805)
+            #endif
+                // Read bits of v that crossed into new buffered_values_
+                *v = *v | static_cast<T>(::arrow::BitUtil::TrailingBits(*buffered_values, *bit_offset)
+                                        << (num_bits - *bit_offset));
+            #ifdef _MSC_VER
+            #pragma warning(pop)
+            #endif
+                DCHECK_LE(*bit_offset, 64);
+            }
+        }
+
         template <typename T>
         inline bool BitReader::GetValue(int num_bits, T* v)
         {
@@ -233,7 +272,7 @@ namespace arrow {
             int i = 0;
             if (ARROW_PREDICT_FALSE(bit_offset != 0)) {
                 for (; i < batch_size && bit_offset != 0; ++i) {
-                    ::arrow::detail::GetValue_(num_bits, &v[i], max_bytes, buffer,
+                    GetValue_(num_bits, &v[i], max_bytes, buffer,
                         &bit_offset, &byte_offset, &buffered_values);
                 }
             }
@@ -277,7 +316,7 @@ namespace arrow {
                 memcpy(&buffered_values, buffer + byte_offset, bytes_remaining);
             }
             for (; i < batch_size; ++i) {
-                ::arrow::detail::GetValue_(num_bits, &v[i], max_bytes, buffer, &bit_offset,
+                GetValue_(num_bits, &v[i], max_bytes, buffer, &bit_offset,
                     &byte_offset, &buffered_values);
             }
             bit_offset_ = bit_offset;

@@ -64,8 +64,8 @@ inline int
 DecodePlain(const std::uint8_t *data,
             std::int64_t        data_size,
             int                 num_values,
-            int                 type_length,
-            T *                 out) {
+            int,
+            T *out) {
     int bytes_to_decode = num_values * static_cast<int>(sizeof(T));
     if (data_size < bytes_to_decode) {
         ::parquet::ParquetException::EofException();
@@ -76,10 +76,10 @@ DecodePlain(const std::uint8_t *data,
 
 template <>
 inline int
-DecodePlain<::parquet::ByteArray>(const std::uint8_t *  data,
-                                  std::int64_t          data_size,
-                                  int                   num_values,
-                                  int                   type_length,
+DecodePlain<::parquet::ByteArray>(const std::uint8_t *data,
+                                  std::int64_t        data_size,
+                                  int                 num_values,
+                                  int,
                                   ::parquet::ByteArray *out) {
     int bytes_decoded = 0;
     int increment;

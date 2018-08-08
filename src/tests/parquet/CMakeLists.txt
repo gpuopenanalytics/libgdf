@@ -61,26 +61,21 @@ set(file_reader_SRCS
 function(GDF_ADD_PARQUET_BENCHMARK TARGET)
     if(GDF_BENCHMARK)
         list(REMOVE_AT ARGV 0)
-        cuda_add_executable(${TARGET} ${ARGV} ${file_reader_SRCS})
+        cuda_add_executable(${TARGET} ${ARGV}   )
         target_include_directories(${TARGET}
             PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
         target_link_libraries(${TARGET}
             Google::Benchmark Google::Benchmark::Main
-            Threads::Threads Apache::ParquetCpp)
+            Threads::Threads gdf-parquet)
     endif()
 endfunction()
 
 function(GDF_ADD_PARQUET_TEST TARGET)
     list(REMOVE_AT ARGV 0)
-    cuda_add_executable(${TARGET} ${ARGV} ${file_reader_SRCS})
+    cuda_add_executable(${TARGET} ${ARGV})
     target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
-    target_link_libraries(${TARGET} GTest::GTest GTest::Main Apache::ParquetCpp)
+    target_link_libraries(${TARGET} GTest::GTest GTest::Main gdf-parquet)
     get_property(ARGN TARGET ${TARGET} PROPERTY SOURCES)
-    foreach(FILE ${ARGN})
-        if(${FILE} MATCHES ".*\\.cu\\.o")
-            list(REMOVE_ITEM ARGN ${FILE})
-        endif()
-    endforeach()
     gtest_add_tests(${TARGET} "" ${ARGN})
 endfunction()
 

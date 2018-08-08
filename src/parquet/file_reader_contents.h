@@ -24,7 +24,7 @@ namespace internal {
 class FileReaderContents : public ::parquet::ParquetFileReader::Contents {
 public:
     FileReaderContents(std::unique_ptr<::parquet::RandomAccessSource> source,
-                       const ::parquet::ReaderProperties &propertiess =
+                       const ::parquet::ReaderProperties &properties =
                          ::parquet::default_reader_properties());
 
     ~FileReaderContents() final;

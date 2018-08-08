@@ -28,27 +28,29 @@ namespace parquet {
 template <class DataType>
 class ColumnReader : public ::parquet::ColumnReader {
 public:
-    typedef typename DataType::c_type T;
+    using T = typename DataType::c_type;
 
     bool HasNext();
 
     std::int64_t ReadBatchSpaced(std::int64_t  batch_size,
-                                 std::int16_t *def_levels,
-                                 std::int16_t *rep_levels,
+                                 std::int16_t *definition_levels,
+                                 std::int16_t *repetition_levels,
                                  T *           values,
                                  std::uint8_t *valid_bits,
                                  std::int64_t  valid_bits_offset,
                                  std::int64_t *levels_read,
                                  std::int64_t *values_read,
-                                 std::int64_t *null_count);
+                                 std::int64_t *nulls_count);
 
-    std::size_t ReadGdfColumn(std::size_t                  sizeToRead,
-                              std::shared_ptr<gdf_column> *out);
+    std::size_t ToGdfColumn(std::int16_t *const definition_levels,
+                            std::int16_t *const repetition_levels,
+                            const gdf_column &  column);
 
 private:
     bool ReadNewPage() final;
 
-    typedef ::parquet::Decoder<DataType>                  DecoderType;
+    using DecoderType = ::parquet::Decoder<DataType>;
+
     std::unordered_map<int, std::shared_ptr<DecoderType>> decoders_;
     DecoderType *                                         current_decoder_;
 };

@@ -25,11 +25,10 @@ namespace parquet {
 
 class FileReader {
 public:
-    static std::unique_ptr<FileReader> OpenFile(
-      const std::string &                path,
-      const ::parquet::ReaderProperties &properties =
-        ::parquet::default_reader_properties(),
-      const std::shared_ptr<::parquet::FileMetaData> &metadata = nullptr);
+    static std::unique_ptr<FileReader>
+    OpenFile(const std::string &                path,
+             const ::parquet::ReaderProperties &properties =
+               ::parquet::default_reader_properties());
 
     std::shared_ptr<::parquet::RowGroupReader> RowGroup(int i);
     std::shared_ptr<::parquet::FileMetaData>   metadata() const;

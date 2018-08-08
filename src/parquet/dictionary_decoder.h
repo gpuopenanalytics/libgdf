@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include "arrow/util/rle-encoding.h"
 #include "../arrow/rle_decoder.h"
+#include "arrow/util/rle-encoding.h"
 
 namespace parquet {
 class ColumnDescriptor;
@@ -93,7 +93,8 @@ private:
 
 template <typename Type, typename RleDecoder>
 inline void
-DictionaryDecoder<Type, RleDecoder>::SetDict(::parquet::Decoder<Type> *dictionary) {
+DictionaryDecoder<Type, RleDecoder>::SetDict(
+  ::parquet::Decoder<Type> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
     dictionary_.Resize(num_dictionary_values);
     dictionary->Decode(&dictionary_[0], num_dictionary_values);
@@ -102,7 +103,7 @@ DictionaryDecoder<Type, RleDecoder>::SetDict(::parquet::Decoder<Type> *dictionar
 template <>
 inline void
 DictionaryDecoder<::parquet::BooleanType, ::arrow::RleDecoder>::SetDict(
-  ::parquet::Decoder<::parquet::BooleanType> *dictionary) {
+  ::parquet::Decoder<::parquet::BooleanType> *) {
     ::parquet::ParquetException::NYI(
       "Dictionary encoding is not implemented for boolean values");
 }
