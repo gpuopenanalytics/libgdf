@@ -54,11 +54,7 @@ _ConfigureDictionary(
           dictionary_page->num_values(), page->data(), page->size());
 
         auto decoder = std::make_shared<internal::DictionaryDecoder<
-          DataType,
-          typename std::conditional<
-            std::is_same<DataType, ::parquet::Int32Type>::value,
-            gdf::arrow::internal::RleDecoder,
-            ::arrow::RleDecoder>::type>>(column_descriptor, pool);
+          DataType,gdf::arrow::internal::RleDecoder>>(column_descriptor, pool);
         decoder->SetDict(&dictionary);
         decoders[encoding] = decoder;
     } else {

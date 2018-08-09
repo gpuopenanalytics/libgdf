@@ -16,7 +16,7 @@
 #=============================================================================
 
 set(PARQUET_FILE_FOR_DECODING_PATH
-    ${CMAKE_SOURCE_DIR}/src/tests/parquet/decoding/file_for_decoding.parquet)
+    ${CMAKE_SOURCE_DIR}/src/tests/parquet/decoding/parquet_gdf.parquet)
 
 GDF_ADD_PARQUET_TEST(decoding-test decoding-test.cpp)
 

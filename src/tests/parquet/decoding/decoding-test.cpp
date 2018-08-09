@@ -25,7 +25,6 @@
 #include "column_reader.h"
 #include "file_reader.h"
 
-
 static constexpr int NUM_ROWS_PER_ROW_GROUP = 500;
 
 #ifndef PARQUET_FILE_FOR_DECODING_PATH
@@ -34,110 +33,320 @@ static constexpr int NUM_ROWS_PER_ROW_GROUP = 500;
 #endif
 
 inline static void
-checkMetadata(const std::shared_ptr<const parquet::FileMetaData> &metadata) {
+checkMetadata(const std::shared_ptr<const parquet::FileMetaData> &metadata)
+{
     EXPECT_EQ(1, metadata->num_row_groups());
     EXPECT_EQ(3, metadata->num_columns());
 }
 
+void checkBoolValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
+{
+
+    std::int64_t levels_read;
+    std::int64_t values_read = 0;
+    std::int64_t nulls_count;
+
+    std::shared_ptr<parquet::ColumnReader> column;
+
+    column = row_group->Column(0);
+    gdf::parquet::BoolReader *_reader =
+        static_cast<gdf::parquet::BoolReader *>(column.get());
+
+    int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
+    std::vector<int8_t> valuesBuffer(amountToRead);
+
+    std::vector<int16_t> dresult(amountToRead, -1);
+    std::vector<int16_t> rresult(amountToRead,
+                                 -1); // repetition levels must not be nullptr in order to avoid skipping null values
+    std::vector<uint8_t> valid_bits(amountToRead, 255);
+
+    int8_t val = valuesBuffer[0];
+
+    int64_t rows_read_total = 0;
+    while (rows_read_total < amountToRead)
+    {
+        int64_t rows_read =
+            _reader->ReadBatchSpaced(amountToRead,
+                                     dresult.data(),
+                                     rresult.data(),
+                                     (bool *)(&(valuesBuffer[rows_read_total])),
+                                     valid_bits.data(),
+                                     0,
+                                     &levels_read,
+                                     &values_read,
+                                     &nulls_count);
+        std::cout << "rows_read: " << rows_read << std::endl;
+        rows_read_total += rows_read;
+    }
+    std::cout << "read values: \n";
+    for (size_t i = 0; i < amountToRead; i++)
+    {
+        bool value = (bool)valuesBuffer[i];
+        bool expected_value = ((i % 2) == 0) ? true : false;
+        EXPECT_EQ(expected_value, value);
+        //std::cout << (bool)valuesBuffer[i] << ",";
+    }
+    std::cout << "\n";
+}
+
+void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
+{
+    std::int64_t levels_read;
+    std::int64_t values_read = 0;
+    std::int64_t nulls_count;
+
+    std::shared_ptr<parquet::ColumnReader> column;
+
+    column = row_group->Column(1);
+    gdf::parquet::Int32Reader *int32_reader =
+        static_cast<gdf::parquet::Int32Reader *>(column.get());
+
+    int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
+    std::vector<int32_t> valuesBuffer(amountToRead);
+
+    std::vector<int16_t> dresult(amountToRead, -1);
+    std::vector<int16_t> rresult(amountToRead,
+                                 -1); // repetition levels must not be nullptr in order to avoid skipping null values
+    std::vector<uint8_t> valid_bits(amountToRead, 255);
+
+    int32_t val = valuesBuffer[0];
+
+    int64_t rows_read_total = 0;
+    while (rows_read_total < amountToRead)
+    {
+        int64_t rows_read =
+            int32_reader->ReadBatchSpaced(amountToRead,
+                                          dresult.data(),
+                                          rresult.data(),
+                                          (int32_t *)(&(valuesBuffer[rows_read_total])),
+                                          valid_bits.data(),
+                                          0,
+                                          &levels_read,
+                                          &values_read,
+                                          &nulls_count);
+        std::cout << "rows_read: " << rows_read << std::endl;
+        rows_read_total += rows_read;
+    }
+    std::cout << "read values: \n";
+    for (size_t i = 0; i < amountToRead; i++)
+    {
+        //std::cout << valuesBuffer[i] << ",";
+        int32_t expected_value;
+        if (i < 100)
+        {
+            expected_value = 100;
+        }
+        else if (i < 200)
+        {
+            expected_value = i;
+        }
+        else if (i < 300)
+        {
+            expected_value = 300;
+        }
+        else if (i < 400)
+        {
+            expected_value = i;
+        }
+        else if (i < 500)
+        {
+            expected_value = 500;
+        }
+        EXPECT_EQ(expected_value, valuesBuffer[i]);
+    }
+    std::cout << "\n";
+}
+
+void checkInt64Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
+{
+    std::int64_t levels_read;
+    std::int64_t values_read = 0;
+    std::int64_t nulls_count;
+
+    std::shared_ptr<parquet::ColumnReader> column;
+
+    column = row_group->Column(2);
+    gdf::parquet::Int64Reader *_reader =
+        static_cast<gdf::parquet::Int64Reader *>(column.get());
+
+    int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
+    std::vector<int64_t> valuesBuffer(amountToRead);
+
+    std::vector<int16_t> dresult(amountToRead, -1);
+    std::vector<int16_t> rresult(amountToRead,
+                                 -1); // repetition levels must not be nullptr in order to avoid skipping null values
+    std::vector<uint8_t> valid_bits(amountToRead, 255);
+
+    int64_t rows_read_total = 0;
+    while (rows_read_total < amountToRead)
+    {
+        int64_t rows_read =
+            _reader->ReadBatchSpaced(amountToRead,
+                                     dresult.data(),
+                                     rresult.data(),
+                                     (int64_t *)(&(valuesBuffer[rows_read_total])),
+                                     valid_bits.data(),
+                                     0,
+                                     &levels_read,
+                                     &values_read,
+                                     &nulls_count);
+        std::cout << "rows_read: " << rows_read << std::endl;
+        rows_read_total += rows_read;
+    }
+    std::cout << "read values: \n";
+    for (size_t i = 0; i < amountToRead; i++)
+    {
+        int64_t value = i * 1000 * 1000;
+        value *= 1000 * 1000;
+        EXPECT_EQ(value, valuesBuffer[i]);
+    }
+    std::cout << "\n";
+}
+void checkFloatValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
+{
+    std::int64_t levels_read;
+    std::int64_t values_read = 0;
+    std::int64_t nulls_count;
+
+    std::shared_ptr<parquet::ColumnReader> column;
+
+    std::cout << "reading float values\n";
+    column = row_group->Column(3);
+    gdf::parquet::FloatReader *_reader =
+        static_cast<gdf::parquet::FloatReader *>(column.get());
+
+    int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
+    std::vector<float> valuesBuffer(amountToRead);
+
+    std::vector<int16_t> dresult(amountToRead, -1);
+    std::vector<int16_t> rresult(amountToRead,
+                                 -1); // repetition levels must not be nullptr in order to avoid skipping null values
+    std::vector<uint8_t> valid_bits(amountToRead, 255);
+
+    int64_t rows_read_total = 0;
+    while (rows_read_total < amountToRead)
+    {
+        int64_t rows_read =
+            _reader->ReadBatchSpaced(amountToRead,
+                                     dresult.data(),
+                                     rresult.data(),
+                                     (float *)(&(valuesBuffer[rows_read_total])),
+                                     valid_bits.data(),
+                                     0,
+                                     &levels_read,
+                                     &values_read,
+                                     &nulls_count);
+        std::cout << "rows_read: " << rows_read << std::endl;
+        rows_read_total += rows_read;
+    }
+    std::cout << "read values: \n";
+    for (size_t i = 0; i < amountToRead; i++)
+    {
+        float value = i * 1.1f;
+        std::cout << value << ":" << valuesBuffer[i] <<  ",\t";
+        EXPECT_EQ(value, valuesBuffer[i]);
+    }
+    std::cout << "\n";
+}
+
+void checkDoubleValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
+{
+    std::int64_t levels_read;
+    std::int64_t values_read = 0;
+    std::int64_t nulls_count;
+
+    std::shared_ptr<parquet::ColumnReader> column;
+
+    column = row_group->Column(4);
+    gdf::parquet::DoubleReader *double_reader =
+        static_cast<gdf::parquet::DoubleReader *>(column.get());
+
+    int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
+    std::vector<double> valuesBuffer(amountToRead);
+
+    std::vector<int16_t> dresult(amountToRead, -1);
+    std::vector<int16_t> rresult(amountToRead,
+                                 -1); // repetition levels must not be nullptr in order to avoid skipping null values
+    std::vector<uint8_t> valid_bits(amountToRead, 255);
+
+    int64_t rows_read_total = 0;
+    while (rows_read_total < amountToRead)
+    {
+        int64_t rows_read =
+            double_reader->ReadBatchSpaced(amountToRead,
+                                           dresult.data(),
+                                           rresult.data(),
+                                           (double *)(&(valuesBuffer[rows_read_total])),
+                                           valid_bits.data(),
+                                           0,
+                                           &levels_read,
+                                           &values_read,
+                                           &nulls_count);
+        std::cout << "rows_read: " << rows_read << std::endl;
+        rows_read_total += rows_read;
+    }
+    std::cout << "read values: \n";
+    for (size_t i = 0; i < amountToRead; i++)
+    {
+        double value = i * 0.001;
+
+        EXPECT_EQ(value, valuesBuffer[i]);
+    }
+    std::cout << "\n";
+}
+
+template<class Functor>
 inline static void
-checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader) {
-    for (int r = 0; r < reader->metadata()->num_row_groups(); ++r) {
+checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader, Functor apply)
+{
+    for (int r = 0; r < reader->metadata()->num_row_groups(); ++r)
+    {
         const std::shared_ptr<parquet::RowGroupReader> row_group =
-          reader->RowGroup(r);
+            reader->RowGroup(r);
 
         std::int64_t levels_read;
         std::int64_t values_read = 0;
         std::int64_t nulls_count;
 
-        int                                    i;
+        int i;
         std::shared_ptr<parquet::ColumnReader> column;
 
-        {
-            column = row_group->Column(0);
-            gdf::parquet::Int32Reader *int32_reader =
-                static_cast<gdf::parquet::Int32Reader *>(column.get());
-
-            int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
-            std::vector<int32_t> valuesBuffer(amountToRead);
-
-            std::vector<int16_t> dresult(amountToRead, -1);
-            std::vector<int16_t> rresult(amountToRead,
-                                        -1); // repetition levels must not be nullptr in order to avoid skipping null values
-            std::vector<uint8_t> valid_bits(amountToRead, 255);
-
-            int32_t val = valuesBuffer[0];
-
-            int64_t rows_read_total = 0;
-            while (rows_read_total < amountToRead) {
-                int64_t rows_read =
-                        int32_reader->ReadBatchSpaced(amountToRead,
-                                                      dresult.data(),
-                                                      rresult.data(),
-                                                      (int32_t *) (&(valuesBuffer[rows_read_total])),
-                                                      valid_bits.data(),
-                                                      0,
-                                                      &levels_read,
-                                                      &values_read,
-                                                      &nulls_count
-                        );
-                std::cout << "rows_read: " << rows_read << std::endl;
-                rows_read_total += rows_read;
-            }
-            std::cout << "read values: \n";
-            for(size_t i = 0; i < amountToRead; i++)
-            {
-                std::cout << valuesBuffer[i] << ",";
-            }
-            std::cout << "\n";
-        }
-
-        // {
-        //     column = row_group->Column(1);
-        //     gdf::parquet::DoubleReader *double_reader =
-        //         static_cast<gdf::parquet::DoubleReader *>(column.get());
-
-        //     int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
-        //     std::vector<double> valuesBuffer(amountToRead);
-
-        //     std::vector<int16_t> dresult(amountToRead, -1);
-        //     std::vector<int16_t> rresult(amountToRead,
-        //                                 -1); // repetition levels must not be nullptr in order to avoid skipping null values
-        //     std::vector<uint8_t> valid_bits(amountToRead, 255);
-
-        //     int64_t rows_read_total = 0;
-        //     while (rows_read_total < amountToRead) {
-        //         int64_t rows_read =
-        //                 double_reader->ReadBatch(amountToRead,
-        //                                             dresult.data(),
-        //                                             rresult.data(),
-        //                                             (double *) (&(valuesBuffer[rows_read_total])),
-        //                                             &values_read
-        //                 );
-        //         std::cout << "rows_read: " << rows_read << std::endl;
-        //         rows_read_total += rows_read;
-        //     }
-        // }
-    }
+        apply(row_group);
+     }
 }
 
-
-inline static std::shared_ptr<parquet::schema::GroupNode> createSchema() {
-    parquet::schema::NodeVector fields{
-            parquet::schema::PrimitiveNode::Make(
-                    "int32_field", parquet::Repetition::REPEATED, parquet::Type::INT32,
-                    parquet::LogicalType::NONE),
-
-            parquet::schema::PrimitiveNode::Make(
-                    "double_field", parquet::Repetition::REQUIRED, parquet::Type::DOUBLE,
-                    parquet::LogicalType::NONE)};
-
-    return std::static_pointer_cast<parquet::schema::GroupNode>(
-            parquet::schema::GroupNode::Make("schema", parquet::Repetition::REQUIRED,
-                                             fields));
-}
-
-TEST(DecodingTest, UsingCustomDecoder) {
+TEST(DecodingTest, ReadBoolValues)
+{
     std::string filename = PARQUET_FILE_FOR_DECODING_PATH;
-	std::unique_ptr<gdf::parquet::FileReader> reader = gdf::parquet::FileReader::OpenFile(filename);
-    checkRowGroups(reader);
+    std::unique_ptr<gdf::parquet::FileReader> reader = gdf::parquet::FileReader::OpenFile(filename);
+    
+    checkRowGroups(reader, checkBoolValues);
+}
+
+TEST(DecodingTest, ReadInt32Values)
+{
+    std::string filename = PARQUET_FILE_FOR_DECODING_PATH;
+    std::unique_ptr<gdf::parquet::FileReader> reader = gdf::parquet::FileReader::OpenFile(filename);
+    checkRowGroups(reader, checkInt32Values);
+}
+
+TEST(DecodingTest, ReadInt64Values)
+{
+    std::string filename = PARQUET_FILE_FOR_DECODING_PATH;
+    std::unique_ptr<gdf::parquet::FileReader> reader = gdf::parquet::FileReader::OpenFile(filename);
+    checkRowGroups(reader, checkInt64Values);
+}
+
+TEST(DecodingTest, ReadFloatValues)
+{
+    std::string filename = PARQUET_FILE_FOR_DECODING_PATH;
+    std::unique_ptr<gdf::parquet::FileReader> reader = gdf::parquet::FileReader::OpenFile(filename);
+    checkRowGroups(reader, checkFloatValues);
+}
+
+TEST(DecodingTest, ReadDoubleValues)
+{
+    std::string filename = PARQUET_FILE_FOR_DECODING_PATH;
+    std::unique_ptr<gdf::parquet::FileReader> reader = gdf::parquet::FileReader::OpenFile(filename);
+    checkRowGroups(reader, checkDoubleValues);   
 }

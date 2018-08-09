@@ -19,7 +19,8 @@
 
 namespace gdf {
 namespace arrow {
-
+namespace internal {
+    
     int decode_using_cpu(const uint8_t* buffer, const int buffer_len,
         const std::vector<uint32_t>& rle_runs,
         const std::vector<uint64_t>& rle_values,
@@ -43,7 +44,7 @@ namespace arrow {
         const std::vector<int>& remainderOutputOffsets,
         const std::vector<uint16_t>& is_rle, int num_bits,
         int* output, int batch_size);
-
+}
 } // namespace arrow
 } // namespace gdf
 
