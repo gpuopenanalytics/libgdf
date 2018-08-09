@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include "cffi/types.h"
-#include "cffi/csv.h"
+#include "cffi/io_types.h"
 
 #define GDF_VALID_BITSIZE (sizeof(gdf_valid_type) * 8)
 
