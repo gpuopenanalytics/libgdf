@@ -44,19 +44,104 @@ include(CTest)
 include(ConfigureGoogleTest)
 include(ConfigureArrow)
 
+# Find CUDA and detect hardware-specific flags
 find_package(CUDA)
 set_package_properties(
     CUDA PROPERTIES TYPE REQUIRED
     PURPOSE "NVIDIA CUDA® parallel computing platform and programming model."
     URL "https://developer.nvidia.com/cuda-zone")
 
-if(CUDA_FOUND)
-    message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
+if (CUDA_FOUND)
+  # Get CUDA architecture flag "--generate-code=arch=compute_XX,code=sm_XX"
+  set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin/get_cuda_arch)
+  set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/get_cuda_arch.cu)
+  execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
+  execute_process(COMMAND ${OUTPUTFILE}
+                  RESULT_VARIABLE CUDA_RETURN_CODE
+                  OUTPUT_VARIABLE DETECTED_ARCH)
 
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11;--expt-extended-lambda)
-    message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
-else()
-    message(FATAL_ERROR "CUDA not found, please check your settings.")
+  if(${CUDA_RETURN_CODE} EQUAL 0)
+    set(CUDA_SUCCESS "TRUE")
+  else()
+    set(CUDA_SUCCESS "FALSE")
+  endif()
+
+  if (${CUDA_SUCCESS})
+    message(STATUS "Detected CUDA Architecture: ${DETECTED_ARCH}")
+    message(STATUS "Detected CUDA Version: ${CUDA_VERSION_STRING}")
+    message(STATUS "Detected CUDA Path: ${CUDA_TOOLKIT_ROOT_DIR}")
+    message(STATUS "Detected CUDA Libararies: ${CUDA_LIBRARIES}")
+    message(STATUS "Detected CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
+
+  else()
+    message(WARNING ${DETECTED_ARCH})
+  endif()
+
+  # Get CUDA compute capability "X.X"
+  set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin/get_cuda_cc)
+  set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/get_cuda_cc.cu)
+  execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
+  execute_process(COMMAND ${OUTPUTFILE}
+                  RESULT_VARIABLE CUDA_RETURN_CODE
+                  OUTPUT_VARIABLE CUDA_COMPUTE_CAPABILITY)
+
+  if(${CUDA_RETURN_CODE} EQUAL 0)
+    set(CUDA_SUCCESS "TRUE")
+  else()
+    set(CUDA_SUCCESS "FALSE")
+  endif()
+
+  if (${CUDA_SUCCESS})
+    message(STATUS "Detected CUDA Compute Capability: ${CUDA_COMPUTE_CAPABILITY}")
+  endif()
+endif()
+
+# Option handling for specifying target GPU Architecture
+set(GPU_ARCH detected CACHE STRING "Specify the target GPU Architecture")
+string(TOLOWER "${GPU_ARCH}" GPU_ARCH)
+
+set(PASCAL_ARCH --generate-code=arch=compute_61,code=sm_61)
+set(VOLTA_ARCH  --generate-code=arch=compute_70,code=sm_70)
+
+if(${GPU_ARCH} STREQUAL detected)
+  message(STATUS "Using detected GPU Architecture")
+  message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+  
+  if(${CUDA_COMPUTE_CAPABILITY} LESS 6.0) # Full functionality available in Pascal or greater
+    message(WARNING "\n Detected CUDA comptue capability: ${CUDA_COMPUTE_CAPABILITY}
+                     \n NOT ALL FEATURES WILL FUNCTION PROPERLY")
+  endif()
+  
+  set(CUDA_NVCC_FLAGS ${DETECTED_ARCH};--expt-extended-lambda;-std=c++11)
+endif()
+
+if(${GPU_ARCH} STREQUAL pascal)
+  message(STATUS "Setting GPU Arch: Pascal")
+  set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};--expt-extended-lambda;-std=c++11)
+  message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+endif()
+
+if(${GPU_ARCH} STREQUAL volta)
+  message(STATUS "Setting GPU Arch: Volta")
+  set(CUDA_NVCC_FLAGS ${VOLTA_ARCH};--expt-extended-lambda;-std=c++11)
+  message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+endif()
+
+# Option handling for CUDA debugging
+if(CMAKE_BUILD_TYPE MATCHES DEBUG)
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G)
+endif()
+
+# Option handling for joins
+option(HASH_JOIN "Hash-based implementation for joins" ON)
+if(HASH_JOIN)
+  message(STATUS "Hash-based implementation for joins: ${HASH_JOIN}")
+endif()
+
+# Option handling for allocator to be used with hash tables
+option(HT_LEGACY_ALLOCATOR "Enable legacy allocator for hash tables" ON)
+if(HT_LEGACY_ALLOCATOR)
+  message(STATUS "Legacy allocator for hash tables: ${HT_LEGACY_ALLOCATOR}")
 endif()
 
 # Locate the Apache Arrow package (Requires that you use ConfigureArrow module)
@@ -79,33 +164,6 @@ include_directories(
     "${CUDA_INCLUDE_DIRS}"
     "${ARROW_INCLUDEDIR}"
 )
-
-IF(CUDA_VERSION_MAJOR GREATER 7)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_60,code=sm_60)
-ENDIF(CUDA_VERSION_MAJOR GREATER 7)
-
-IF(CUDA_VERSION_MAJOR GREATER 8)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_70,code=sm_70)
-ENDIF(CUDA_VERSION_MAJOR GREATER 8)
-
-IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G)
-ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
-
-# switch between hash-join and sort-join
-option(HASH_JOIN "hash-based join" ON)
-if(HASH_JOIN)
-  message("-- Using the hash-based join implementation")
-  set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS};-DHASH_JOIN)
-endif()
-
-# switch between cudaMalloc and cudaMallocManaged for hash tables
-option(HT_LEGACY_ALLOCATOR "legacy allocator for hash tables" ON)
-if(HT_LEGACY_ALLOCATOR)
-  message("-- Using the legacy allocator for hash tables")
-  set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS};-DHT_LEGACY_ALLOCATOR)
-endif()
-
 
 cuda_add_library(gdf SHARED
     src/binaryops.cu
