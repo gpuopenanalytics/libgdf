@@ -8,4 +8,4 @@ for fname in ['types.h', 'functions.h']:
         ffibuilder.cdef(fin.read())
 
 if __name__ == "__main__":
-    ffibuilder.compile()
+ffibuilder.compile()
