@@ -112,11 +112,12 @@ development includes/changes the depedencies.  To do so, run:
 ```bash
 conda env update --name libgdf_dev --file ../conda_environments/dev_py35.yml
 ```
+
 Note that `dev_py35.yml` uses the latest version of pyarrow.
 Reinstall pyarrow if needed using `conda install
 pyarrow=$ARROW_VERSION -c conda-forge`.
 
-### Configure and build
+## Configure and Build
 
 This project uses cmake for building the C/C++ library. To configure cmake,
 run:
