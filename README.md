@@ -4,7 +4,22 @@
 
 libgdf is a C library for implementing common functionality for a GPU Data Frame.  For more project details, see [the wiki](https://github.com/gpuopenanalytics/libgdf/wiki/Home).
 
-## Development Setup
+## Get Source Code
+
+**Note**: This repo uses submodules. Make sure you cloned recursively:
+
+```bash
+git clone --recurse-submodules git@github.com:gpuopenanalytics/libgdf.git
+```
+
+Or, after cloning:
+
+```bash
+cd libgdf
+git submodule update --init --recursive
+```
+
+## Development Environment Setup
 
 The following instructions are tested on Linux and OSX systems.
 
@@ -21,18 +36,18 @@ You can obtain CUDA from [https://developer.nvidia.com/cuda-downloads](https://d
 
 ### Get dependencies
 
-**Note**: This repo uses submodules. Make sure you cloned recursively:
+#### CMake
 
+Install the latest version of `cmake` using `pip`:
 ```bash
-git clone --recurse-submodules git@github.com:gpuopenanalytics/libgdf.git
+pip install cmake
 ```
 
-Or, after cloning:
+or
 
-```bash
-cd libgdf
-git submodule update --init --recursive
-```
+Install from tarball or installer from the [CMake website](https://cmake.org/install/)
+
+#### Boost C++
 
 Since `cmake` will download and build Apache Arrow (version 0.7.1 or
 0.8+) you may need to install Boost C++ (version 1.58) before running
