@@ -56,7 +56,7 @@ set_package_properties(
 if (CUDA_FOUND)
 
   # Option handling for specifying target GPU Architecture
-  set(GPU_ARCH volta CACHE STRING "Specify target GPU Architecture(s)")
+  set(GPU_ARCH detected CACHE STRING "Specify target GPU Architecture(s)")
   string(TOLOWER "${GPU_ARCH}" GPU_ARCH)
   string(REPLACE "," ";" USER_GPU_ARCH_LIST ${GPU_ARCH}) # Make GPU_ARCH into a list
   message(STATUS "Target GPU Architectures: ${USER_GPU_ARCH_LIST}") # Show ";" seperated list of target architectures
@@ -123,7 +123,9 @@ if (CUDA_FOUND)
         message(STATUS "Detected CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
 
       else()
-        message(WARNING ${DETECTED_ARCH})
+        message(WARNING "\n ${DETECTED_ARCH} \n")
+        message(WARNING "\n Using ${GPU_ARCH_LIST} instead")
+        set(GPU_ARCH ${GPU_ARCH_LIST})
       endif()
 
       # Get CUDA compute capability "X.X"
