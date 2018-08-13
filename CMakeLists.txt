@@ -51,98 +51,144 @@ set_package_properties(
     PURPOSE "NVIDIA CUDA® parallel computing platform and programming model."
     URL "https://developer.nvidia.com/cuda-zone")
 
+
+
 if (CUDA_FOUND)
-  # Get CUDA architecture flag "--generate-code=arch=compute_XX,code=sm_XX"
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin)
 
-  set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin/get_cuda_arch)
-  set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/get_cuda_arch.cu)
-  execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
-  execute_process(COMMAND ${OUTPUTFILE}
-                  RESULT_VARIABLE CUDA_RETURN_CODE
-                  OUTPUT_VARIABLE DETECTED_ARCH)
+  # Option handling for specifying target GPU Architecture
+  set(GPU_ARCH volta CACHE STRING "Specify target GPU Architecture(s)")
+  string(TOLOWER "${GPU_ARCH}" GPU_ARCH)
+  string(REPLACE "," ";" USER_GPU_ARCH_LIST ${GPU_ARCH}) # Make GPU_ARCH into a list
+  message(STATUS "Target GPU Architectures: ${USER_GPU_ARCH_LIST}") # Show ";" seperated list of target architectures
+  list(LENGTH USER_GPU_ARCH_LIST NUM_GPU_ARCH) # Get the number of targets from the list
+  message(STATUS "Number of target GPU Architectures specified: ${NUM_GPU_ARCH}") # Show the number of targeted architectures
 
-  if(${CUDA_RETURN_CODE} EQUAL 0)
-    set(CUDA_SUCCESS "TRUE")
-  else()
-    set(CUDA_SUCCESS "FALSE")
+
+  set(PASCAL_ARCH --generate-code=arch=compute_61,code=sm_61)
+  set(VOLTA_ARCH  --generate-code=arch=compute_70,code=sm_70)
+  set(GPU_ARCH_LIST pascal volta) # List of supported GPU Architectures
+
+  if (NUM_GPU_ARCH GREATER 1)
+    
+    foreach(USER_ARCH ${USER_GPU_ARCH_LIST}) # Cycle through all user-defined GPU Architecture targets
+
+      message(STATUS "Adding GPU Architecture: ${USER_ARCH}") # Status message: display the architecture being added
+      list(FIND GPU_ARCH_LIST ${USER_ARCH} OUTPUT_INDEX) # See if it exists in supported architectures list
+      message(STATUS "OUTPUT INDEX: ${OUTPUT_INDEX}") # Display index. -1 if not found
+
+      if (OUTPUT_INDEX GREATER -1)
+        list(GET GPU_ARCH_LIST ${OUTPUT_INDEX} _ARCH) # Get the valid GPU Architecture from supported list
+
+        # Add the flags for the supported architecture
+        if (${_ARCH} STREQUAL pascal)
+          set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};${PASCAL_ARCH})
+        elseif(${_ARCH} STREQUAL volta)
+          set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};${VOLTA_ARCH})
+        endif()
+
+      else()
+        message(WARNING "\n Target GPU Architecture not supported: ${USER_ARCH}")
+      endif()
+    endforeach()
+
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--expt-extended-lambda;-std=c++11)
+    message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+
   endif()
 
-  if (${CUDA_SUCCESS})
-    message(STATUS "Detected CUDA Architecture: ${DETECTED_ARCH}")
-    message(STATUS "Detected CUDA Version: ${CUDA_VERSION_STRING}")
-    message(STATUS "Detected CUDA Path: ${CUDA_TOOLKIT_ROOT_DIR}")
-    message(STATUS "Detected CUDA Libararies: ${CUDA_LIBRARIES}")
-    message(STATUS "Detected CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
+  if (NUM_GPU_ARCH EQUAL 1)
+    if(${GPU_ARCH} STREQUAL detected)
 
-  else()
-    message(WARNING ${DETECTED_ARCH})
-  endif()
+      # Get CUDA architecture flag "--generate-code=arch=compute_XX,code=sm_XX"
+      file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin)
 
-  # Get CUDA compute capability "X.X"
-  set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin/get_cuda_cc)
-  set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/get_cuda_cc.cu)
-  execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
-  execute_process(COMMAND ${OUTPUTFILE}
-                  RESULT_VARIABLE CUDA_RETURN_CODE
-                  OUTPUT_VARIABLE CUDA_COMPUTE_CAPABILITY)
+      set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin/get_cuda_arch)
+      set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/get_cuda_arch.cu)
+      execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
+      execute_process(COMMAND ${OUTPUTFILE}
+                      RESULT_VARIABLE CUDA_RETURN_CODE
+                      OUTPUT_VARIABLE DETECTED_ARCH)
 
-  if(${CUDA_RETURN_CODE} EQUAL 0)
-    set(CUDA_SUCCESS "TRUE")
-  else()
-    set(CUDA_SUCCESS "FALSE")
-  endif()
+      if (${CUDA_RETURN_CODE} EQUAL 0)
+        set(CUDA_SUCCESS "TRUE")
+      else()
+        set(CUDA_SUCCESS "FALSE")
+      endif()
 
-  if (${CUDA_SUCCESS})
-    message(STATUS "Detected CUDA Compute Capability: ${CUDA_COMPUTE_CAPABILITY}")
-  endif()
-endif()
+      if (${CUDA_SUCCESS})
+        message(STATUS "Detected CUDA Architecture: ${DETECTED_ARCH}")
+        message(STATUS "Detected CUDA Version: ${CUDA_VERSION_STRING}")
+        message(STATUS "Detected CUDA Path: ${CUDA_TOOLKIT_ROOT_DIR}")
+        message(STATUS "Detected CUDA Libararies: ${CUDA_LIBRARIES}")
+        message(STATUS "Detected CUDA Performance Primitives: ${CUDA_npp_LIBRARY}")
 
-# Option handling for specifying target GPU Architecture
-set(GPU_ARCH detected CACHE STRING "Specify the target GPU Architecture")
-string(TOLOWER "${GPU_ARCH}" GPU_ARCH)
+      else()
+        message(WARNING ${DETECTED_ARCH})
+      endif()
 
-set(PASCAL_ARCH --generate-code=arch=compute_61,code=sm_61)
-set(VOLTA_ARCH  --generate-code=arch=compute_70,code=sm_70)
+      # Get CUDA compute capability "X.X"
+      set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin/get_cuda_cc)
+      set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/get_cuda_cc.cu)
+      execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
+      execute_process(COMMAND ${OUTPUTFILE}
+                      RESULT_VARIABLE CUDA_RETURN_CODE
+                      OUTPUT_VARIABLE CUDA_COMPUTE_CAPABILITY)
 
-if(${GPU_ARCH} STREQUAL detected)
-  message(STATUS "Using detected GPU Architecture")
-  message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+      if (${CUDA_RETURN_CODE} EQUAL 0)
+        set(CUDA_SUCCESS "TRUE")
+      else()
+        set(CUDA_SUCCESS "FALSE")
+      endif()
+
+      if (${CUDA_SUCCESS})
+        message(STATUS "Detected CUDA Compute Capability: ${CUDA_COMPUTE_CAPABILITY}")
+      endif()
   
-  if(${CUDA_COMPUTE_CAPABILITY} LESS 6.0) # Full functionality available in Pascal or greater
-    message(WARNING "\n Detected CUDA comptue capability: ${CUDA_COMPUTE_CAPABILITY}
-                     \n NOT ALL FEATURES WILL FUNCTION PROPERLY")
-  endif()
+      if (${CUDA_COMPUTE_CAPABILITY} LESS 6.0) # Full functionality available in Pascal or greater
+        message(WARNING "\n Detected CUDA comptue capability: ${CUDA_COMPUTE_CAPABILITY}
+                         \n NOT ALL FEATURES WILL FUNCTION PROPERLY")
+      endif()
   
-  set(CUDA_NVCC_FLAGS ${DETECTED_ARCH};--expt-extended-lambda;-std=c++11)
-endif()
+      set(CUDA_NVCC_FLAGS ${DETECTED_ARCH};--expt-extended-lambda;-std=c++11)
+      message(STATUS "Using detected GPU Architecture")
+      message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
 
-if(${GPU_ARCH} STREQUAL pascal)
-  message(STATUS "Setting GPU Arch: Pascal")
-  set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};--expt-extended-lambda;-std=c++11)
-  message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
-endif()
+    elseif (${GPU_ARCH} STREQUAL pascal)
 
-if(${GPU_ARCH} STREQUAL volta)
-  message(STATUS "Setting GPU Arch: Volta")
-  set(CUDA_NVCC_FLAGS ${VOLTA_ARCH};--expt-extended-lambda;-std=c++11)
-  message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+      message(STATUS "Setting GPU Arch: Pascal")
+      set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};--expt-extended-lambda;-std=c++11)
+      message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+
+    elseif (${GPU_ARCH} STREQUAL volta)
+
+      message(STATUS "Setting GPU Arch: Volta")
+      set(CUDA_NVCC_FLAGS ${VOLTA_ARCH};--expt-extended-lambda;-std=c++11)
+      message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+
+    elseif (${GPU_ARCH} STREQUAL custom)
+
+      message(STATUS "Using user-specified GPU Architecture(s)")
+      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} CACHE STRING "Specify CUDA NVCC Flags")
+      message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+
+    endif()
+  endif()
 endif()
 
 # Option handling for CUDA debugging
-if(CMAKE_BUILD_TYPE MATCHES DEBUG)
-  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G)
+if (CMAKE_BUILD_TYPE MATCHES DEBUG)
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G CACHE STRING "Specify CUDA NVCC Flags")
 endif()
 
 # Option handling for joins
 option(HASH_JOIN "Hash-based implementation for joins" ON)
-if(HASH_JOIN)
+if (HASH_JOIN)
   message(STATUS "Hash-based implementation for joins: ${HASH_JOIN}")
 endif()
 
 # Option handling for allocator to be used with hash tables
 option(HT_LEGACY_ALLOCATOR "Enable legacy allocator for hash tables" ON)
-if(HT_LEGACY_ALLOCATOR)
+if (HT_LEGACY_ALLOCATOR)
   message(STATUS "Legacy allocator for hash tables: ${HT_LEGACY_ALLOCATOR}")
 endif()
 
