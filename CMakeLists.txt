@@ -53,6 +53,8 @@ set_package_properties(
 
 if (CUDA_FOUND)
   # Get CUDA architecture flag "--generate-code=arch=compute_XX,code=sm_XX"
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin)
+
   set(OUTPUTFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/bin/get_cuda_arch)
   set(CUDAFILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CUDA-Utils/get_cuda_arch.cu)
   execute_process(COMMAND nvcc -lcuda ${CUDAFILE} -o ${OUTPUTFILE})
