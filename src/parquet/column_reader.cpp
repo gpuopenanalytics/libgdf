@@ -53,10 +53,19 @@ _ConfigureDictionary(
         dictionary.SetData(
           dictionary_page->num_values(), page->data(), page->size());
 
+ #ifdef GDF_DECODER_GPU_VERSION
+        std::cout << "using gpu decoder\n";
         auto decoder = std::make_shared<internal::DictionaryDecoder<
-          DataType,gdf::arrow::internal::RleDecoder>>(column_descriptor, pool);
+        DataType, gdf::arrow::internal::RleDecoder> >(column_descriptor, pool);
         decoder->SetDict(&dictionary);
         decoders[encoding] = decoder;
+#else
+        auto decoder = std::make_shared<internal::DictionaryDecoder<
+        DataType, ::arrow::RleDecoder> >(column_descriptor, pool);
+        decoder->SetDict(&dictionary);
+        decoders[encoding] = decoder;
+#endif
+
     } else {
         ::parquet::ParquetException::NYI(
           "only plain dictionary encoding has been implemented");

@@ -101,17 +101,7 @@ class CerrLog
     const int severity_;
     bool has_logged_;
 };
-
-#define ARROW_CHECK(condition) \
-    (condition) ? 0 : gdf::arrow::detail::CerrLog(ARROW_FATAL) << __FILE__ << __LINE__ << " Check failed: " #condition " "
-
-#define DCHECK(condition) ARROW_CHECK(condition)
-#define DCHECK_EQ(val1, val2) ARROW_CHECK((val1) == (val2))
-#define DCHECK_NE(val1, val2) ARROW_CHECK((val1) != (val2))
-#define DCHECK_LE(val1, val2) ARROW_CHECK((val1) <= (val2))
-#define DCHECK_LT(val1, val2) ARROW_CHECK((val1) < (val2))
-#define DCHECK_GE(val1, val2) ARROW_CHECK((val1) >= (val2))
-#define DCHECK_GT(val1, val2) ARROW_CHECK((val1) > (val2))
+ 
 
 /// Returns the 'num_bits' least-significant bits of 'v'.
 __host__ __device__ static inline uint64_t TrailingBits(uint64_t v,
@@ -390,25 +380,6 @@ int decode_using_gpu(const uint8_t *buffer, const int buffer_len,
     thrust::device_vector<int> d_output(batch_size);
     thrust::device_vector<uint32_t> d_counts(rle_runs);
     thrust::device_vector<uint64_t> d_values(rle_values);
-
-    {
-         std::cout << "rleRuns[i]"
-                << " | "
-                << "rleValues[i]" << std::endl;
-
-        for (int i = 0; i < rle_runs.size(); i++)
-        {
-            std::cout << rle_runs[i] << " | " << rle_values[i] << ((is_rle[i]) ? " | rle" : " | bit");
-            std::cout << std::endl;
-        }
-
-        std::cout << "unpacking using cpu: " << std::endl;
-
-        std::cout << "unpack32InputOffsets[i]"
-                << " | "
-                << "unpack32OutputOffsets[i]" << std::endl;
-
-    }
  
     gpu_expand(d_counts.begin(), d_counts.end(), d_values.begin(),
                d_output.begin());
@@ -438,13 +409,7 @@ int decode_using_gpu(const uint8_t *buffer, const int buffer_len,
     for (int j = 0; j < batch_size; ++j)
     {
         output[j] = host_output[j];
-    }
-    std::cout << "*final_output: " << std::endl;
-    for (int i = 0; i < d_output.size(); i++)
-    {
-        std::cout << d_output[i] << ", ";
-    }
-    std::cout << "*final_output: " << std::endl;
+    } 
     return batch_size;
 }
 
@@ -465,26 +430,7 @@ int decode_using_cpu(const uint8_t *buffer, const int buffer_len,
     thrust::host_vector<int> d_output(batch_size);
     thrust::host_vector<uint32_t> d_counts(rle_runs);
     thrust::host_vector<uint64_t> d_values(rle_values);
-
-    {
-         std::cout << "rleRuns[i]"
-                << " | "
-                << "rleValues[i]" << std::endl;
-
-        for (int i = 0; i < rle_runs.size(); i++)
-        {
-            std::cout << rle_runs[i] << " | " << rle_values[i] << ((is_rle[i]) ? " | rle" : " | bit");
-            std::cout << std::endl;
-        }
-
-        std::cout << "unpacking using cpu: " << std::endl;
-
-        std::cout << "unpack32InputOffsets[i]"
-                << " | "
-                << "unpack32OutputOffsets[i]" << std::endl;
-
-    }
- 
+   
     expand(d_counts.begin(), d_counts.end(), d_values.begin(), d_output.begin());
 
     cpu_bit_packing(buffer, buffer_len, input_offset, output_offset, d_output, num_bits);
@@ -512,13 +458,7 @@ int decode_using_cpu(const uint8_t *buffer, const int buffer_len,
     for (int j = 0; j < batch_size; ++j)
     {
         output[j] = host_output[j];
-    } 
-    std::cout << "*final_output: " << std::endl;
-    for (int i = 0; i < d_output.size(); i++)
-    {
-        std::cout << d_output[i] << ", ";
-    }
-    std::cout << "*final_output: " << std::endl;
+    }  
     return batch_size;
 }
 } // namespace internal

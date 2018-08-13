@@ -153,8 +153,7 @@ namespace arrow {
                     isRleVector.push_back(1);
                     rleValues.push_back(current_value_);
                     numRle++;
-                    std::fill(values + values_read, values + values_read + repeat_batch,
-                        dictionary[current_value_]);
+                    std::fill(values + values_read, values + values_read + repeat_batch, dictionary[current_value_]);
                     repeat_count_ -= repeat_batch;
                     values_read += repeat_batch;
                 } else if (literal_count_ > 0) {
@@ -169,16 +168,14 @@ namespace arrow {
                     numBitpacked++;
 
                     bit_reader_.SetGpuBatchMetadata(
-                        bit_width_, literal_batch, values_read, unpack32InputOffsets,
+                        bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets,
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                         remainderSetSize, remainderOutputOffsets);
-                    int actual_read;
-
+                    // int actual_read;
                     // actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
-
                     // DCHECK_EQ(actual_read, literal_batch);
                     // for (int i = 0; i < literal_batch; ++i) {
-                    //     values[values_read + i] = dictionary[indices[i]];
+                    //     // values[values_read + i] = dictionary[indices[i]];
                     // }
                     literal_count_ -= literal_batch;
                     values_read += literal_batch;
@@ -193,6 +190,7 @@ namespace arrow {
                 rleRuns, rleValues, unpack32InputOffsets, unpack32OutputOffsets,
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets, isRleVector, bit_width_, &indices[0], batch_size);
+
             for (int i = 0; i < batch_size; ++i) {
                 values[i] = dictionary[indices[i]];
             }

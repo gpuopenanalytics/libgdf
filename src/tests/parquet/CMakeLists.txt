@@ -60,6 +60,7 @@ set(file_reader_SRCS
 
 function(GDF_ADD_PARQUET_BENCHMARK TARGET)
     if(GDF_BENCHMARK)
+
         list(REMOVE_AT ARGV 0)
         cuda_add_executable(${TARGET} ${ARGV}   )
         target_include_directories(${TARGET}

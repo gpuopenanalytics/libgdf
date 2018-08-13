@@ -46,10 +46,10 @@ inline static void
 readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
     const std::shared_ptr<::parquet::RowGroupReader> row_group =
       reader->RowGroup(0);
-
-    std::int16_t definition_level;
-    std::int16_t repetition_level;
-    std::uint8_t valid_bits;
+    constexpr static int BATCH_SIZE = 50000;
+    std::int16_t definition_level[BATCH_SIZE];
+    std::int16_t repetition_level[BATCH_SIZE];
+    std::uint8_t valid_bits[BATCH_SIZE];
     std::int64_t levels_read;
     std::int64_t values_read = 0;
     std::int64_t nulls_count;
@@ -60,12 +60,12 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
     typename Readers<T>::BoolReader *bool_reader =
       static_cast<typename Readers<T>::BoolReader *>(column.get());
     while (bool_reader->HasNext()) {
-        bool value;
-        bool_reader->ReadBatchSpaced(1,
-                                     &definition_level,
-                                     &repetition_level,
-                                     &value,
-                                     &valid_bits,
+        bool value[BATCH_SIZE];
+        bool_reader->ReadBatchSpaced(BATCH_SIZE,
+                                     definition_level,
+                                     repetition_level,
+                                     value,
+                                     valid_bits,
                                      0,
                                      &levels_read,
                                      &values_read,
@@ -76,12 +76,12 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
     typename Readers<T>::Int64Reader *int64_reader =
       static_cast<typename Readers<T>::Int64Reader *>(column.get());
     while (int64_reader->HasNext()) {
-        std::int64_t value;
-        int64_reader->ReadBatchSpaced(1,
-                                      &definition_level,
-                                      &repetition_level,
-                                      &value,
-                                      &valid_bits,
+        std::int64_t value[BATCH_SIZE];
+        int64_reader->ReadBatchSpaced(BATCH_SIZE,
+                                      definition_level,
+                                      repetition_level,
+                                      value,
+                                      valid_bits,
                                       0,
                                       &levels_read,
                                       &values_read,
@@ -92,12 +92,12 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
     typename Readers<T>::DoubleReader *double_reader =
       static_cast<typename Readers<T>::DoubleReader *>(column.get());
     while (double_reader->HasNext()) {
-        double value;
-        double_reader->ReadBatchSpaced(1,
-                                       &definition_level,
-                                       &repetition_level,
-                                       &value,
-                                       &valid_bits,
+        double value[BATCH_SIZE];
+        double_reader->ReadBatchSpaced(BATCH_SIZE,
+                                       definition_level,
+                                       repetition_level,
+                                       value,
+                                       valid_bits,
                                        0,
                                        &levels_read,
                                        &values_read,
@@ -108,6 +108,11 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
 template <ReaderType T>
 static void
 BM_FileRead(benchmark::State &state) {
+    #ifdef GDF_DECODER_GPU_VERSION
+        std::cout << "use gpu decoder\n";
+    #else
+        std::cout << "use cpu decoder\n";
+    #endif
     for (auto _ : state) {
         std::unique_ptr<typename Readers<T>::FileReader> reader =
           Readers<T>::FileReader::OpenFile(PARQUET_FILE_PATH);

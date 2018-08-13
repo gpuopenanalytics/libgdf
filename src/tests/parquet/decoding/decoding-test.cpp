@@ -75,10 +75,10 @@ void checkBoolValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
                                      &levels_read,
                                      &values_read,
                                      &nulls_count);
-        std::cout << "rows_read: " << rows_read << std::endl;
+        
         rows_read_total += rows_read;
     }
-    std::cout << "read values: \n";
+    
     for (size_t i = 0; i < amountToRead; i++)
     {
         bool value = (bool)valuesBuffer[i];
@@ -86,7 +86,7 @@ void checkBoolValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
         EXPECT_EQ(expected_value, value);
         //std::cout << (bool)valuesBuffer[i] << ",";
     }
-    std::cout << "\n";
+    
 }
 
 void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
@@ -101,7 +101,7 @@ void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
     gdf::parquet::Int32Reader *int32_reader =
         static_cast<gdf::parquet::Int32Reader *>(column.get());
 
-    int64_t amountToRead = NUM_ROWS_PER_ROW_GROUP;
+    int64_t amountToRead = 500;
     std::vector<int32_t> valuesBuffer(amountToRead);
 
     std::vector<int16_t> dresult(amountToRead, -1);
@@ -115,7 +115,7 @@ void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
     while (rows_read_total < amountToRead)
     {
         int64_t rows_read =
-            int32_reader->ReadBatchSpaced(amountToRead,
+            int32_reader->ReadBatchSpaced(1,
                                           dresult.data(),
                                           rresult.data(),
                                           (int32_t *)(&(valuesBuffer[rows_read_total])),
@@ -124,10 +124,10 @@ void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
                                           &levels_read,
                                           &values_read,
                                           &nulls_count);
-        std::cout << "rows_read: " << rows_read << std::endl;
+        // 
         rows_read_total += rows_read;
     }
-    std::cout << "read values: \n";
+    
     for (size_t i = 0; i < amountToRead; i++)
     {
         //std::cout << valuesBuffer[i] << ",";
@@ -154,7 +154,7 @@ void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
         }
         EXPECT_EQ(expected_value, valuesBuffer[i]);
     }
-    std::cout << "\n";
+    
 }
 
 void checkInt64Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
@@ -190,17 +190,17 @@ void checkInt64Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
                                      &levels_read,
                                      &values_read,
                                      &nulls_count);
-        std::cout << "rows_read: " << rows_read << std::endl;
+        
         rows_read_total += rows_read;
     }
-    std::cout << "read values: \n";
+    
     for (size_t i = 0; i < amountToRead; i++)
     {
         int64_t value = i * 1000 * 1000;
         value *= 1000 * 1000;
         EXPECT_EQ(value, valuesBuffer[i]);
     }
-    std::cout << "\n";
+    
 }
 void checkFloatValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
 {
@@ -210,7 +210,6 @@ void checkFloatValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
 
     std::shared_ptr<parquet::ColumnReader> column;
 
-    std::cout << "reading float values\n";
     column = row_group->Column(3);
     gdf::parquet::FloatReader *_reader =
         static_cast<gdf::parquet::FloatReader *>(column.get());
@@ -236,17 +235,14 @@ void checkFloatValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
                                      &levels_read,
                                      &values_read,
                                      &nulls_count);
-        std::cout << "rows_read: " << rows_read << std::endl;
+        
         rows_read_total += rows_read;
     }
-    std::cout << "read values: \n";
     for (size_t i = 0; i < amountToRead; i++)
     {
         float value = i * 1.1f;
-        std::cout << value << ":" << valuesBuffer[i] <<  ",\t";
         EXPECT_EQ(value, valuesBuffer[i]);
     }
-    std::cout << "\n";
 }
 
 void checkDoubleValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
@@ -282,17 +278,17 @@ void checkDoubleValues(const std::shared_ptr<parquet::RowGroupReader> row_group)
                                            &levels_read,
                                            &values_read,
                                            &nulls_count);
-        std::cout << "rows_read: " << rows_read << std::endl;
+        
         rows_read_total += rows_read;
     }
-    std::cout << "read values: \n";
+    
     for (size_t i = 0; i < amountToRead; i++)
     {
         double value = i * 0.001;
 
         EXPECT_EQ(value, valuesBuffer[i]);
     }
-    std::cout << "\n";
+    
 }
 
 template<class Functor>
