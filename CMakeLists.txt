@@ -126,6 +126,8 @@ if (CUDA_FOUND)
         message(WARNING "\n ${DETECTED_ARCH} \n")
         message(WARNING "\n Using ${GPU_ARCH_LIST} instead")
         set(GPU_ARCH ${GPU_ARCH_LIST})
+        set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};${VOLTA_ARCH};--expt-extended-lambda;-std=c++11)
+        message(WARNING "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
       endif()
 
       # Get CUDA compute capability "X.X"
