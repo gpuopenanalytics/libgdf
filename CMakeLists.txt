@@ -144,16 +144,15 @@ if (CUDA_FOUND)
 
       if (${CUDA_SUCCESS})
         message(STATUS "Detected CUDA Compute Capability: ${CUDA_COMPUTE_CAPABILITY}")
+        set(CUDA_NVCC_FLAGS ${DETECTED_ARCH};--expt-extended-lambda;-std=c++11)
+        message(STATUS "Using detected GPU Architecture")
+        message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
+
+        if (${CUDA_COMPUTE_CAPABILITY} LESS 6.0) # Full functionality available in Pascal or greater
+          message(WARNING "\n Detected CUDA comptue capability: ${CUDA_COMPUTE_CAPABILITY}
+                           \n NOT ALL FEATURES WILL FUNCTION PROPERLY")
+        endif()
       endif()
-  
-      if (${CUDA_COMPUTE_CAPABILITY} LESS 6.0) # Full functionality available in Pascal or greater
-        message(WARNING "\n Detected CUDA comptue capability: ${CUDA_COMPUTE_CAPABILITY}
-                         \n NOT ALL FEATURES WILL FUNCTION PROPERLY")
-      endif()
-  
-      set(CUDA_NVCC_FLAGS ${DETECTED_ARCH};--expt-extended-lambda;-std=c++11)
-      message(STATUS "Using detected GPU Architecture")
-      message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
 
     elseif (${GPU_ARCH} STREQUAL pascal)
 
