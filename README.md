@@ -91,8 +91,10 @@ the dependencies.
 ```bash
 # create the conda environment (assuming in build directory)
 $ conda env create --name libgdf_dev --file ../conda_environments/dev_py35.yml
+
 # activate the environment
 $ source activate libgdf_dev
+
 # when not using default arrow version 0.10.0, run
 $ conda install pyarrow=$ARROW_VERSION -c conda-forge
 ```
