@@ -105,6 +105,7 @@ namespace arrow {
         template <typename T>
         inline int RleDecoder::GetBatch(T* values, int batch_size)
         {
+            std::cout << "GetBatch\n";
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
 
@@ -134,6 +135,7 @@ namespace arrow {
         inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values,
             int batch_size)
         {
+            // std::cout << "GetBatchWithDict\n";
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
 
@@ -142,6 +144,7 @@ namespace arrow {
             std::vector<uint64_t> rleValues;
             int numRle;
             int numBitpacked;
+            std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
             std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
             std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets;
@@ -168,9 +171,10 @@ namespace arrow {
                     numBitpacked++;
 
                     bit_reader_.SetGpuBatchMetadata(
-                        bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets,
+                        bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets, bitpackset,
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                         remainderSetSize, remainderOutputOffsets);
+
                     // int actual_read;
                     // actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
                     // DCHECK_EQ(actual_read, literal_batch);
@@ -185,9 +189,12 @@ namespace arrow {
                 }
             }
             int indices[batch_size];
-            int actual_read = gdf::arrow::internal::decode_using_gpu(
+            int actual_read = gdf::arrow::internal::decode_using_cpu(
                 this->bit_reader_.get_buffer(), this->bit_reader_.get_buffer_len(),
-                rleRuns, rleValues, unpack32InputOffsets, unpack32OutputOffsets,
+                rleRuns, rleValues, 
+                unpack32InputOffsets,
+                bitpackset,
+                unpack32OutputOffsets,
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets, isRleVector, bit_width_, &indices[0], batch_size);
 
@@ -203,6 +210,8 @@ namespace arrow {
             const uint8_t* valid_bits,
             int64_t valid_bits_offset)
         {
+            // std::cout << "GetBatchWithDictSpaced\n";
+
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
             int remaining_nulls = null_count;

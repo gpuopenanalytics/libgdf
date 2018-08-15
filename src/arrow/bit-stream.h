@@ -71,6 +71,7 @@ namespace arrow {
             template <typename T>
             void SetGpuBatchMetadata(int num_bits, T* v, int batch_size, int values_read,  
                 std::vector<int>& unpack32InputOffsets,
+                std::vector< std::pair<uint32_t, uint32_t> >& bitpackset,
                 std::vector<int>& unpack32OutputOffsets,
                 std::vector<int>& remainderInputOffsets,
                 std::vector<int>& remainderBitOffsets,
@@ -174,6 +175,7 @@ namespace arrow {
         inline void
         BitReader::SetGpuBatchMetadata(int num_bits, T* v, int batch_size, int values_read,
             std::vector<int>& unpack32InputOffsets,
+            std::vector< std::pair<uint32_t, uint32_t> > &bitpackset,
             std::vector<int>& unpack32OutputOffsets,
             std::vector<int>& remainderInputOffsets,
             std::vector<int>& remainderBitOffsets,
@@ -223,12 +225,15 @@ namespace arrow {
 
                 int unpack_batch_size = (batch_size - i) / 32 * 32;
                 int num_loops = unpack_batch_size / 32;
+                int start_input_offset = byte_offset;
                 for (int j = 0; j < num_loops; ++j) {
                     unpack32InputOffsets.push_back(byte_offset);
                     unpack32OutputOffsets.push_back(i + values_read);
-
                     i += 32;
                     byte_offset += 32 * num_bits / 8;
+                }
+                if (num_loops > 0) {
+                    bitpackset.push_back(std::make_pair<uint32_t, uint32_t>(start_input_offset, byte_offset - start_input_offset));
                 }
                 int byte_offset_start = byte_offset;
                 int bit_offset_start = bit_offset;

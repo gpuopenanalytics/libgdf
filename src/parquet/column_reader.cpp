@@ -54,7 +54,6 @@ _ConfigureDictionary(
           dictionary_page->num_values(), page->data(), page->size());
 
  #ifdef GDF_DECODER_GPU_VERSION
-        std::cout << "using gpu decoder\n";
         auto decoder = std::make_shared<internal::DictionaryDecoder<
         DataType, gdf::arrow::internal::RleDecoder> >(column_descriptor, pool);
         decoder->SetDict(&dictionary);
