@@ -24,6 +24,8 @@
 namespace gdf {
 namespace parquet {
 
+#define GDF_DECODER_GPU_VERSION 1 
+
 template <class DataType, class DecoderType>
 static inline void
 _ConfigureDictionary(

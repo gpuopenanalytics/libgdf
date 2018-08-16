@@ -86,20 +86,20 @@ TEST_F(ParquetReaderAPITest, ReadAll) {
 
     checkBoolean(columns[0]);
     checkInt64(columns[1]);
-    // checkDouble(columns[2]);
+    checkDouble(columns[2]);
 }
 
-// TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
-//     const char *const column_names[] = {
-//       "double_field", "int64_field", nullptr};
+TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
+    const char *const column_names[] = {
+      "double_field", "int64_field", nullptr};
 
-//     gdf_error error_code = gdf::parquet::read_parquet(
-//       PARQUET_FILE_PATH, nullptr, column_names, &columns, &columns_length);
+    gdf_error error_code = gdf::parquet::read_parquet(
+      PARQUET_FILE_PATH, nullptr, column_names, &columns, &columns_length);
 
-//     EXPECT_EQ(GDF_SUCCESS, error_code);
+    EXPECT_EQ(GDF_SUCCESS, error_code);
 
-//     EXPECT_EQ(2, columns_length);
+    EXPECT_EQ(2, columns_length);
 
-//     checkDouble(columns[0]);
-//     checkInt64(columns[1]);
-// }
+    checkDouble(columns[0]);
+    checkInt64(columns[1]);
+}

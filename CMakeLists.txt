@@ -94,10 +94,6 @@ IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G)
 ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
 
-if (GDF_DECODER_GPU_VERSION)
-    add_definitions(-DGDF_DECODER_GPU_VERSION=1)
-endif()    
-
 # switch between hash-join and sort-join
 option(HASH_JOIN "hash-based join" ON)
 if(HASH_JOIN)

@@ -310,7 +310,8 @@ void gpu_bit_packing_remainder( const uint8_t *buffer,
         sum_set_size += (remainderSetSize[i] / 4 + 1) * 8;  
     }
     int offset = 0;
-    thrust::host_vector<uint8_t> h_buffer(sum_set_size);
+    uint8_t* h_buffer;
+    pinnedAllocator.pinnedAllocate((void **)&h_buffer, sum_set_size * sizeof (uint8_t) );
     thrust::host_vector<int> remainder_new_input_offsets;
     for (int i = 0; i < remainderInputOffsets.size(); i++) {
         auto offset_sz = (remainderSetSize[i] / 4 + 1) * 8;
@@ -318,7 +319,7 @@ void gpu_bit_packing_remainder( const uint8_t *buffer,
         remainder_new_input_offsets.push_back(offset);
         offset += offset_sz;
     }
-    thrust::device_vector<uint8_t> d_buffer(h_buffer);
+    thrust::device_vector<uint8_t> d_buffer(h_buffer, h_buffer + sum_set_size * sizeof (uint8_t));
     thrust::device_vector<int> d_remainder_input_offsets(remainder_new_input_offsets);
     thrust::device_vector<int> d_remainder_bit_offsets(remainderBitOffsets);
     thrust::device_vector<int> d_remainder_setsize(remainderSetSize);
@@ -337,6 +338,8 @@ void gpu_bit_packing_remainder( const uint8_t *buffer,
         thrust::make_discard_iterator(),
         remainder_functor(max_bytes, num_bits, d_buffer.data().get(),
                           d_output.data().get()));
+
+    pinnedAllocator.pinnedFree(h_buffer);
 }
 
 void cpu_bit_packing_remainder( const uint8_t *buffer,
@@ -354,6 +357,7 @@ void cpu_bit_packing_remainder( const uint8_t *buffer,
     }
     int offset = 0;
     thrust::host_vector<uint8_t> h_buffer(sum_set_size);
+   
     thrust::host_vector<int> remainder_new_input_offsets;
     for (int i = 0; i < remainderInputOffsets.size(); i++) {
         auto offset_sz = (remainderSetSize[i] / 4 + 1) * 8;
@@ -442,6 +446,7 @@ void gpu_bit_packing(const uint8_t *buffer,
 	    thrust::make_permutation_iterator(d_bit_buffer.end(), d_bit_offset.end()),
 	    thrust::make_permutation_iterator(d_output.begin(), d_output_offset.begin()),
 	    thrust::make_discard_iterator(), unpack_functor(num_bits));
+    pinnedAllocator.pinnedFree(h_bit_buffer);
 }
 
 int decode_using_gpu(const uint8_t *buffer, const int buffer_len,

@@ -67,7 +67,7 @@ function(GDF_ADD_PARQUET_BENCHMARK TARGET)
             PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
         target_link_libraries(${TARGET}
             Google::Benchmark Google::Benchmark::Main
-            Threads::Threads gdf-parquet)
+            Threads::Threads gdf gdf-parquet)
     endif()
 endfunction()
 
@@ -82,3 +82,4 @@ endfunction()
 
 add_subdirectory(file_reader)
 add_subdirectory(decoding)
+add_subdirectory(benchmark)

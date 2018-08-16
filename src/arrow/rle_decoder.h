@@ -130,7 +130,7 @@ namespace arrow {
 
             return values_read;
         }
-
+        
         template <typename T>
         inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values,
             int batch_size)
@@ -174,13 +174,6 @@ namespace arrow {
                         bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets, bitpackset,
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                         remainderSetSize, remainderOutputOffsets);
-
-                    // int actual_read;
-                    // actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
-                    // DCHECK_EQ(actual_read, literal_batch);
-                    // for (int i = 0; i < literal_batch; ++i) {
-                    //     // values[values_read + i] = dictionary[indices[i]];
-                    // }
                     literal_count_ -= literal_batch;
                     values_read += literal_batch;
                 } else {
@@ -189,7 +182,7 @@ namespace arrow {
                 }
             }
             int indices[batch_size];
-            int actual_read = gdf::arrow::internal::decode_using_cpu(
+            int actual_read = gdf::arrow::internal::decode_using_gpu(
                 this->bit_reader_.get_buffer(), this->bit_reader_.get_buffer_len(),
                 rleRuns, rleValues, 
                 unpack32InputOffsets,

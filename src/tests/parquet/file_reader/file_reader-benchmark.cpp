@@ -108,11 +108,6 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &reader) {
 template <ReaderType T>
 static void
 BM_FileRead(benchmark::State &state) {
-    #ifdef GDF_DECODER_GPU_VERSION
-        std::cout << "use gpu decoder\n";
-    #else
-        std::cout << "use cpu decoder\n";
-    #endif
     for (auto _ : state) {
         std::unique_ptr<typename Readers<T>::FileReader> reader =
           Readers<T>::FileReader::OpenFile(PARQUET_FILE_PATH);
