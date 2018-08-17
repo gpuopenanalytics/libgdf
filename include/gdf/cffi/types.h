@@ -97,12 +97,16 @@ enum gdf_binary_operator {
 
 struct gdf_scalar {
     union gdf_data {
-        std::int8_t  si08;
-        std::int16_t si16;
-        std::int32_t si32;
-        std::int64_t si64;
-        float        fp32;
-        double       fp64;
+        std::uint8_t  ui08;
+        std::uint16_t ui16;
+        std::uint32_t ui32;
+        std::uint64_t ui64;
+        std::int8_t   si08;
+        std::int16_t  si16;
+        std::int32_t  si32;
+        std::int64_t  si64;
+        float         fp32;
+        double        fp64;
     };
 
     gdf_data  data;

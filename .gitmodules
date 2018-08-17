@@ -4,3 +4,6 @@
 [submodule "thirdparty/moderngpu"]
 	path = thirdparty/moderngpu
 	url = https://github.com/moderngpu/moderngpu.git
+[submodule "thirdparty/jitify"]
+	path = thirdparty/jitify
+	url = git@github.com:NVIDIA/jitify.git

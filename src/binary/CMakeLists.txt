@@ -13,3 +13,12 @@ if (${BINARY_OPERATION_VERSION} STREQUAL "V1")
          "${CMAKE_CURRENT_LIST_DIR}/common/mediator.cu"
     )
 endif()
+
+
+if (${BINARY_OPERATION_VERSION} STREQUAL "V2")
+    message("BINARY_OPERATION_VERSION: V2 Selected")
+    list(APPEND gdfs_source_files
+         "${CMAKE_CURRENT_LIST_DIR}/binary2/binary.cpp"
+         "${CMAKE_CURRENT_LIST_DIR}/binary2/type.cpp"
+    )
+endif()
