@@ -19,6 +19,10 @@ if (${BINARY_OPERATION_VERSION} STREQUAL "V2")
     message("BINARY_OPERATION_VERSION: V2 Selected")
     list(APPEND gdfs_source_files
          "${CMAKE_CURRENT_LIST_DIR}/binary2/binary.cpp"
+         "${CMAKE_CURRENT_LIST_DIR}/binary2/kernel.cpp"
+         "${CMAKE_CURRENT_LIST_DIR}/binary2/launcher.cpp"
+         "${CMAKE_CURRENT_LIST_DIR}/binary2/operation.cpp"
+         "${CMAKE_CURRENT_LIST_DIR}/binary2/traits.cpp"
          "${CMAKE_CURRENT_LIST_DIR}/binary2/type.cpp"
     )
 endif()

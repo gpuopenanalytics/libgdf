@@ -1,7 +1,6 @@
 #include "binary/binary2/type.h"
 
 namespace gdf {
-namespace binary {
 
     BaseType convertToBaseType(gdf_dtype type) {
         switch (type) {
@@ -50,5 +49,32 @@ namespace binary {
         }
     }
 
-}
+    const char* getOperatorName(gdf_binary_operator ope) {
+        switch (ope) {
+            case GDF_ADD:
+                return "Add";
+            case GDF_SUB:
+                return "Sub";
+            case GDF_MUL:
+                return "Mul";
+            case GDF_DIV:
+                return "Div";
+            /*
+        GDF_TRUE_DIV,
+        GDF_FLOOR_DIV,
+        GDF_MOD,
+        GDF_POW,
+        //GDF_COMBINE,
+        //GDF_COMBINE_FIRST,
+        //GDF_ROUND,
+        GDF_EQUAL,
+        GDF_NOT_EQUAL,
+        GDF_LESS,
+        GDF_GREATER,
+        GDF_LESS_EQUAL,
+        GDF_GREATER_EQUAL,
+        */
+        }
+    }
+
 }

@@ -1,6 +1,3 @@
-#ifndef GDF_CUDA_OPERATION_H
-#define GDF_CUDA_OPERATION_H
-
 namespace gdf {
 namespace cuda {
 
@@ -51,5 +48,3 @@ R"***(
 )***";
 }
 }
-
-#endif

@@ -4,7 +4,6 @@
 #include "gdf/gdf.h"
 
 namespace gdf {
-namespace binary {
 
     enum class BaseType {
         UI08,
@@ -23,7 +22,8 @@ namespace binary {
 
     const char* getStringFromBaseType(BaseType type);
 
-}
+    const char* getOperatorName(gdf_binary_operator ope);
+
 }
 
 #endif

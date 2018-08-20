@@ -1,6 +1,3 @@
-#ifndef GDF_CUDA_TRAITS_H
-#define GDF_CUDA_TRAITS_H
-
 namespace gdf {
 namespace cuda {
 
@@ -174,8 +171,8 @@ R"***(
 
     template <typename Vax, typename Vay>
     struct HelperCommonNumber<Vax, Vay, enableIf<(isFloatingPoint<Vax> || isFloatingPoint<Vay>)>> {
-        constexpr static int szVax = sizeof(Vax);
-        constexpr static int szVay = sizeof(Vay);
+        static constexpr int szVax = sizeof(Vax);
+        static constexpr int szVay = sizeof(Vay);
 
         using Type = If<(szVax == 8 || szVay == 8), double, float>;
     };
@@ -206,5 +203,3 @@ R"***(
 
 }
 }
-
-#endif
