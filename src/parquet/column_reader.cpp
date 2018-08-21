@@ -306,6 +306,8 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
                     ++values_to_read;
                 }
             }
+            std::cout << "*ReadBatchSpaced: before _ReadValues" << std::endl;
+
             total_values =
               _ReadValues(current_decoder_, values_to_read, values);
             for (std::int64_t i = 0; i < total_values; i++) {
@@ -323,6 +325,7 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
                                       &null_count,
                                       valid_bits,
                                       valid_bits_offset);
+            
             total_values = _ReadValuesSpaced(current_decoder_,
                                              *values_read,
                                              values,
@@ -359,11 +362,11 @@ struct ParquetTraits {};
 TYPE_TRAITS_FACTORY(::parquet::BooleanType, GDF_invalid);
 TYPE_TRAITS_FACTORY(::parquet::Int32Type, GDF_INT32);
 TYPE_TRAITS_FACTORY(::parquet::Int64Type, GDF_INT64);
-TYPE_TRAITS_FACTORY(::parquet::Int96Type, GDF_invalid);
+// TYPE_TRAITS_FACTORY(::parquet::Int96Type, GDF_invalid);
 TYPE_TRAITS_FACTORY(::parquet::FloatType, GDF_FLOAT32);
 TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
-TYPE_TRAITS_FACTORY(::parquet::ByteArrayType, GDF_invalid);
-TYPE_TRAITS_FACTORY(::parquet::FLBAType, GDF_invalid);
+// TYPE_TRAITS_FACTORY(::parquet::ByteArrayType, GDF_invalid);
+// TYPE_TRAITS_FACTORY(::parquet::FLBAType, GDF_invalid);
 
 #undef TYPE_TRAITS_FACTORY
 
@@ -408,11 +411,11 @@ ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels,
 template class ColumnReader<::parquet::BooleanType>;
 template class ColumnReader<::parquet::Int32Type>;
 template class ColumnReader<::parquet::Int64Type>;
-template class ColumnReader<::parquet::Int96Type>;
+// template class ColumnReader<::parquet::Int96Type>;
 template class ColumnReader<::parquet::FloatType>;
 template class ColumnReader<::parquet::DoubleType>;
-template class ColumnReader<::parquet::ByteArrayType>;
-template class ColumnReader<::parquet::FLBAType>;
+// template class ColumnReader<::parquet::ByteArrayType>;
+// template class ColumnReader<::parquet::FLBAType>;
 
 }  // namespace parquet
 }  // namespace gdf

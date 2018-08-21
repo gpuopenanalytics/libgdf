@@ -20,6 +20,10 @@
 #include "bit-stream.h"
 #include "cu_decoder.cuh"
 #include <arrow/util/bit-stream-utils.h>
+#include <thrust/gather.h>
+#include <thrust/fill.h>
+#include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
 
 namespace parquet {
 class ColumnDescriptor;
@@ -72,7 +76,7 @@ namespace arrow {
             /// Like GetBatch but the values are then decoded using the provided
             /// dictionary
             template <typename T>
-            int GetBatchWithDict(const T* dictionary, T* values, int batch_size);
+            int GetBatchWithDict(const T* dictionary, int num_dictionary_values, T* values, int batch_size);
 
             /// Like GetBatchWithDict but add spacing for null entries
             template <typename T>
@@ -132,10 +136,9 @@ namespace arrow {
         }
         
         template <typename T>
-        inline int RleDecoder::GetBatchWithDict(const T* dictionary, T* values,
+        inline int RleDecoder::GetBatchWithDict(const T* dictionary, int num_dictionary_values, T* values,
             int batch_size)
         {
-            // std::cout << "GetBatchWithDict\n";
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
 
@@ -156,7 +159,11 @@ namespace arrow {
                     isRleVector.push_back(1);
                     rleValues.push_back(current_value_);
                     numRle++;
-                    std::fill(values + values_read, values + values_read + repeat_batch, dictionary[current_value_]);
+
+                    // not to do fill!
+                    //std::fill(values + values_read, values + values_read + repeat_batch, dictionary[current_value_]);
+                    // thrust::fill(thrust::device, values + values_read, values + values_read + repeat_batch, dictionary[current_value_]);
+
                     repeat_count_ -= repeat_batch;
                     values_read += repeat_batch;
                 } else if (literal_count_ > 0) {
@@ -169,7 +176,6 @@ namespace arrow {
                     isRleVector.push_back(0);
                     rleValues.push_back(0);
                     numBitpacked++;
-
                     bit_reader_.SetGpuBatchMetadata(
                         bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets, bitpackset,
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
@@ -181,19 +187,19 @@ namespace arrow {
                         return values_read;
                 }
             }
-            int indices[batch_size];
-            int actual_read = gdf::arrow::internal::decode_using_gpu(
+            int actual_read = gdf::arrow::internal::decode_using_gpu(dictionary, num_dictionary_values, values,
                 this->bit_reader_.get_buffer(), this->bit_reader_.get_buffer_len(),
                 rleRuns, rleValues, 
                 unpack32InputOffsets,
                 bitpackset,
                 unpack32OutputOffsets,
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
-                remainderOutputOffsets, isRleVector, bit_width_, &indices[0], batch_size);
-
-            for (int i = 0; i < batch_size; ++i) {
-                values[i] = dictionary[indices[i]];
-            }
+                remainderOutputOffsets, isRleVector, bit_width_, batch_size);
+            
+            // copy values using gpu 
+            // for (int i = 0; i < batch_size; ++i) {
+            //     values[i] = dictionary[indices[i]];
+            // }
             return values_read;
         }
 
@@ -203,7 +209,8 @@ namespace arrow {
             const uint8_t* valid_bits,
             int64_t valid_bits_offset)
         {
-            // std::cout << "GetBatchWithDictSpaced\n";
+            std::cout << "GetBatchWithDictSpaced not supported\n";
+            assert(false);
 
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
@@ -280,7 +287,7 @@ namespace arrow {
         }
 
         template <typename T>
-        bool RleDecoder::NextCounts()
+        inline bool RleDecoder::NextCounts()
         {
             // Read the next run's indicator int, it could be a literal or repeated run.
             // The int is encoded as a vlq-encoded value.

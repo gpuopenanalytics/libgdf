@@ -16,6 +16,7 @@
  */
 
 #include <arrow/util/bit-stream-utils.h>
+#include "../arrow/bit-stream.h"
 
 namespace parquet {
 class ColumnDescriptor;
@@ -139,7 +140,7 @@ public:
     virtual void
     SetData(int num_values, const std::uint8_t *data, int len) {
         num_values_ = num_values;
-        bit_reader_ = ::arrow::BitReader(data, len);
+        bit_reader_ = gdf::arrow::internal::BitReader(data, len);
     }
 
     int
@@ -159,15 +160,41 @@ public:
     virtual int
     Decode(bool *buffer, int max_values) {
         max_values = std::min(max_values, num_values_);
-        if (bit_reader_.GetBatch(1, buffer, max_values) != max_values) {
-            ::parquet::ParquetException::EofException();
-        }
+
+        int literal_batch = max_values;
+        int values_read = 0;
+        std::vector<uint16_t> isRleVector;
+        std::vector<uint32_t> rleRuns;
+        std::vector<uint64_t> rleValues;
+        int numRle;
+        int numBitpacked;
+        std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
+        std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
+        std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
+                remainderOutputOffsets;
+
+        bit_reader_.SetGpuBatchMetadata(
+                1, buffer, literal_batch, values_read, unpack32InputOffsets, bitpackset,
+                unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
+                remainderSetSize, remainderOutputOffsets);
+
+        gdf::arrow::internal::unpack_using_gpu<bool> (
+                bit_reader_.get_buffer(), bit_reader_.get_buffer_len(),
+                unpack32InputOffsets,
+                bitpackset,
+                unpack32OutputOffsets,
+                remainderInputOffsets, remainderBitOffsets, remainderSetSize,
+                remainderOutputOffsets, 1, buffer, literal_batch);
+
+        // if (bit_reader_.GetBatch(1, buffer, max_values) != max_values) {
+        //     ::parquet::ParquetException::EofException();
+        // }
         num_values_ -= max_values;
         return max_values;
     }
 
 private:
-    ::arrow::BitReader bit_reader_;
+    gdf::arrow::internal::BitReader bit_reader_;
 };
 
 }  // namespace internal

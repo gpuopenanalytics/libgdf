@@ -16,15 +16,6 @@
 #include <vector>
 #include <tuple>
 
-#ifndef EXPECT_TRUE
-#define EXPECT_TRUE (expr)
-    assert(expr);
-#endif
-
-#ifndef EXPECT_EQ
-#define EXPECT_EQ (lhs, rhs)
-    assert((lsh) == (rhs));
-#endif
 
 template <typename gdf_type>
 inline gdf_dtype gdf_enum_type_for()
@@ -91,7 +82,7 @@ auto init_device_vector(gdf_size_type num_elements) -> std::tuple<RawType *, thr
 {
     RawType *device_pointer;
     cudaError_t cuda_error = cudaMalloc((void **)&device_pointer, sizeof(PointerType) * num_elements);
-    EXPECT_TRUE(cuda_error == cudaError::cudaSuccess);
+    assert(cuda_error == cudaError::cudaSuccess);
     thrust::device_ptr<PointerType> device_wrapper = thrust::device_pointer_cast((PointerType *)device_pointer);
     return std::make_tuple(device_pointer, device_wrapper);
 }
@@ -157,17 +148,17 @@ auto print_column(gdf_column * column) -> void {
     auto host_valid_out = get_gdf_valid_from_device(column);
     std::cout<<"Printing Column\t null_count:" << column->null_count << "\t type " << column->dtype <<  std::endl;
     int  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
-    // for(int i = 0; i < column->size; i++) {
-    //     int col_position =  i / 8;
-    //     int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
-    //     int bit_offset =  (length_col - 1) - (i % 8);
-    //     if (sizeof(ValueType) == 1) {
-    //         std::cout << "host_out[" << i << "] = " << ((int)host_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
+    for(int i = 0; i < column->size; i++) {
+        int col_position =  i / 8;
+        int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
+        int bit_offset =  (length_col - 1) - (i % 8);
+        if (sizeof(ValueType) == 1) {
+            std::cout << "host_out[" << i << "] = " << ((int)host_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
 
-    //     } else {
-    //         std::cout << "host_out[" << i << "] = " << ((ValueType)host_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
-    //     }
-    // }
+        } else {
+            std::cout << "host_out[" << i << "] = " << ((ValueType)host_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
+        }
+    }
     for (int i = 0; i < n_bytes; i++) {
         int length = n_bytes != i+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
         print_binary(host_valid_out[i], length);
@@ -218,7 +209,7 @@ void check_column_for_stencil_operation(gdf_column *column, gdf_column *stencil,
     gdf_column host_stencil = convert_to_host_gdf_column(stencil);
     gdf_column host_output_op = convert_to_host_gdf_column(output_op);
 
-    EXPECT_EQ(host_column.size, host_stencil.size);
+    assert(host_column.size == host_stencil.size);
     //EXPECT_EQ(host_column.dtype == host_output_op.dtype);  // it must have the same type
 
     
@@ -239,13 +230,13 @@ void check_column_for_stencil_operation(gdf_column *column, gdf_column *stencil,
         int index = indexes[i];
         LeftValueType value = ((LeftValueType *)(host_column.data))[index];
         std::cout << "filtered values: " << index  << "** "  << "\t value: " << (int)value << std::endl;
-        EXPECT_EQ( ((RightValueType*)host_output_op.data)[i], value);
+        assert( ((RightValueType*)host_output_op.data)[i] == value);
         
         int col_position =  i / 8;
         int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : output_op->size - GDF_VALID_BITSIZE * (n_bytes - 1);
         int bit_offset =  (length_col - 1) - (i % 8);
         bool valid = ((host_output_op.valid[col_position] >> bit_offset ) & 1) != 0;
-        EXPECT_EQ(valid, true);
+        assert(valid == true);
     }
 }
 
@@ -259,14 +250,14 @@ void check_column_for_comparison_operation(gdf_column *lhs, gdf_column *rhs, gdf
         
         size_t n_bytes = get_number_of_bytes_for_valid(output->size);
 
-        EXPECT_EQ(lhs->size, rhs->size); 
+        assert(lhs->size == rhs->size); 
         
         for(int i = 0; i < output->size; i++) {
             int col_position =  i / 8;
             int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : output->size - GDF_VALID_BITSIZE * (n_bytes - 1);
             int bit_offset =  (length_col - 1) - (i % 8);
             
-            EXPECT_EQ( ((lhs_valid[col_position] >> bit_offset ) & 1) & ((rhs_valid[col_position] >> bit_offset ) & 1),
+            assert( ((lhs_valid[col_position] >> bit_offset ) & 1) & ((rhs_valid[col_position] >> bit_offset ) & 1) ==
             ((output_valid[col_position] >> bit_offset ) & 1) );
         }
         
@@ -280,10 +271,10 @@ void check_column_for_comparison_operation(gdf_column *lhs, gdf_column *rhs, gdf
         auto rhs_data = get_gdf_data_from_device<RightValueType>(rhs);
         auto output_data = get_gdf_data_from_device<int8_t>(output);
 
-        EXPECT_EQ(lhs->size, rhs->size); 
+        assert(lhs->size == rhs->size); 
         for(size_t i = 0; i < lhs->size; i++)
         {
-            EXPECT_EQ(lhs_data[i] == rhs_data[i] ? 1 : 0,  output_data[i]);              
+            assert(lhs_data[i] == rhs_data[i] ? 1 : 0  ==  output_data[i]);              
         }
         
         delete[] lhs_data;
@@ -310,7 +301,7 @@ void check_column_for_concat_operation(gdf_column *lhs, gdf_column *rhs, gdf_col
         delete[] lhs_valid;
         delete[] rhs_valid;
         delete[] output_valid;    
-        EXPECT_EQ(computed, expected);
+        assert(computed == expected);
     }
 
     {
@@ -323,7 +314,7 @@ void check_column_for_concat_operation(gdf_column *lhs, gdf_column *rhs, gdf_col
         delete[] lhs_data;
         delete[] rhs_data;
         delete[] output_data;    
-        EXPECT_EQ(computed, expected);    
+        assert(computed == expected);    
     }
     
 }

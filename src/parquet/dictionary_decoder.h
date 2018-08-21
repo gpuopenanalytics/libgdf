@@ -54,7 +54,7 @@ public:
     Decode(T *buffer, int max_values) override {
         max_values         = std::min(max_values, num_values_);
         int decoded_values = idx_decoder_.GetBatchWithDict(
-          dictionary_.data(), buffer, max_values);
+          dictionary_.data(), num_dictionary_values_, buffer, max_values);
         if (decoded_values != max_values) {
             ::parquet::ParquetException::EofException();
         }
@@ -89,6 +89,8 @@ private:
     std::shared_ptr<::parquet::PoolBuffer> byte_array_data_;
 
     RleDecoder idx_decoder_;
+
+    int num_dictionary_values_;
 };
 
 template <typename Type, typename RleDecoder>
@@ -96,6 +98,7 @@ inline void
 DictionaryDecoder<Type, RleDecoder>::SetDict(
   ::parquet::Decoder<Type> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
+    num_dictionary_values_ = num_dictionary_values;
     dictionary_.Resize(num_dictionary_values);
     dictionary->Decode(&dictionary_[0], num_dictionary_values);
 }
@@ -113,6 +116,7 @@ inline void
 DictionaryDecoder<::parquet::ByteArrayType, ::arrow::RleDecoder>::SetDict(
   ::parquet::Decoder<::parquet::ByteArrayType> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
+    num_dictionary_values_ = num_dictionary_values;
     dictionary_.Resize(num_dictionary_values);
     dictionary->Decode(&dictionary_[0], num_dictionary_values);
 
@@ -139,6 +143,7 @@ inline void
 DictionaryDecoder<::parquet::FLBAType, ::arrow::RleDecoder>::SetDict(
   ::parquet::Decoder<::parquet::FLBAType> *dictionary) {
     int num_dictionary_values = dictionary->values_left();
+    num_dictionary_values_ = num_dictionary_values;
     dictionary_.Resize(num_dictionary_values);
     dictionary->Decode(&dictionary_[0], num_dictionary_values);
 
