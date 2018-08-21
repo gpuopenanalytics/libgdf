@@ -110,7 +110,7 @@ endif()
 
 cuda_add_library(gdf-parquet
     src/parquet/api.cpp
-    src/parquet/column_reader.cpp
+    src/parquet/column_reader.cu
     src/parquet/file_reader.cpp
     src/parquet/file_reader_contents.cpp
     src/parquet/page_reader.cpp

@@ -18,8 +18,8 @@
 #include <arrow/util/bit-util.h>
 
 #include "column_reader.h"
-#include "dictionary_decoder.h"
-#include "plain_decoder.h"
+#include "dictionary_decoder.cuh"
+#include "plain_decoder.cuh"
 
 namespace gdf {
 namespace parquet {

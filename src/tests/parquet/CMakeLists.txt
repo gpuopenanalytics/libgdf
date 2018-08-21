@@ -46,17 +46,6 @@ set_target_properties(Google::Benchmark::Main
     PROPERTIES INTERFACE_LINK_LIBRARIES ${BENCHMARK_ROOT}/lib/libbenchmark_main.a)
 endif()
 
-set(file_reader_SRCS
-    ${CMAKE_SOURCE_DIR}/src/arrow/util/pinned_allocator.cu
-    ${CMAKE_SOURCE_DIR}/src/arrow/cu_decoder.cu
-    ${CMAKE_SOURCE_DIR}/src/parquet/api.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/column_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/file_reader_contents.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/page_reader.cpp
-    ${CMAKE_SOURCE_DIR}/src/parquet/row_group_reader_contents.cpp
-    )
-
 function(GDF_ADD_PARQUET_BENCHMARK TARGET)
     if(GDF_BENCHMARK)
 

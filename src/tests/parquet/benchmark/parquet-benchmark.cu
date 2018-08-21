@@ -274,11 +274,11 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
 
             const std::shared_ptr<parquet::ColumnReader> columnReader = groupReader->Column(columnIndex);
             int64_t numRecords = rowGroupMetadata->num_rows();
-            
-            gdf_column output;
-            containerFrom<T>(&output, columnReader, numRecords, batch_size);
-            columns.push_back(output);
-            
+            // if (columnIndex == 0) {
+                gdf_column output;
+                containerFrom<T>(&output, columnReader, numRecords, batch_size);
+                columns.push_back(output);
+            // }
         }
     } 
     // check columns 
@@ -286,6 +286,7 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
     // checkInt64(columns[1]);
     // checkDouble(columns[2]);
     
+    filterops_test<bool, bool>(&columns[0], &columns[0]);
     filterops_test<bool, bool>(&columns[0], &columns[1]);
     filterops_test<bool, double>(&columns[0], &columns[2]);
     filterops_test<int64_t, double>(&columns[1], &columns[2]);

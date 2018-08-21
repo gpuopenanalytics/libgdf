@@ -343,7 +343,7 @@ void gpu_bit_packing(const uint8_t *buffer,
 }
  
 template<typename T>
-int decode_using_gpu(const T * dictionary, int num_dictionary_values, T* d_output, const uint8_t *buffer, const int buffer_len,
+int decode_using_gpu(const T * d_dictionary, int num_dictionary_values, T* d_output, const uint8_t *buffer, const int buffer_len,
                      const std::vector<uint32_t> &rle_runs,
                      const std::vector<uint64_t> &rle_values,
                      const std::vector<int> &input_offset,
@@ -359,18 +359,25 @@ int decode_using_gpu(const T * dictionary, int num_dictionary_values, T* d_outpu
     thrust::device_vector<int> d_indices(batch_size);
     thrust::device_vector<uint32_t> d_counts(rle_runs);
     thrust::device_vector<uint64_t> d_values(rle_values);
-    gpu_expand(d_counts.begin(), d_counts.end(), d_values.begin(),
-               d_indices.begin());
+    gpu_expand(d_counts.begin(), d_counts.end(), d_values.begin(), d_indices.begin());
     gpu_bit_packing(buffer, buffer_len, input_offset, bitpackset, output_offset, d_indices, num_bits);
     gpu_bit_packing_remainder(buffer, buffer_len, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
     
-    thrust::device_vector<int> d_dictionary(dictionary, dictionary + num_dictionary_values);
     thrust::gather(thrust::device,
                 d_indices.begin(), d_indices.end(),
-                d_dictionary.begin(),
+                d_dictionary,
                 d_output);
     return batch_size;
 }
+
+template <typename T>
+struct copy_functor : public thrust::unary_function<int, T>
+{
+    __host__ __device__ T operator()(int input)
+    {
+        return static_cast<T>(input);
+    }
+};
 
 template<typename T>
 int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
@@ -387,13 +394,8 @@ int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
     thrust::device_vector<int> d_output_int(batch_size);
     gpu_bit_packing(buffer, buffer_len, input_offset, bitpackset, output_offset, d_output_int, num_bits);
     gpu_bit_packing_remainder(buffer, buffer_len, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_output_int, num_bits);
-    
-    thrust::host_vector<int> h_output_int(d_output_int);
-    thrust::host_vector<T> h_output(batch_size);
-    for (int k = 0; k < h_output_int.size(); ++k) {
-        h_output[k] = static_cast<T>(h_output_int[k]);
-    }
-    cudaMemcpy(device_output, h_output.data(), sizeof(T) * batch_size, cudaMemcpyHostToDevice);
+
+    thrust::transform(thrust::device, d_output_int.begin(), d_output_int.end(), device_output, copy_functor<T>());
     return batch_size;
 }
 
