@@ -2,58 +2,21 @@
 #include "binary/binary2/launcher.h"
 
 namespace gdf {
-    gdf_error operation_launch(Launcher& launcher, gdf_column* out, gdf_column* vax, gdf_scalar* vay) {
-        auto type = gdf::convertToBaseType(vay->type);
-        switch (type) {
-            case gdf::BaseType::UI08:
-                launcher.launch(out, vax, vay->data.ui08);
-                break;
-            case gdf::BaseType::UI16:
-                launcher.launch(out, vax, vay->data.ui16);
-                break;
-            case gdf::BaseType::UI32:
-                launcher.launch(out, vax, vay->data.ui32);
-                break;
-            case gdf::BaseType::UI64:
-                launcher.launch(out, vax, vay->data.ui64);
-                break;
-            case gdf::BaseType::SI08:
-                launcher.launch(out, vax, vay->data.si08);
-                break;
-            case gdf::BaseType::SI16:
-                launcher.launch(out, vax, vay->data.si16);
-                break;
-            case gdf::BaseType::SI32:
-                launcher.launch(out, vax, vay->data.si32);
-                break;
-            case gdf::BaseType::SI64:
-                launcher.launch(out, vax, vay->data.si64);
-                break;
-            case gdf::BaseType::FP32:
-                launcher.launch(out, vax, vay->data.fp32);
-                break;
-            case gdf::BaseType::FP64:
-                launcher.launch(out, vax, vay->data.fp64);
-                break;
-        }
-
-        return GDF_SUCCESS;
-    }
-
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_binary_operator ope) {
         gdf::Launcher launcher;
 
-        launcher.kernel("kernel_v_v_s")
+        launcher.kernel("kernel_v_s")
                 .instantiate(out, vax, vay, ope)
-                .configure(dim3(1, 1, 1), dim3(32, 1, 1));
+                .configure(dim3(1, 1, 1), dim3(32, 1, 1))
+                .launch(out, vax, vay);
 
-        return operation_launch(launcher, out, vax, vay);
+        return GDF_SUCCESS;
     }
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_binary_operator ope) {
         gdf::Launcher launcher;
 
-        launcher.kernel("kernel_v_v_v")
+        launcher.kernel("kernel_v_v")
                 .instantiate(out, vax, vay, ope)
                 .configure(dim3(1, 1, 1), dim3(32, 1, 1))
                 .launch(out, vax, vay);

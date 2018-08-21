@@ -39,24 +39,9 @@ namespace gdf {
 
         Launcher& configure(dim3 grid, dim3 block);
 
-        template <typename Type>
-        gdf_error launch(gdf_column* out, gdf_column* vax, Type vay) {
-            program.kernel(kernelName)
-                   .instantiate(arguments)
-                   .configure(grid, block)
-                   .launch(out->data, vax->data, vay, out->size);
+        gdf_error launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay);
 
-            return GDF_SUCCESS;
-        }
-
-        gdf_error launch(gdf_column* out, gdf_column* vax, gdf_column* vay) {
-            program.kernel(kernelName.c_str())
-                   .instantiate(arguments)
-                   .configure(grid, block)
-                   .launch(out->data, vax->data, vay->data, out->size);
-
-            return GDF_SUCCESS;
-        }
+        gdf_error launch(gdf_column* out, gdf_column* vax, gdf_column* vay);
 
         gdf_error launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def);
 

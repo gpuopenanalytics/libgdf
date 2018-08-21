@@ -77,6 +77,28 @@ namespace gdf {
         return *this;
     }
 
+    gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay) {
+        program.kernel(kernelName.c_str())
+               .instantiate(arguments)
+               .configure(grid, block)
+               .launch(out->size,
+                       out->data, vax->data, vay->data,
+                       out->valid, vax->valid);
+
+        return GDF_SUCCESS;
+    }
+
+    gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_column* vay) {
+        program.kernel(kernelName.c_str())
+               .instantiate(arguments)
+               .configure(grid, block)
+               .launch(out->size,
+                       out->data, vax->data, vay->data,
+                       out->valid, vax->valid, vay->valid);
+
+        return GDF_SUCCESS;
+    }
+
     gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def)
     {
         program.kernel(kernelName)
