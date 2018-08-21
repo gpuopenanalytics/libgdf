@@ -13,6 +13,10 @@ namespace gdf {
             stream << gdf::cuda::traits;
             return &stream;
         }
+        if (filename == "kernel_gdf_data.h") {
+            stream << gdf::cuda::kernel_gdf_data;
+            return &stream;
+        }
         return nullptr;
     }
 
@@ -47,9 +51,53 @@ namespace gdf {
         return *this;
     }
 
+    Launcher& Launcher::instantiate(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope) {
+        arguments.clear();
+        arguments.push_back(getStringFromBaseType(convertToBaseType(out->dtype)));
+        arguments.push_back(getStringFromBaseType(convertToBaseType(vax->dtype)));
+        arguments.push_back(getStringFromBaseType(convertToBaseType(vay->type)));
+        arguments.push_back(getStringFromBaseType(convertToBaseType(def->type)));
+        arguments.push_back(getOperatorName(ope));
+        return *this;
+    }
+
+    Launcher& Launcher::instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope) {
+        arguments.clear();
+        arguments.push_back(getStringFromBaseType(convertToBaseType(out->dtype)));
+        arguments.push_back(getStringFromBaseType(convertToBaseType(vax->dtype)));
+        arguments.push_back(getStringFromBaseType(convertToBaseType(vay->dtype)));
+        arguments.push_back(getStringFromBaseType(convertToBaseType(def->type)));
+        arguments.push_back(getOperatorName(ope));
+        return *this;
+    }
+
     Launcher& Launcher::configure(dim3 grid, dim3 block) {
         this->grid = grid;
         this->block = block;
         return *this;
+    }
+
+    gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def)
+    {
+        program.kernel(kernelName)
+               .instantiate(arguments)
+               .configure(grid, block)
+               .launch(out->size, def->data,
+                       out->data, vax->data, vay->data,
+                       out->valid, vax->valid);
+
+        return GDF_SUCCESS;
+    }
+
+    gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def)
+    {
+        program.kernel(kernelName)
+               .instantiate(arguments)
+               .configure(grid, block)
+               .launch(out->size, def->data,
+                       out->data, vax->data, vay->data,
+                       out->valid, vax->valid, vay->valid);
+
+        return GDF_SUCCESS;
     }
 }

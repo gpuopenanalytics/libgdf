@@ -6,6 +6,7 @@ namespace cuda {
     extern const char* kernel;
     extern const char* traits;
     extern const char* operation;
+    extern const char* kernel_gdf_data;
 }
 }
 

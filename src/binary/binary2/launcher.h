@@ -33,6 +33,10 @@ namespace gdf {
 
         Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_binary_operator ope);
 
+        Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope);
+
+        Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope);
+
         Launcher& configure(dim3 grid, dim3 block);
 
         template <typename Type>
@@ -54,9 +58,13 @@ namespace gdf {
             return GDF_SUCCESS;
         }
 
+        gdf_error launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def);
+
+        gdf_error launch(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def);
+
     private:
         std::vector<std::string> compilerFlags { "-std=c++14" };
-        std::vector<std::string> headersName { "operation.h" , "traits.h" };
+        std::vector<std::string> headersName { "operation.h" , "traits.h" , "kernel_gdf_data.h" };
 
     private:
         jitify::Program program;

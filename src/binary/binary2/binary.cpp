@@ -62,10 +62,24 @@ namespace gdf {
     }
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope) {
+        gdf::Launcher launcher;
+
+        launcher.kernel("kernel_v_s_d")
+                .instantiate(out, vax, vay, def, ope)
+                .configure(dim3(1, 1, 1), dim3(32, 1, 1))
+                .launch(out, vax, vay, def);
+
         return GDF_SUCCESS;
     }
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope) {
+        gdf::Launcher launcher;
+
+        launcher.kernel("kernel_v_v_d")
+                .instantiate(out, vax, vay, def, ope)
+                .configure(dim3(1, 1, 1), dim3(32, 1, 1))
+                .launch(out, vax, vay, def);
+
         return GDF_SUCCESS;
     }
 }
