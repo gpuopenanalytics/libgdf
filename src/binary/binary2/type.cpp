@@ -2,49 +2,32 @@
 
 namespace gdf {
 
-    BaseType convertToBaseType(gdf_dtype type) {
+    const char* getTypeName(gdf_dtype type) {
         switch (type) {
             case GDF_INT8:
-                return BaseType::SI08;
+                return "int8_t";
             case GDF_INT16:
-                return BaseType::SI16;
+                return "int16_t";
             case GDF_INT32:
             case GDF_DATE32:
-                return BaseType::SI32;
+                return "int32_t";
             case GDF_INT64:
             case GDF_DATE64:
             case GDF_TIMESTAMP:
-                return BaseType::SI64;
-            case GDF_FLOAT32:
-                return BaseType::FP32;
-            case GDF_FLOAT64:
-                return BaseType::FP64;
-            default:
-                return BaseType::FP64;
-        }
-    }
-
-    const char* getStringFromBaseType(BaseType type) {
-        switch (type) {
-            case BaseType::UI08:
-                return "uint8_t";
-            case BaseType::UI16:
-                return "uint16_t";
-            case BaseType::UI32:
-                return "uint32_t";
-            case BaseType::UI64:
-                return "uint64_t";
-            case BaseType::SI08:
-                return "int8_t";
-            case BaseType::SI16:
-                return "int16_t";
-            case BaseType::SI32:
-                return "int32_t";
-            case BaseType::SI64:
                 return "int64_t";
-            case BaseType::FP32:
+            case GDF_UINT8:
+                return "uint8_t";
+            case GDF_UINT16:
+                return "uint16_t";
+            case GDF_UINT32:
+                return "uint32_t";
+            case GDF_UINT64:
+                return "uint64_t";
+            case GDF_FLOAT32:
                 return "float";
-            case BaseType::FP64:
+            case GDF_FLOAT64:
+                return "double";
+            default:
                 return "double";
         }
     }
@@ -59,21 +42,33 @@ namespace gdf {
                 return "Mul";
             case GDF_DIV:
                 return "Div";
-            /*
-        GDF_TRUE_DIV,
-        GDF_FLOOR_DIV,
-        GDF_MOD,
-        GDF_POW,
-        //GDF_COMBINE,
-        //GDF_COMBINE_FIRST,
-        //GDF_ROUND,
-        GDF_EQUAL,
-        GDF_NOT_EQUAL,
-        GDF_LESS,
-        GDF_GREATER,
-        GDF_LESS_EQUAL,
-        GDF_GREATER_EQUAL,
-        */
+            case GDF_TRUE_DIV:
+                return "TrueDiv";
+            case GDF_FLOOR_DIV:
+                return "FloorDiv";
+            case GDF_MOD:
+                return "Pow";
+            //GDF_COMBINE,
+            case GDF_COMBINE_FIRST:
+                return "CombineFirst";
+            case GDF_ROUND:
+                return "Round";
+            case GDF_EQUAL:
+                return "Equal";
+            case GDF_NOT_EQUAL:
+                return "NotEqual";
+            case GDF_LESS:
+                return "Less";
+            case GDF_GREATER:
+                return "Greater";
+            case GDF_LESS_EQUAL:
+                return "LessEqual";
+            case GDF_GREATER_EQUAL:
+                return "GreaterEqual";
+            //GDF_PRODUCT,
+            //GDF_DOT
+            default:
+                return "None";
         }
     }
 

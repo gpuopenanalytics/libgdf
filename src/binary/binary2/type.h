@@ -5,22 +5,7 @@
 
 namespace gdf {
 
-    enum class BaseType {
-        UI08,
-        UI16,
-        UI32,
-        UI64,
-        SI08,
-        SI16,
-        SI32,
-        SI64,
-        FP32,
-        FP64
-    };
-
-    BaseType convertToBaseType(gdf_dtype type);
-
-    const char* getStringFromBaseType(BaseType type);
+    const char* getTypeName(gdf_dtype type);
 
     const char* getOperatorName(gdf_binary_operator ope);
 

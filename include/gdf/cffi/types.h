@@ -8,6 +8,10 @@ typedef enum {
     GDF_INT16,
     GDF_INT32,
     GDF_INT64,
+    GDF_UINT8,
+    GDF_UINT16,
+    GDF_UINT32,
+    GDF_UINT64,
     GDF_FLOAT32,
     GDF_FLOAT64,
     GDF_DATE32,   // int32_t days since the UNIX epoch
@@ -82,8 +86,8 @@ enum gdf_binary_operator {
     GDF_MOD,
     GDF_POW,
     //GDF_COMBINE,
-    //GDF_COMBINE_FIRST,
-    //GDF_ROUND,
+    GDF_COMBINE_FIRST,
+    GDF_ROUND,
     GDF_EQUAL,
     GDF_NOT_EQUAL,
     GDF_LESS,
@@ -110,7 +114,7 @@ struct gdf_scalar {
     };
 
     gdf_data  data;
-    gdf_dtype type;
+    gdf_dtype dtype;
 };
 
 
