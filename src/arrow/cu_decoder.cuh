@@ -3,6 +3,7 @@
 /*
  * Copyright 2018 BlazingDB, Inc.
  *     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
+ *     Copyright 2018 William Malpica <william@blazingdb.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include <thrust/gather.h>
+#include <thrust/scan.h>
 
 namespace gdf {
 namespace arrow {
@@ -46,6 +50,17 @@ namespace internal {
         const std::vector<int>& remainderOutputOffsets,
         const std::vector<uint16_t>& is_rle, int num_bits,
         int* output, int batch_size);
+
+
+    // expands data vector that does not contain nulls into a representation that has indeterminate values where there should be nulls
+    // The expansion happens in place. This assumes that the data vector is actually big enough to hold the expanded data
+    // A vector of int work_space needs to be allocated to hold the prefix sum.
+    template <typename T>
+    void compact_to_sparse_for_nulls(T* data, const uint8_t* valid_bits, int batch_size, int * work_space){
+    	thrust::exclusive_scan	(valid_bits, valid_bits + batch_size, work_space);
+
+    	thrust::gather_if(work_space, work_space + batch_size, valid_bits, data, data);
+    }
 }
 } // namespace arrow
 } // namespace gdf

@@ -115,7 +115,7 @@ void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
     while (rows_read_total < amountToRead)
     {
         int64_t rows_read =
-            int32_reader->ReadBatchSpaced(1,
+            int32_reader->ReadBatchSpaced(amountToRead,
                                           dresult.data(),
                                           rresult.data(),
                                           (int32_t *)(&(valuesBuffer[rows_read_total])),

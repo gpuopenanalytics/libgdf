@@ -509,6 +509,7 @@ int decode_using_cpu(const uint8_t *buffer, const int buffer_len,
     memcpy(output, &d_output[0], batch_size * sizeof (int) );
     return batch_size;
 }
+
 } // namespace internal
 } // namespace arrow
 } // namespace gdf

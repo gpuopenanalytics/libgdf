@@ -206,74 +206,13 @@ namespace arrow {
             // std::cout << "GetBatchWithDictSpaced\n";
 
             DCHECK_GE(bit_width_, 0);
-            int values_read = 0;
-            int remaining_nulls = null_count;
 
-            ::arrow::internal::BitmapReader bit_reader(valid_bits, valid_bits_offset,
-                batch_size);
+            int values_read = GetBatchWithDict(dictionary, values, batch_size);
 
-            while (values_read < batch_size) {
-                bool is_valid = bit_reader.IsSet();
-                bit_reader.Next();
-
-                if (is_valid) {
-                    if ((repeat_count_ == 0) && (literal_count_ == 0)) {
-                        if (!NextCounts<T>())
-                            return values_read;
-                    }
-                    if (repeat_count_ > 0) {
-                        T value = dictionary[current_value_];
-                        // The current index is already valid, we don't need to check that again
-                        int repeat_batch = 1;
-                        repeat_count_--;
-
-                        while (repeat_count_ > 0 && (values_read + repeat_batch) < batch_size) {
-                            if (bit_reader.IsSet()) {
-                                repeat_count_--;
-                            } else {
-                                remaining_nulls--;
-                            }
-                            repeat_batch++;
-
-                            bit_reader.Next();
-                        }
-                        std::fill(values + values_read, values + values_read + repeat_batch,
-                            value);
-                        values_read += repeat_batch;
-                    } else if (literal_count_ > 0) {
-                        int literal_batch = std::min(batch_size - values_read - remaining_nulls,
-                            static_cast<int>(literal_count_));
-
-                        // Decode the literals
-                        constexpr int kBufferSize = 1024;
-                        int indices[kBufferSize];
-                        literal_batch = std::min(literal_batch, kBufferSize);
-                        int actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
-                        DCHECK_EQ(actual_read, literal_batch);
-
-                        int skipped = 0;
-                        int literals_read = 1;
-                        values[values_read] = dictionary[indices[0]];
-
-                        // Read the first bitset to the end
-                        while (literals_read < literal_batch) {
-                            if (bit_reader.IsSet()) {
-                                values[values_read + literals_read + skipped] = dictionary[indices[literals_read]];
-                                literals_read++;
-                            } else {
-                                skipped++;
-                            }
-
-                            bit_reader.Next();
-                        }
-                        literal_count_ -= literal_batch;
-                        values_read += literal_batch + skipped;
-                        remaining_nulls -= skipped;
-                    }
-                } else {
-                    values_read++;
-                    remaining_nulls--;
-                }
+            std::vector<int> work_space_vector(batch_size); // WSM TODO need to make this into a device vector
+            int * work_space = &work_space_vector[0];
+            if (null_count > 0){
+            	gdf::arrow::internal::compact_to_sparse_for_nulls(values, valid_bits, batch_size, work_space);
             }
 
             return values_read;
