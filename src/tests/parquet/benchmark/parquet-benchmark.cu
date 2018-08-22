@@ -44,14 +44,7 @@ struct Readers<kGdf> {
     typedef typename gdf::parquet::FloatReader  FloatReader;          
     typedef typename gdf::parquet::DoubleReader DoubleReader;          
     typedef typename gdf::parquet::FileReader   FileReader;            
-    
-    // static inline gdf_error init_gdf_buffers(void **host_values, gdf_valid_type** host_valid, uint32_t values_malloc_size, gdf_size_type column_size){
-    //     *host_values = malloc(values_malloc_size);
-    //      auto n_bytes = get_number_of_bytes_for_valid(column_size);
-    //     *host_valid = (gdf_valid_type*)malloc(n_bytes);
-    //     return GDF_SUCCESS;
-    // }
-
+     
 
     static inline gdf_error init_gdf_buffers(void **device_values, gdf_valid_type** host_valid, uint32_t values_malloc_size, gdf_size_type column_size){
         cudaError_t cuda_error = cudaMalloc(device_values, values_malloc_size);
@@ -61,24 +54,7 @@ struct Readers<kGdf> {
         *host_valid = (gdf_valid_type*)malloc(n_bytes);
         return GDF_SUCCESS;
     }
-    
-    
-    // static inline gdf_error buffer_to_gdf_column(gdf_column *output, void *host_values, gdf_valid_type* host_valid, uint32_t values_malloc_size, gdf_size_type column_size, gdf_dtype dtype) {
-    //     void *device_values;
-    //     cudaError_t cuda_error = cudaMalloc((void **)&device_values, values_malloc_size);
-    //     cudaMemcpy(device_values, host_values, values_malloc_size, cudaMemcpyHostToDevice);
-        
-    //     gdf_valid_type *device_valid;
-    //     auto n_bytes = get_number_of_bytes_for_valid(column_size);
-    //     cudaMalloc((void **)&device_valid, n_bytes);
-    //     cudaMemcpy(device_valid, host_valid, n_bytes, cudaMemcpyHostToDevice);
-
-    //     auto zero_bits = count_zero_bits(host_valid, column_size);
-
-    //     free(host_values);
-    //     free(host_valid);
-    //     return gdf_column_view_augmented(output, device_values, device_valid, column_size, dtype, zero_bits);
-    // }
+     
 
     static inline gdf_error buffer_to_gdf_column(gdf_column *output, void *device_values, gdf_valid_type* host_valid, uint32_t values_malloc_size, gdf_size_type column_size, gdf_dtype dtype) {
          
@@ -286,10 +262,9 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
     // checkInt64(columns[1]);
     // checkDouble(columns[2]);
     
-    filterops_test<bool, bool>(&columns[0], &columns[0]);
-    filterops_test<bool, bool>(&columns[0], &columns[1]);
-    filterops_test<bool, double>(&columns[0], &columns[2]);
-    filterops_test<int64_t, double>(&columns[1], &columns[2]);
+    for(size_t i = 0; i < columns.size() - 1; i++) {
+        filterops_test<bool, bool>(&columns[i], &columns[i + 1]);
+    }
     
     for(size_t i = 0; i < columns.size(); i++)
     {
@@ -312,5 +287,5 @@ BM_FileRead(benchmark::State &state) {
 // BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
 // BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
 
-BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(50000);
-BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(50000);
+BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
+BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
