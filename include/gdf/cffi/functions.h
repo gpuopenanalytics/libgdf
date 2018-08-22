@@ -659,7 +659,7 @@ gdf_error gpu_hash_columns(gdf_column ** columns_to_hash, int num_columns, gdf_c
 
 gdf_error get_column_byte_width(gdf_column * col, int * width);
 
-/* 
+/*
  Multi-Column SQL ops:
    WHERE (Filtering)
    ORDER-BY
@@ -740,3 +740,15 @@ gdf_error gdf_quantile_aprrox(	gdf_column*  col_in,       //input column;
                                 double       q,            //requested quantile in [0,1]
                                 void*        t_erased_res, //type-erased result of same type as column;
                                 gdf_context* ctxt);        //context info
+
+/* replace */
+
+/// \brief Replace `to_replace` data of `column` with `values`
+/// \param[in/out] column data
+/// \param[in] to_replace contains values of column that will be replaced
+/// \param[in] values contains the replacement values
+///
+/// Note that `to_replace` and `values` are related by the index
+gdf_error gdf_replace(gdf_column *      column,
+                      const gdf_column *to_replace,
+                      const gdf_column *values);

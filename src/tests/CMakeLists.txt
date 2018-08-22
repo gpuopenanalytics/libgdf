@@ -50,5 +50,6 @@ add_subdirectory(filterops_numeric)
 add_subdirectory(quantiles)
 add_subdirectory(validops)
 add_subdirectory(csv)
+add_subdirectory(replace)
 
 message(STATUS "******** Tests are ready ********")
