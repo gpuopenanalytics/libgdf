@@ -491,7 +491,7 @@ gdf_error gpu_hash_columns(gdf_column ** columns_to_hash, int num_columns, gdf_c
 
 gdf_error get_column_byte_width(gdf_column * col, int * width);
 
-/* 
+/*
  Multi-Column SQL ops:
    WHERE (Filtering)
    ORDER-BY
@@ -559,3 +559,15 @@ gdf_error gdf_group_by_count(int ncols,                    // # columns
                                                          //(multi-gather based on indices, which are needed anyway)
                              gdf_column* out_col_agg,      //aggregation result
                              gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+
+/* replace */
+
+/// \brief Replace `to_replace` data of `column` with `values`
+/// \param[in/out] column data
+/// \param[in] to_replace contains values of column that will be replaced
+/// \param[in] values contains the replacement values
+///
+/// Note that `to_replace` and `values` are related by the index
+gdf_error gdf_replace(gdf_column *      column,
+                      const gdf_column *to_replace,
+                      const gdf_column *values);

@@ -127,6 +127,7 @@ cuda_add_library(gdf SHARED
     src/sqls_ops.cu
     src/streamcompactionops.cu
     src/unaryops.cu
+    src/replace.cu
     #src/windowedops.cu
 )
 
