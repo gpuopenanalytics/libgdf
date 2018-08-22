@@ -20,27 +20,18 @@ R"***(
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
     __global__
-    void kernel_v_s(int size,
-                    TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data,
-                    uint32_t* out_valid, uint32_t* vax_valid) {
+    void kernel_v_s(int size, TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data) {
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         if (tid < size) {
-            uint32_t mask = 1 << (tid % WARP_SIZE);
-            uint32_t is_vax_valid = isValid(tid, vax_valid, mask);
-
-            if ((is_vax_valid & mask) == mask) {
-                AbstractOperation<TypeOpe> operation;
-                out_data[tid] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[tid], (TypeVay)vay_data);
-            }
+            AbstractOperation<TypeOpe> operation;
+            out_data[tid] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[tid], (TypeVay)vay_data);
         }
     }
 
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
     __global__
-    void kernel_v_v(int size,
-                    TypeOut* out_data, TypeVax* vax_data, TypeVax* vay_data,
-                    uint32_t* out_valid, uint32_t* vax_valid, uint32_t* vay_valid) {
+    void kernel_v_v(int size, TypeOut* out_data, TypeVax* vax_data, TypeVay* vay_data) {
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         if (tid < size) {
             AbstractOperation<TypeOpe> operation;

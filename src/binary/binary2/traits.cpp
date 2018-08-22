@@ -171,10 +171,7 @@ R"***(
 
     template <typename Vax, typename Vay>
     struct HelperCommonNumber<Vax, Vay, enableIf<(isFloatingPoint<Vax> || isFloatingPoint<Vay>)>> {
-        static constexpr int szVax = sizeof(Vax);
-        static constexpr int szVay = sizeof(Vay);
-
-        using Type = If<(szVax == 8 || szVay == 8), double, float>;
+        using Type = If<(sizeof(Vax) == 8 || sizeof(Vay) == 8), double, float>;
     };
 
     template <typename Vax, typename Vay>

@@ -81,9 +81,7 @@ namespace gdf {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)
                .configure(grid, block)
-               .launch(out->size,
-                       out->data, vax->data, vay->data,
-                       out->valid, vax->valid);
+               .launch(out->size, out->data, vax->data, vay->data);
 
         return GDF_SUCCESS;
     }
@@ -92,9 +90,7 @@ namespace gdf {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)
                .configure(grid, block)
-               .launch(out->size,
-                       out->data, vax->data, vay->data,
-                       out->valid, vax->valid, vay->valid);
+               .launch(out->size, out->data, vax->data, vay->data);
 
         return GDF_SUCCESS;
     }
