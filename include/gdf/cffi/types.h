@@ -20,6 +20,23 @@ typedef enum {
     N_GDF_TYPES, /* additional types should go BEFORE N_GDF_TYPES */
 } gdf_dtype;
 
+union gdf_data {
+    void*    invd;
+    int8_t   si08;
+    int16_t  si16;
+    int32_t  si32;
+    int64_t  si64;
+    uint8_t  ui08;
+    uint16_t ui16;
+    uint32_t ui32;
+    uint64_t ui64;
+    float    fp32;
+    double   fp64;
+    int32_t  dt32;  // GDF_DATE32
+    int64_t  dt64;  // GDF_DATE64
+    int64_t  tmst;  // GDF_TIMESTAMP
+};
+
 typedef enum {
     GDF_SUCCESS=0,
     GDF_CUDA_ERROR,
@@ -50,6 +67,11 @@ typedef struct {
 	gdf_time_unit time_unit;
 	// here we can also hold info for decimal datatype or any other datatype that requires additional information
 } gdf_dtype_extra_info;
+
+struct gdf_scalar {
+    gdf_data  data;
+    gdf_dtype dtype;
+};
 
 typedef struct gdf_column_{
     void *data;
@@ -97,26 +119,6 @@ enum gdf_binary_operator {
     //GDF_PRODUCT,
     //GDF_DOT
 };
-
-
-struct gdf_scalar {
-    union gdf_data {
-        std::uint8_t  ui08;
-        std::uint16_t ui16;
-        std::uint32_t ui32;
-        std::uint64_t ui64;
-        std::int8_t   si08;
-        std::int16_t  si16;
-        std::int32_t  si32;
-        std::int64_t  si64;
-        float         fp32;
-        double        fp64;
-    };
-
-    gdf_data  data;
-    gdf_dtype dtype;
-};
-
 
 /* additonal flags */
 typedef struct gdf_context_{
