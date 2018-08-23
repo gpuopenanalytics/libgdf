@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include "library/scalar.h"
 #include "library/vector.h"
 #include "library/operation.h"
