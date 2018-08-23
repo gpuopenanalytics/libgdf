@@ -63,6 +63,39 @@ namespace internal {
 
     	thrust::gather_if(work_space, work_space + batch_size, valid_bits, data, data);
     }
+
+
+    template<typename Func>
+    __global__
+    void decode_bitpacking(uint8_t *buffer, int *output, int *input_offsets, int *input_run_lengths,
+    		int * output_offsets, int *output_run_lengths, short bit_width, int max_run_length, Func unpack_func)
+    {
+
+    	short INPUT_BLOCK = bit_width * 32 / 8; // number of bytes needed for a unpack32 operation
+    	short OUTPUT_BLOCK = 32; // number of elements for output
+
+    	int index = blockIdx.x * blockDim.x + threadIdx.x;
+
+    	int set_index = index/max_run_length;
+    	int intput_index = input_offsets[set_index] + INPUT_BLOCK * (index % max_run_length);
+
+    	if ((INPUT_BLOCK * (index % max_run_length)) < input_run_lengths[set_index]) { // if we want to actually process
+
+    		uint8_t temp_in[INPUT_BLOCK];
+    		int temp_out[OUTPUT_BLOCK];
+
+    		for (int i = 0; i < INPUT_BLOCK; i++){
+    			temp_in[i] = buffer[intput_index + i];
+    		}
+    		unpack_func(temp_in, temp_out);
+
+    		for (int i = 0; i < INPUT_BLOCK; i++){
+    			output[output_index + i] = temp_out[i];
+    		}
+    	}
+    }
+
+
 }
 } // namespace arrow
 } // namespace gdf
