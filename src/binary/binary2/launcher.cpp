@@ -80,7 +80,7 @@ namespace gdf {
     gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay) {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)
-               .configure(grid, block)
+               .configure_1d_max_occupancy()
                .launch(out->size, out->data, vax->data, vay->data);
 
         return GDF_SUCCESS;
@@ -89,7 +89,7 @@ namespace gdf {
     gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_column* vay) {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)
-               .configure(grid, block)
+               .configure_1d_max_occupancy()
                .launch(out->size, out->data, vax->data, vay->data);
 
         return GDF_SUCCESS;
@@ -99,7 +99,7 @@ namespace gdf {
     {
         program.kernel(kernelName)
                .instantiate(arguments)
-               .configure(grid, block)
+               .configure_1d_max_occupancy()
                .launch(out->size, def->data,
                        out->data, vax->data, vay->data,
                        out->valid, vax->valid);
@@ -111,7 +111,7 @@ namespace gdf {
     {
         program.kernel(kernelName)
                .instantiate(arguments)
-               .configure(grid, block)
+               .configure_1d_max_occupancy()
                .launch(out->size, def->data,
                        out->data, vax->data, vay->data,
                        out->valid, vax->valid, vay->valid);

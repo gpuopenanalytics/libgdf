@@ -27,20 +27,34 @@ R"***(
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
     __global__
     void kernel_v_s(int size, TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data) {
-        int tid = threadIdx.x + blockIdx.x * blockDim.x;
-        if (tid < size) {
+        int tid = threadIdx.x;
+        int blkid = blockIdx.x;
+        int blksz = blockDim.x;
+        int gridsz = gridDim.x;
+
+        int start = tid + blkid * blksz;
+        int step = blksz * gridsz;
+
+        for (int i=start; i<size; i+=step) {
             AbstractOperation<TypeOpe> operation;
-            out_data[tid] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[tid], (TypeVay)vay_data);
+            out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[i], (TypeVay)vay_data);
         }
     }
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
     __global__
     void kernel_v_v(int size, TypeOut* out_data, TypeVax* vax_data, TypeVay* vay_data) {
-        int tid = threadIdx.x + blockIdx.x * blockDim.x;
-        if (tid < size) {
+        int tid = threadIdx.x;
+        int blkid = blockIdx.x;
+        int blksz = blockDim.x;
+        int gridsz = gridDim.x;
+
+        int start = tid + blkid * blksz;
+        int step = blksz * gridsz;
+
+        for (int i=start; i<size; i+=step) {
             AbstractOperation<TypeOpe> operation;
-            out_data[tid] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[tid], vay_data[tid]);
+            out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[i], vay_data[i]);
         }
     }
 
@@ -49,28 +63,33 @@ R"***(
     void kernel_v_s_d(int size, gdf_data def_data,
                       TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data,
                       uint32_t* out_valid, uint32_t* vax_valid) {
-        int tid = threadIdx.x + blockIdx.x * blockDim.x;
-        if (size <= tid) {
-            return;
-        }
+        int tid = threadIdx.x;
+        int blkid = blockIdx.x;
+        int blksz = blockDim.x;
+        int gridsz = gridDim.x;
 
-        uint32_t mask = 1 << (tid % WARP_SIZE);
-        uint32_t is_vax_valid = isValid(tid, vax_valid, mask);
+        int start = tid + blkid * blksz;
+        int step = blksz * gridsz;
 
-        TypeVax vax_data_aux = vax_data[tid];
-        if ((is_vax_valid & mask) != mask) {
-            vax_data_aux = (TypeDef)def_data;
-        }
+        for (int i=start; i<size; i+=step) {
+            uint32_t mask = 1 << (i % WARP_SIZE);
+            uint32_t is_vax_valid = isValid(i, vax_valid, mask);
 
-        AbstractOperation<TypeOpe> operation;
-        out_data[tid] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, (TypeVay)vay_data);
+            TypeVax vax_data_aux = vax_data[i];
+            if ((is_vax_valid & mask) != mask) {
+                vax_data_aux = (TypeDef)def_data;
+            }
 
-        __syncwarp();
+            AbstractOperation<TypeOpe> operation;
+            out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, (TypeVay)vay_data);
 
-        shiftMask(mask);
+            __syncwarp();
 
-        if ((tid % WARP_SIZE) == 0) {
-            out_valid[tid / WARP_SIZE] = mask;
+            shiftMask(mask);
+
+            if ((i % WARP_SIZE) == 0) {
+                out_valid[i / WARP_SIZE] = mask;
+            }
         }
     }
 
@@ -80,36 +99,41 @@ R"***(
     void kernel_v_v_d(int size, gdf_data def_data,
                       TypeOut* out_data, TypeVax* vax_data, TypeVay* vay_data,
                       uint32_t* out_valid, uint32_t* vax_valid, uint32_t* vay_valid) {
-        int tid = threadIdx.x + blockIdx.x * blockDim.x;
-        if (size <= tid) {
-            return;
-        }
+        int tid = threadIdx.x;
+        int blkid = blockIdx.x;
+        int blksz = blockDim.x;
+        int gridsz = gridDim.x;
 
-        uint32_t mask = 1 << (tid % WARP_SIZE);
-        uint32_t is_vax_valid = isValid(tid, vax_valid, mask);
-        uint32_t is_vay_valid = isValid(tid, vay_valid, mask);
+        int start = tid + blkid * blksz;
+        int step = blksz * gridsz;
 
-        TypeVax vax_data_aux = vax_data[tid];
-        TypeVay vay_data_aux = vay_data[tid];
-        if ((is_vax_valid & mask) != mask) {
-            vax_data_aux = (TypeDef)def_data;
-        }
-        else if ((is_vay_valid & mask) != mask) {
-            vay_data_aux = (TypeDef)def_data;
-        }
-        if ((is_vax_valid | is_vay_valid) == mask) {
-            AbstractOperation<TypeOpe> operation;
-            out_data[tid] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, vay_data_aux);
-        } else {
-            mask = 0;
-        }
+        for (int i=start; i<size; i+=step) {
+            uint32_t mask = 1 << (i % WARP_SIZE);
+            uint32_t is_vax_valid = isValid(i, vax_valid, mask);
+            uint32_t is_vay_valid = isValid(i, vay_valid, mask);
 
-        __syncwarp();
+            TypeVax vax_data_aux = vax_data[i];
+            TypeVay vay_data_aux = vay_data[i];
+            if ((is_vax_valid & mask) != mask) {
+                vax_data_aux = (TypeDef)def_data;
+            }
+            else if ((is_vay_valid & mask) != mask) {
+                vay_data_aux = (TypeDef)def_data;
+            }
+            if ((is_vax_valid | is_vay_valid) == mask) {
+                AbstractOperation<TypeOpe> operation;
+                out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, vay_data_aux);
+            } else {
+                mask = 0;
+            }
 
-        shiftMask(mask);
+            __syncwarp();
 
-        if ((tid % WARP_SIZE) == 0) {
-            out_valid[tid / WARP_SIZE] = mask;
+            shiftMask(mask);
+
+            if ((i % WARP_SIZE) == 0) {
+                out_valid[i / WARP_SIZE] = mask;
+            }
         }
     }
 )***";
