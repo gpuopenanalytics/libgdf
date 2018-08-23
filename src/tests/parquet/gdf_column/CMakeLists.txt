@@ -1,6 +1,8 @@
+
+
 #=============================================================================
 # Copyright 2018 BlazingDB, Inc.
-#     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
+#     Copyright 2018 Cristhian Alberto Gonzales Castillo <cristhian@blazingdb.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,18 +17,21 @@
 # limitations under the License.
 #=============================================================================
 
+
+
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
-set(PARQUET_FILE_PATH
-    ${CMAKE_SOURCE_DIR}/src/tests/parquet/benchmark/reader-test.parquet)
+set(PARQUET_FILE_FOR_DECODING_PATH
+        ${CMAKE_SOURCE_DIR}/src/tests/parquet/gdf_column/reader-test.parquet)
 
-GDF_ADD_PARQUET_BENCHMARK(parquet-benchmark parquet-benchmark.cu)
+GDF_ADD_PARQUET_TEST(gdf_column-test
+        gdf_column-test.cu
+        ../../helper/utils.cuh 
+        ../../helper/utils.cu
+        )
 
-if (GDF_BENCHMARK)
-target_compile_definitions(parquet-benchmark
-    PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
-endif()
+target_compile_definitions(gdf_column-test
+        PUBLIC -DPARQUET_FILE_FOR_DECODING_PATH="${PARQUET_FILE_FOR_DECODING_PATH}")
 
-# GDF_ADD_PARQUET_TEST(parquet_generator-test parquet_generator-test.cpp)
-# target_compile_definitions(parquet_generator-test
-# PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
+target_link_libraries(gdf_column-test Boost::filesystem)
+
