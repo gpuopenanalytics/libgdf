@@ -295,7 +295,8 @@ template<class Functor>
 inline static void
 checkRowGroups(const std::unique_ptr<gdf::parquet::FileReader> &reader, Functor apply)
 {
-    for (int r = 0; r < reader->metadata()->num_row_groups(); ++r)
+	int numRowGroups = reader->metadata()->num_row_groups();
+    for (int r = 0; r < numRowGroups; ++r)
     {
         const std::shared_ptr<parquet::RowGroupReader> row_group =
             reader->RowGroup(r);

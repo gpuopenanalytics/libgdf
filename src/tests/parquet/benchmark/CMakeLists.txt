@@ -18,11 +18,15 @@
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
 set(PARQUET_FILE_PATH
-    ${CMAKE_SOURCE_DIR}/src/tests/parquet/benchmark/reader-test.parquet)
+    ${CMAKE_SOURCE_DIR}/src/tests/parquet/benchmark/huge_dataset.parquet)
 
-GDF_ADD_PARQUET_BENCHMARK(parquet-benchmark parquet-benchmark.cu)
+GDF_ADD_PARQUET_BENCHMARK(parquet-benchmark parquet-benchmark.cu ../../helper/utils.cuh ../../helper/utils.cu)
 
 if (GDF_BENCHMARK)
 target_compile_definitions(parquet-benchmark
     PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
 endif()
+
+GDF_ADD_PARQUET_TEST(parquet_generator-test parquet_generator-test.cpp)
+target_compile_definitions(parquet_generator-test
+    PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")

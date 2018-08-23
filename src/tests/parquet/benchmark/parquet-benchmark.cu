@@ -17,25 +17,19 @@
 
 #include <benchmark/benchmark.h>
 #include <cassert>
-#include <gdf/gdf.h>
-#include <gdf/cffi/functions.h>
 #include <thrust/functional.h>
 #include <thrust/device_ptr.h>
 
 #include "column_reader.h"
 #include "file_reader.h"
 
+#include "../../helper/utils.cuh"
+
 #ifndef PARQUET_FILE_PATH
 #error PARQUET_FILE_PATH must be defined for precompiling
 #define PARQUET_FILE_PATH "/"
 #endif
-
-// BEGIN UTILS
-inline auto get_number_of_bytes_for_valid (size_t column_size) -> size_t {
-    return sizeof(gdf_valid_type) * (column_size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
-}
-
-// END UTILS
+ 
 
 enum ReaderType : std::uint8_t { kGdf, kParquet };
 
@@ -50,30 +44,29 @@ struct Readers<kGdf> {
     typedef typename gdf::parquet::FloatReader  FloatReader;          
     typedef typename gdf::parquet::DoubleReader DoubleReader;          
     typedef typename gdf::parquet::FileReader   FileReader;            
-    
-    static inline gdf_error init_gdf_buffers(void **host_values, gdf_valid_type** host_valid, uint32_t values_malloc_size, gdf_size_type column_size){
-        *host_values = malloc(values_malloc_size);
-         //@todo check if it has enough memory for valid 
-         auto n_bytes = get_number_of_bytes_for_valid(column_size);
+     
+
+    static inline gdf_error init_gdf_buffers(void **device_values, gdf_valid_type** host_valid, uint32_t values_malloc_size, gdf_size_type column_size){
+        cudaError_t cuda_error = cudaMalloc(device_values, values_malloc_size);
+        auto n_bytes = get_number_of_bytes_for_valid(column_size);
+        //cudaMalloc((void **)&device_valid, n_bytes);
+
         *host_valid = (gdf_valid_type*)malloc(n_bytes);
-        //@todo check error for malloc
         return GDF_SUCCESS;
     }
-    
-    static inline gdf_error buffer_to_gdf_column(gdf_column *output, void *host_values, gdf_valid_type* host_valid, uint32_t values_malloc_size, gdf_size_type column_size, gdf_dtype dtype) {
-        void *device_values;
-        cudaError_t cuda_error = cudaMalloc((void **)&device_values, values_malloc_size);
-        cudaMemcpy(device_values, host_values, values_malloc_size, cudaMemcpyHostToDevice);
-        
+     
+
+    static inline gdf_error buffer_to_gdf_column(gdf_column *output, void *device_values, gdf_valid_type* host_valid, uint32_t values_malloc_size, gdf_size_type column_size, gdf_dtype dtype) {
+         
         gdf_valid_type *device_valid;
         auto n_bytes = get_number_of_bytes_for_valid(column_size);
         cudaMalloc((void **)&device_valid, n_bytes);
         cudaMemcpy(device_valid, host_valid, n_bytes, cudaMemcpyHostToDevice);
 
-        free(host_values);
+        auto zero_bits = count_zero_bits(host_valid, column_size);
         free(host_valid);
-        return gdf_column_view(output, device_values, device_valid, column_size, dtype);
-        return gdf_column_view(output, host_values, host_valid, column_size, dtype);
+
+        return gdf_column_view_augmented(output, device_values, device_valid, column_size, dtype, zero_bits);
     }
 };
 
@@ -89,10 +82,8 @@ struct Readers<kParquet> {
 
     static inline gdf_error init_gdf_buffers(void **host_values, gdf_valid_type** host_valid, uint32_t values_malloc_size, gdf_size_type column_size){
         *host_values = malloc(values_malloc_size);
-         //@todo check if it has enough memory for valid 
          auto n_bytes = get_number_of_bytes_for_valid(column_size);
         *host_valid = (gdf_valid_type*)malloc(n_bytes);
-        //@todo check error for malloc
         return GDF_SUCCESS;
     }
     
@@ -106,11 +97,11 @@ struct Readers<kParquet> {
         cudaMalloc((void **)&device_valid, n_bytes);
         cudaMemcpy(device_valid, host_valid, n_bytes, cudaMemcpyHostToDevice);
 
+        auto zero_bits = count_zero_bits(host_valid, column_size);
+
         free(host_values);
         free(host_valid);
-        return gdf_column_view(output, device_values, device_valid, column_size, dtype);
-
-        return gdf_column_view(output, host_values, host_valid, column_size, dtype);
+        return gdf_column_view_augmented(output, device_values, device_valid, column_size, dtype, zero_bits);
     }
 };
 
@@ -134,16 +125,6 @@ PARQUET_TRAITS_FACTORY(parquet::Type::DOUBLE, double, GDF_FLOAT64);
 
 #undef PARQUET_TRAITS_FACTORY
 
-
-// template <typename PointerType>
-// auto init_device_vector(gdf_size_type num_elements) -> char*
-// {
-//     char *device_values;
-//     cudaError_t cuda_error = cudaMalloc((void **)&device_values, sizeof(PointerType) * num_elements);
-//     EXPECT_TRUE(cuda_error == cudaError::cudaSuccess);
-//     return std::make_tuple(device_values);
-// }
-
 template <ReaderType T, class ColumnReaderType, parquet::Type::type C>
 static inline gdf_error 
 convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_read, uint32_t batch_size) {
@@ -163,7 +144,7 @@ convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_r
     std::int64_t nulls_count;
 
     int64_t rows_read_total = 0;
-    while (column_reader->HasNext()) {
+    while (column_reader->HasNext() && rows_read_total < amount_to_read) {
         int64_t rows_read = column_reader->ReadBatchSpaced(batch_size,
                                      definition_level.data(),
                                      repetition_level.data(),
@@ -227,28 +208,24 @@ void
 checkDouble(const gdf_column &double_column) {
     for (std::size_t i = 0; i < double_column.size; i++) {
         double expected = i * 0.001;
-        double value    = static_cast<double *>(double_column.data)[i];
-
+        double value = static_cast<double *>(double_column.data)[i];
         assert(expected == value);
     }
 }
 
-
-
-void filterops(gdf_column* lhs, gdf_column* rhs,  gdf_comparison_operator gdf_operator = GDF_EQUALS)
+template <typename LeftValueType, typename RightValueType>
+void filterops_test(gdf_column* lhs, gdf_column* rhs)
 {
     int column_size = lhs->size;
-    const int max_size = 8;
-    int init_value = 0
+    // print_column<LeftValueType>(lhs);
+    // print_column<RightValueType>(rhs);
 
     gdf_column output = gen_gdb_column<int8_t>(column_size, 0);
+    // print_column<int8_t>(&output);
 
+    auto gdf_operator = GDF_EQUALS;
     gdf_error error = gpu_comparison(lhs, rhs, &output, gdf_operator);
-    
-    check_column_for_comparison_operation<LeftValueType, RightValueType>(&lhs, &rhs, &output, gdf_operator);
-
-    delete_gdf_column(&lhs);
-    delete_gdf_column(&rhs);
+    check_column_for_comparison_operation<LeftValueType, RightValueType>(lhs, rhs, &output, gdf_operator);
     delete_gdf_column(&output);
 }
 
@@ -273,19 +250,27 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
 
             const std::shared_ptr<parquet::ColumnReader> columnReader = groupReader->Column(columnIndex);
             int64_t numRecords = rowGroupMetadata->num_rows();
-            
-            gdf_column output;
-            containerFrom<T>(&output, columnReader, numRecords, batch_size);
-            columns.push_back(output);
+            // if (columnIndex == 0) {
+                gdf_column output;
+                containerFrom<T>(&output, columnReader, numRecords, batch_size);
+                columns.push_back(output);
+            // }
         }
     } 
     // check columns 
-    checkBoolean(columns[0]);
-    checkInt64(columns[1]);
-    checkDouble(columns[2]);
+    // checkBoolean(columns[0]);
+    // checkInt64(columns[1]);
+    // checkDouble(columns[2]);
+    
+    for(size_t i = 0; i < columns.size() - 1; i++) {
+        filterops_test<bool, bool>(&columns[i], &columns[i + 1]);
+    }
+    
+    for(size_t i = 0; i < columns.size(); i++)
+    {
+        delete_gdf_column(&columns[i]);
+    }
 }
-
-
 
 template <ReaderType T>
 static void
@@ -299,5 +284,8 @@ BM_FileRead(benchmark::State &state) {
     state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range(0)));
 }
 
-BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
-BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
+// BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
+// BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
+
+BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
+BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
