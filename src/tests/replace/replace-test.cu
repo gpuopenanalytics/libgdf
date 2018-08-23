@@ -17,23 +17,24 @@
 
 #include <gtest/gtest.h>
 
-#include <initializer_list>
-
-#include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
 
 #include <gdf/gdf.h>
 
-static gdf_column
-CreateGdfColumn(const std::initializer_list<std::int64_t> list) {
-    const std::vector<std::int64_t>       host_data(list);
-    thrust::device_vector<std::int64_t>   device_data(host_data);
-    thrust::device_vector<gdf_valid_type> device_valid(1, 0);
+template <class T>
+static inline thrust::device_vector<T>
+MakeDeviceVector(const std::initializer_list<T> list) {
+    const std::vector<T>     column_data(list);
+    thrust::device_vector<T> device_data(column_data);
+    return device_data;
+}
 
+static inline gdf_column
+MakeGdfColumn(thrust::device_vector<std::int64_t> &device_vector) {
     return gdf_column{
-      .data       = thrust::raw_pointer_cast(device_data.data()),
-      .valid      = thrust::raw_pointer_cast(device_valid.data()),
-      .size       = 0,
+      .data       = thrust::raw_pointer_cast(device_vector.data()),
+      .valid      = nullptr,
+      .size       = device_vector.size(),
       .dtype      = GDF_INT64,
       .null_count = 0,
       .dtype_info = {},
@@ -41,25 +42,26 @@ CreateGdfColumn(const std::initializer_list<std::int64_t> list) {
 }
 
 TEST(ReplaceTest, API) {
-    gdf_column column = CreateGdfColumn({1, 2, 3, 4, 5, 6, 7, 8});
+    thrust::device_vector<std::int64_t> device_data =
+      MakeDeviceVector<std::int64_t>({1, 2, 3, 4, 5, 6, 7, 8});
+    gdf_column column = MakeGdfColumn(device_data);
 
-    gdf_column to_replace = CreateGdfColumn({2, 4, 6, 8});
-    gdf_column values     = CreateGdfColumn({0, 2, 4, 6});
+    thrust::device_vector<std::int64_t> to_replace_data =
+      MakeDeviceVector<std::int64_t>({2, 4, 6, 8});
+    thrust::device_vector<std::int64_t> values_data =
+      MakeDeviceVector<std::int64_t>({0, 2, 4, 6});
+
+    gdf_column to_replace = MakeGdfColumn(to_replace_data);
+    gdf_column values     = MakeGdfColumn(values_data);
 
     const gdf_error status = gdf_replace(&column, &to_replace, &values);
 
     EXPECT_EQ(GDF_SUCCESS, status);
 
-    const thrust::device_ptr<std::int64_t> data_ptr(
+    thrust::device_ptr<std::int64_t> results(
       static_cast<std::int64_t *>(column.data));
-
-    constexpr std::ptrdiff_t ptrdiff = 8;
-
-    const thrust::device_vector<std::int64_t> device_data(data_ptr,
-                                                          data_ptr + ptrdiff);
-
-    EXPECT_EQ(0, device_data[1]);
-    EXPECT_EQ(2, device_data[3]);
-    EXPECT_EQ(4, device_data[5]);
-    EXPECT_EQ(6, device_data[7]);
+    EXPECT_EQ(0, results[1]);
+    EXPECT_EQ(2, results[3]);
+    EXPECT_EQ(4, results[5]);
+    EXPECT_EQ(6, results[7]);
 }
