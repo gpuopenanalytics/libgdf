@@ -18,7 +18,8 @@
  * limitations under the License.
  */
 
-#include <thrust/gather.h>
+#include <thrust/scatter.h>
+#include <thrust/counting_iterator.h>
 #include <thrust/scan.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -57,7 +58,7 @@ namespace internal {
     // expands data vector that does not contain nulls into a representation that has indeterminate values where there should be nulls
     // A vector of int work_space needs to be allocated to hold the map for the scatter operation. The workspace should be of size batch_size
     template <typename T>
-//    void compact_to_sparse_for_nulls(T* data_in, T* data_out, const uint8_t* definition_levels, uint8_t max_definition_level,
+    void compact_to_sparse_for_nulls(T* data_in, T* data_out, const uint8_t* definition_levels, uint8_t max_definition_level,
     		int batch_size, int * work_space){
 
     	struct is_equal
