@@ -435,6 +435,50 @@ template int unpack_using_gpu<bool>(const uint8_t* buffer, const int buffer_len,
             bool* output, int batch_size 
             );
 
+
+
+template<typename Func>
+__global__ void decode_bitpacking(uint8_t *buffer, int *output, int *input_offsets, int *input_run_lengths, int * output_offsets, int *output_run_lengths, short bit_width, Func unpack_func)
+{
+
+	short INPUT_BLOCK = bit_width * 32 / 8; // number of bytes needed for a unpack32 operation
+	short OUTPUT_BLOCK = 32; // number of elements for output
+
+	int set_index = blockIdx.x;
+	int intput_index = input_offsets[set_index] + INPUT_BLOCK * threadIdx.x;
+
+	if (INPUT_BLOCK * threadIdx.x < input_run_lengths[set_index]) { // if we want to actually process
+
+		uint8_t temp_in[INPUT_BLOCK];
+		int temp_out[OUTPUT_BLOCK];
+
+		for (int i = 0; i < INPUT_BLOCK; i++){
+			temp_in[i] = buffer[intput_index + i];
+		}
+		unpack_func(temp_in, temp_out);
+
+		for (int i = 0; i < INPUT_BLOCK; i++){
+			output[output_index + i] = temp_out[i];
+		}
+	}
+
+
+  int x = blockIdx.x * TILE_DIM + threadIdx.x;
+
+  int width = gridDim.x * TILE_DIM;
+
+  for (int j = 0; j < TILE_DIM; j += BLOCK_ROWS)
+     tile[(threadIdx.y+j)*TILE_DIM + threadIdx.x] = idata[(y+j)*width + x];
+
+  __syncthreads();
+
+  for (int j = 0; j < TILE_DIM; j += BLOCK_ROWS)
+     odata[(y+j)*width + x] = tile[(threadIdx.y+j)*TILE_DIM + threadIdx.x];
+}
+
+
+
+
 } // namespace internal
 } // namespace arrow
 } // namespace gdf
