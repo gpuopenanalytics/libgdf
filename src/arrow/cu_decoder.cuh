@@ -107,8 +107,8 @@ namespace internal {
 
     		if ((INPUT_BLOCK_BYTES * (index % max_num_sets_in_run)) < input_run_lengths[set_index]) { // if we want to actually process
 
-    			uint8_t * temp_in = &temp[IO_BLOCK * index];
-    			int *temp_out = (int*)&temp[IO_BLOCK * index + INPUT_BLOCK_BYTES];
+    			uint8_t * temp_in = &temp[IO_BLOCK * threadIdx.x];
+    			int *temp_out = (int*)&temp[IO_BLOCK * threadIdx.x + INPUT_BLOCK_BYTES];
 
     			for (int i = 0; i < INPUT_BLOCK_BYTES; i++){
     				temp_in[i] = buffer[intput_index + i];

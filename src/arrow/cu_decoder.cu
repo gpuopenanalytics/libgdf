@@ -391,10 +391,19 @@ int decode_using_gpu(const T * d_dictionary, int num_dictionary_values, T* d_out
 
     int max_total_sets = max_num_sets_in_run * bitpackset.size();
 
-    int blocksize = std::min(256, max_total_sets);
+    int blocksize = std::min(128, max_total_sets);
    	int gridsize = (max_total_sets + blocksize - 1) / blocksize;
 
     int shared_memory = blocksize * (num_bits * 32/8 + 32 * 4);
+
+//    std::cout<<"max_total_sets: "<<max_total_sets<<std::endl;
+//    std::cout<<"blocksize: "<<blocksize<<std::endl;
+//    std::cout<<"gridsize: "<<gridsize<<std::endl;
+//    std::cout<<"shared_memory: "<<shared_memory<<std::endl;
+//    std::cout<<"num_bits: "<<num_bits<<std::endl;
+//    std::cout<<"max_num_sets_in_run: "<<max_num_sets_in_run<<std::endl;
+//    std::cout<<"bitpackset.size(): "<<bitpackset.size()<<std::endl;
+
 
     decode_bitpacking<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_indices.data()),
     		thrust::raw_pointer_cast(d_input_offsets.data()), thrust::raw_pointer_cast(d_input_runlengths.data()), bitpackset.size(),
@@ -404,14 +413,14 @@ int decode_using_gpu(const T * d_dictionary, int num_dictionary_values, T* d_out
 
 //    gpu_bit_packing(buffer, buffer_len, input_offset, bitpackset, output_offset, d_indices, num_bits);
 
-    std::vector<int> h_indices(batch_size);
-    thrust::copy(d_indices.begin(), d_indices.end(), h_indices.begin());
-
-    std::cout<<"INDICES"<<std::endl;
-    for (int i = 0; i < h_indices.size(); i++){
-    	std::cout<<i<<"   "<<h_indices[i]<<std::endl;
-    }
-    std::cout<<"END"<<std::endl;
+//    std::vector<int> h_indices(batch_size);
+//    thrust::copy(d_indices.begin(), d_indices.end(), h_indices.begin());
+//
+//    std::cout<<"INDICES"<<std::endl;
+//    for (int i = 0; i < h_indices.size(); i++){
+//    	std::cout<<i<<"   "<<h_indices[i]<<std::endl;
+//    }
+//    std::cout<<"END"<<std::endl;
 
     gpu_bit_packing_remainder(buffer, buffer_len, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
     
