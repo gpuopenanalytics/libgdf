@@ -67,7 +67,7 @@ protected:
 
     virtual void TearDown() override;
 
-    static constexpr size_t kRowsPerGroup = 16;
+    static constexpr size_t kRowsPerGroup = 50;
 
     const std::string filename;
 
@@ -180,9 +180,7 @@ TYPED_TEST(SingleColumnToGdfTest, ReadAll) {
     cudaMalloc(&column.data, rowsPerGroup * sizeof(value_type));
     
     auto n_bytes = get_number_of_bytes_for_valid(this->kRowsPerGroup);
-    std::cout << "num_chars for valid: " << n_bytes << std::endl;
     cudaMalloc((void **)&column.valid, n_bytes);
-
 
     std::int16_t definition_levels[rowsPerGroup];
     std::int16_t repetition_levels[rowsPerGroup];
@@ -193,27 +191,19 @@ TYPED_TEST(SingleColumnToGdfTest, ReadAll) {
     column.size = static_cast<gdf_size_type>(rowsPerGroup); //total_read  vs rowsPerGroup / 2... because there is not yet expand functions 
 //    column.dtype = ParquetTraits<TypeParam>::gdfDType;
 
-    EXPECT_EQ(rowsPerGroup / 2, total_read); // using ReadBatch
+    EXPECT_EQ(rowsPerGroup, total_read); // using ReadBatch
 
     print_column<value_type>(&column);
     
     gdf_column host_column = convert_to_host_gdf_column<value_type>(&column);
 
     for (std::size_t i = 0; i < rowsPerGroup; i++) {
-        value_type expected = this->GenerateValue(i);
-        // if (i % 2) { 
-            std::cout << "data: " <<  expected << "\tvalid: " << i % 2 << std::endl;
-        // }
+        if (i % 2) { 
+            value_type   expected = this->GenerateValue(i);
+            value_type   value    = static_cast<value_type *>(host_column.data)[i];
+            EXPECT_EQ(expected, value); 
+        }
     }
-    // int index = 0;
-    // for (std::size_t i = 0; i < rowsPerGroup; i++) {
-    //     if (i % 2) { 
-    //         value_type   expected = this->GenerateValue(i);
-    //         value_type   value    = static_cast<value_type *>(host_column.data)[index];
-    //         index++;
-    //         EXPECT_EQ(expected, value); 
-    //     }
-    // }
 
     delete_gdf_column(&column);
 }
