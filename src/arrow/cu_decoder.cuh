@@ -87,34 +87,35 @@ namespace internal {
     template<typename Func>
     __global__
     void decode_bitpacking(uint8_t *buffer, int *output, int *input_offsets, int *input_run_lengths, int num_sets,
-    		int * output_offsets, short bit_width, int max_run_length, Func unpack_func)
+    		int * output_offsets, short bit_width, int max_num_sets_in_run, Func unpack_func)
     {
 
     	extern __shared__ uint8_t temp[];
 
-    	const short INPUT_BLOCK = bit_width * 32 / 8; // number of bytes needed for a unpack32 operation
-    	const short OUTPUT_BLOCK = 32; // number of elements for output
-    	const short IO_BLOCK = INPUT_BLOCK + OUTPUT_BLOCK*4;  // size in bytes of INPUT and OUTPUT BLOCK
+    	const short INPUT_BLOCK_BYTES = bit_width * 32 / 8;
+    	const short OUTPUT_BLOCK_BYTES = 32 * 4;
+    	const short BLOCK_SIZE = 32;
+    	const short IO_BLOCK = INPUT_BLOCK_BYTES + OUTPUT_BLOCK_BYTES;  // size in bytes of INPUT and OUTPUT BLOCK
 
     	int index = blockIdx.x * blockDim.x + threadIdx.x;
 
-    	int set_index = index/max_run_length;
+    	int set_index = index/max_num_sets_in_run;
 
     	if (set_index < num_sets){
-    		int intput_index = input_offsets[set_index] + INPUT_BLOCK * (index % max_run_length);
-    		int output_index = output_offsets[set_index] + OUTPUT_BLOCK * (index % max_run_length);
+    		int intput_index = input_offsets[set_index] + INPUT_BLOCK_BYTES * (index % max_num_sets_in_run);
+    		int output_index = output_offsets[set_index] + BLOCK_SIZE * (index % max_num_sets_in_run);
 
-    		if ((INPUT_BLOCK * (index % max_run_length)) < input_run_lengths[set_index]) { // if we want to actually process
+    		if ((INPUT_BLOCK_BYTES * (index % max_num_sets_in_run)) < input_run_lengths[set_index]) { // if we want to actually process
 
-    			uint8_t * temp_in = &temp[IO_BLOCK * threadIdx.x];
-    			int *temp_out = (int*)&temp[IO_BLOCK * threadIdx.x + INPUT_BLOCK];
+    			uint8_t * temp_in = &temp[IO_BLOCK * index];
+    			int *temp_out = (int*)&temp[IO_BLOCK * index + INPUT_BLOCK_BYTES];
 
-    			for (int i = 0; i < INPUT_BLOCK; i++){
+    			for (int i = 0; i < INPUT_BLOCK_BYTES; i++){
     				temp_in[i] = buffer[intput_index + i];
     			}
     			unpack_func(temp_in[0], temp_out[0]);
 
-    			for (int i = 0; i < INPUT_BLOCK; i++){
+    			for (int i = 0; i < BLOCK_SIZE; i++){
     				output[output_index + i] = temp_out[i];
     			}
     		}
