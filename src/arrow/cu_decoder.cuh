@@ -18,7 +18,8 @@
  * limitations under the License.
  */
 
-#include <thrust/gather.h>
+#include <thrust/scatter.h>
+#include <thrust/counting_iterator.h>
 #include <thrust/scan.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -55,13 +56,30 @@ namespace internal {
 
 
     // expands data vector that does not contain nulls into a representation that has indeterminate values where there should be nulls
-    // The expansion happens in place. This assumes that the data vector is actually big enough to hold the expanded data
-    // A vector of int work_space needs to be allocated to hold the prefix sum.
+    // A vector of int work_space needs to be allocated to hold the map for the scatter operation. The workspace should be of size batch_size
     template <typename T>
-    void compact_to_sparse_for_nulls(T* data, const uint8_t* valid_bits, int batch_size, int * work_space){
-    	thrust::exclusive_scan	(valid_bits, valid_bits + batch_size, work_space);
+    void compact_to_sparse_for_nulls(T* data_in, T* data_out, const uint8_t* definition_levels, uint8_t max_definition_level,
+    		int batch_size, int * work_space){
 
-    	thrust::gather_if(work_space, work_space + batch_size, valid_bits, data, data);
+    	struct is_equal
+    	{
+    		uint8_t _val;
+    		__host__ __device__ BlazingMinus(uint8_t val){
+    			_val = val;
+    		}
+    	  __host__ __device__
+    	  bool operator()(const uint8_t &x)
+    	  {
+    	    return x == _val;
+    	  }
+    	};
+
+    	is_equal op(max_definition_level);
+    	thrust::counting_iterator<int> iter(0);
+    	auto out_iter = thrust::copy_if(iter, iter + batch_size, definition_levels, work_space, op);
+    	int num_not_null = out_iter - work_space;
+
+    	thrust::scatter(data_in, data_in + num_not_null, work_space, data_out);
     }
 
 
