@@ -71,12 +71,6 @@ namespace gdf {
         return *this;
     }
 
-    Launcher& Launcher::configure(dim3 grid, dim3 block) {
-        this->grid = grid;
-        this->block = block;
-        return *this;
-    }
-
     gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay) {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)

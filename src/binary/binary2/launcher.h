@@ -10,7 +10,7 @@ namespace gdf {
 
     class Launcher {
     public:
-        static Launcher Launch() {
+        static Launcher launch() {
             return Launcher();
         }
 
@@ -37,8 +37,6 @@ namespace gdf {
 
         Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope);
 
-        Launcher& configure(dim3 grid, dim3 block);
-
         gdf_error launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay);
 
         gdf_error launch(gdf_column* out, gdf_column* vax, gdf_column* vay);
@@ -55,8 +53,6 @@ namespace gdf {
         jitify::Program program;
 
     private:
-        dim3 grid;
-        dim3 block;
         std::string kernelName;
         std::vector<std::string> arguments;
     };
