@@ -317,17 +317,18 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t  batch_size,
         } else {
             std::int16_t max_definition_level = descr_->max_definition_level();
             std::int16_t max_repetition_level = descr_->max_repetition_level();
-            _DefinitionLevelsToBitmap(definition_levels,
-                                      num_def_levels,
-                                      max_definition_level,
-                                      max_repetition_level,
-                                      values_read,
-                                      &null_count,
-                                      valid_bits,
-                                      valid_bits_offset);
+//            _DefinitionLevelsToBitmap(definition_levels,
+//                                      num_def_levels,
+//                                      max_definition_level,
+//                                      max_repetition_level,
+//                                      values_read,
+//                                      &null_count,
+//                                      valid_bits,
+//                                      valid_bits_offset);
             
             total_values = _ReadValuesSpaced(current_decoder_,
-                                             *values_read,
+//                                             *values_read,
+            		batch_size,
                                              values,
                                              static_cast<int>(null_count),
                                              valid_bits,

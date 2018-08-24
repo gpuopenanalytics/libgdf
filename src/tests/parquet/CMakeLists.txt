@@ -65,7 +65,7 @@ function(GDF_ADD_PARQUET_TEST TARGET)
     target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
     target_link_libraries(${TARGET} GTest::GTest GTest::Main gdf-parquet)
     get_property(ARGN TARGET ${TARGET} PROPERTY SOURCES)
-    gtest_add_tests(${TARGET} "" ${ARGN})
+#    gtest_add_tests(${TARGET} "" ${ARGN})
 endfunction()
 
 add_subdirectory(file_reader)

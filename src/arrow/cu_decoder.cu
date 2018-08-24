@@ -393,6 +393,35 @@ int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
 {
     thrust::device_vector<int> d_output_int(batch_size);
     gpu_bit_packing(buffer, buffer_len, input_offset, bitpackset, output_offset, d_output_int, num_bits);
+
+    unpack_functor func(num_bits);
+    std::vector<int> input_offsets(bitpackset.size());
+    std::vector<int> input_runlengths(bitpackset.size());
+    for (int i = 0; i < bitpackset.size(); i++){
+    	input_offsets[i] = bitpackset[i].first;
+    	input_runlengths[i] = bitpackset[i].second;
+    }
+    thrust::device_vector<uint8_t> d_buffer(buffer_len);
+    thrust::copy(buffer, buffer + buffer_len, d_buffer.begin());
+    thrust::device_vector<int> d_input_offsets(input_offsets);
+    thrust::device_vector<int> d_input_runlengths(input_runlengths);
+    thrust::device_vector<int> d_output_offset(output_offset);
+
+    int max_run_length = thrust::reduce(thrust::device,
+    		d_input_runlengths.begin(), d_input_runlengths.end(),
+                                0,
+                                thrust::maximum<int>());
+
+
+    short num_sets = 10;
+    int shared_memory = num_sets * (num_bits * 32/8 + 32 * 4);
+
+    decode_bitpacking<<<1, num_sets, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_output_int.data()),
+    		thrust::raw_pointer_cast(d_input_offsets.data()), thrust::raw_pointer_cast(d_input_runlengths.data()), bitpackset.size(),
+			thrust::raw_pointer_cast(d_output_offset.data()), num_bits, max_run_length, func);
+
+
+
     gpu_bit_packing_remainder(buffer, buffer_len, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_output_int, num_bits);
 
     thrust::transform(thrust::device, d_output_int.begin(), d_output_int.end(), device_output, copy_functor<T>());
@@ -432,7 +461,7 @@ template int unpack_using_gpu<bool>(const uint8_t* buffer, const int buffer_len,
             const std::vector<int>& remainderSetSize, 
             const std::vector<int>& remainderOutputOffsets, 
             int num_bits, 
-            bool* output, int batch_size 
+            bool* device_output, int batch_size
             );
 
 

@@ -86,30 +86,37 @@ namespace internal {
 
     template<typename Func>
     __global__
-    void decode_bitpacking(uint8_t *buffer, int *output, int *input_offsets, int *input_run_lengths,
-    		int * output_offsets, int *output_run_lengths, short bit_width, int max_run_length, Func unpack_func)
+    void decode_bitpacking(uint8_t *buffer, int *output, int *input_offsets, int *input_run_lengths, int num_sets,
+    		int * output_offsets, short bit_width, int max_run_length, Func unpack_func)
     {
 
-    	short INPUT_BLOCK = bit_width * 32 / 8; // number of bytes needed for a unpack32 operation
-    	short OUTPUT_BLOCK = 32; // number of elements for output
+    	extern __shared__ uint8_t temp[];
+
+    	const short INPUT_BLOCK = bit_width * 32 / 8; // number of bytes needed for a unpack32 operation
+    	const short OUTPUT_BLOCK = 32; // number of elements for output
+    	const short IO_BLOCK = INPUT_BLOCK + OUTPUT_BLOCK*4;  // size in bytes of INPUT and OUTPUT BLOCK
 
     	int index = blockIdx.x * blockDim.x + threadIdx.x;
 
     	int set_index = index/max_run_length;
-    	int intput_index = input_offsets[set_index] + INPUT_BLOCK * (index % max_run_length);
 
-    	if ((INPUT_BLOCK * (index % max_run_length)) < input_run_lengths[set_index]) { // if we want to actually process
+    	if (set_index < num_sets){
+    		int intput_index = input_offsets[set_index] + INPUT_BLOCK * (index % max_run_length);
+    		int output_index = output_offsets[set_index] + OUTPUT_BLOCK * (index % max_run_length);
 
-    		uint8_t temp_in[INPUT_BLOCK];
-    		int temp_out[OUTPUT_BLOCK];
+    		if ((INPUT_BLOCK * (index % max_run_length)) < input_run_lengths[set_index]) { // if we want to actually process
 
-    		for (int i = 0; i < INPUT_BLOCK; i++){
-    			temp_in[i] = buffer[intput_index + i];
-    		}
-    		unpack_func(temp_in, temp_out);
+    			uint8_t * temp_in = &temp[IO_BLOCK * threadIdx.x];
+    			int *temp_out = (int*)&temp[IO_BLOCK * threadIdx.x + INPUT_BLOCK];
 
-    		for (int i = 0; i < INPUT_BLOCK; i++){
-    			output[output_index + i] = temp_out[i];
+    			for (int i = 0; i < INPUT_BLOCK; i++){
+    				temp_in[i] = buffer[intput_index + i];
+    			}
+    			unpack_func(temp_in[0], temp_out[0]);
+
+    			for (int i = 0; i < INPUT_BLOCK; i++){
+    				output[output_index + i] = temp_out[i];
+    			}
     		}
     	}
     }
@@ -118,5 +125,27 @@ namespace internal {
 }
 } // namespace arrow
 } // namespace gdf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif // _CU_DECODER_H_
