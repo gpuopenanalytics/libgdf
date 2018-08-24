@@ -83,6 +83,20 @@ R"***(
     constexpr bool isIntegralUnsigned<uint64_t> = true;
 
 
+    template <typename Type>
+    constexpr bool isFloat = false;
+
+    template <>
+    constexpr bool isFloat<float> = true;
+
+
+    template <typename Type>
+    constexpr bool isDouble = false;
+
+    template <>
+    constexpr bool isDouble<double> = true;
+
+
     template <typename X, typename Y>
     constexpr int MaxSize = ((sizeof(X) < sizeof(Y)) ? sizeof(Y) : sizeof(X));
 

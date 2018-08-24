@@ -258,3 +258,183 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_Default_FP64_SI32_UI32_
 
     assertVector(out, vax, vay, def, ADD());
 }
+
+
+TEST_F(BinaryOperationIntegrationTest, Sub_Vector_Vector_UI64) {
+    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
+    using SUB = gdf::test::operation::Sub<UI64, UI64, UI64>;
+
+    gdf::test::Vector<UI64> out;
+    gdf::test::Vector<UI64> vax;
+    gdf::test::Vector<UI64> vay;
+
+    vax.range(100, 200, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_SUB);
+
+    out.read();
+
+    assertVector(out, vax, vay, SUB());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Mul_Vector_Vector_UI64) {
+    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
+    using MUL = gdf::test::operation::Mul<UI64, UI64, UI64>;
+
+    gdf::test::Vector<UI64> out;
+    gdf::test::Vector<UI64> vax;
+    gdf::test::Vector<UI64> vay;
+
+    vax.range(100, 200, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MUL);
+
+    out.read();
+
+    assertVector(out, vax, vay, MUL());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Div_Vector_Vector_UI64) {
+    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
+    using DIV = gdf::test::operation::Div<UI64, UI64, UI64>;
+
+    gdf::test::Vector<UI64> out;
+    gdf::test::Vector<UI64> vax;
+    gdf::test::Vector<UI64> vay;
+
+    vax.range(100, 200, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_DIV);
+
+    out.read();
+
+    assertVector(out, vax, vay, DIV());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, TrueDiv_Vector_Vector_UI64) {
+    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
+    using TRUEDIV = gdf::test::operation::TrueDiv<UI64, UI64, UI64>;
+
+    gdf::test::Vector<UI64> out;
+    gdf::test::Vector<UI64> vax;
+    gdf::test::Vector<UI64> vay;
+
+    vax.range(100, 200, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_TRUE_DIV);
+
+    out.read();
+
+    assertVector(out, vax, vay, TRUEDIV());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, FloorDiv_Vector_Vector_UI64) {
+    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
+    using FLOORDIV = gdf::test::operation::FloorDiv<UI64, UI64, UI64>;
+
+    gdf::test::Vector<UI64> out;
+    gdf::test::Vector<UI64> vax;
+    gdf::test::Vector<UI64> vay;
+
+    vax.range(100, 200, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_FLOOR_DIV);
+
+    out.read();
+
+    assertVector(out, vax, vay, FLOORDIV());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_UI64) {
+    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
+    using MOD = gdf::test::operation::Mod<UI64, UI64, UI64>;
+
+    gdf::test::Vector<UI64> out;
+    gdf::test::Vector<UI64> vax;
+    gdf::test::Vector<UI64> vay;
+
+    vax.range(120, 220, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+
+    out.read();
+
+    assertVector(out, vax, vay, MOD());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP32) {
+    using FP32 = gdf::test::GdfEnumType<GDF_FLOAT32>;
+    using MOD = gdf::test::operation::Mod<FP32, FP32, FP32>;
+
+    gdf::test::Vector<FP32> out;
+    gdf::test::Vector<FP32> vax;
+    gdf::test::Vector<FP32> vay;
+
+    vax.range(120, 220, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+
+    out.read();
+
+    assertVector(out, vax, vay, MOD());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP64) {
+    using FP64 = gdf::test::GdfEnumType<GDF_FLOAT64>;
+    using MOD = gdf::test::operation::Mod<FP64, FP64, FP64>;
+
+    gdf::test::Vector<FP64> out;
+    gdf::test::Vector<FP64> vax;
+    gdf::test::Vector<FP64> vay;
+
+    vax.range(120, 220, 2);
+    vay.range(50, 100, 1);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+
+    out.read();
+
+    assertVector(out, vax, vay, MOD());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Pow_Vector_Vector_UI64) {
+    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
+    using POW = gdf::test::operation::Pow<UI64, UI64, UI64>;
+
+    gdf::test::Vector<UI64> out;
+    gdf::test::Vector<UI64> vax;
+    gdf::test::Vector<UI64> vay;
+
+    vax.range(0, 50, 1);
+    vay.fill(50, 2);
+    out.emplace(vax.dataSize());
+
+    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_POW);
+
+    out.read();
+
+    assertVector(out, vax, vay, POW());
+}

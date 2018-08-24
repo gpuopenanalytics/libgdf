@@ -47,12 +47,12 @@ namespace gdf {
             case GDF_FLOOR_DIV:
                 return "FloorDiv";
             case GDF_MOD:
+                return "Mod";
+            case GDF_POW:
                 return "Pow";
-            //GDF_COMBINE,
-            case GDF_COMBINE_FIRST:
-                return "CombineFirst";
-            case GDF_ROUND:
-                return "Round";
+            //case GDF_COMBINE:
+            //case GDF_COMBINE_FIRST:
+            //case GDF_ROUND:
             case GDF_EQUAL:
                 return "Equal";
             case GDF_NOT_EQUAL:

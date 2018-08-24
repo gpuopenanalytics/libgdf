@@ -49,6 +49,17 @@ namespace test {
             return *this;
         }
 
+        Vector& fill(int size, int value) {
+            mData.clear();
+            mData.reserve(size);
+            for (int k = 0; k < size; ++k) {
+                mData.push_back((Type)value);
+            }
+            mDataState = State::GpuCopy;
+            emplace();
+            return *this;
+        }
+
         Vector& valid(bool value, std::initializer_list<int> list) {
             assert(mData.size() != 0);
             mValid.clear();
