@@ -19,7 +19,7 @@
  */
 
 #include <thrust/scatter.h>
-#include <thrust/counting_iterator.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <thrust/scan.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -62,17 +62,18 @@ namespace internal {
     		int batch_size, int * work_space){
 
     	struct is_equal
-    	{
+		{
     		uint8_t _val;
-    		__host__ __device__ BlazingMinus(uint8_t val){
+
+    		__host__ __device__ is_equal(uint8_t val){
     			_val = val;
     		}
-    	  __host__ __device__
-    	  bool operator()(const uint8_t &x)
-    	  {
-    	    return x == _val;
-    	  }
-    	};
+    		__host__ __device__
+			bool operator()(const uint8_t &x)
+    		{
+    			return x == _val;
+    		}
+		};
 
     	is_equal op(max_definition_level);
     	thrust::counting_iterator<int> iter(0);
