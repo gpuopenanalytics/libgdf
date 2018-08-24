@@ -216,7 +216,7 @@ namespace arrow {
             thrust::device_vector<int> work_space_vector(batch_size);
             int* work_space = thrust::raw_pointer_cast(work_space_vector.data());
             if (null_count > 0){
-            	gdf::arrow::internal::compact_to_sparse_for_nulls(values, valid_bits, batch_size, work_space);
+//            	gdf::arrow::internal::compact_to_sparse_for_nulls(values, valid_bits, batch_size, work_space);
             }
 
             return values_read;
