@@ -331,7 +331,6 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
     }
 
     std::int64_t total_values;
-    //  num_buffered_values_ - num_decoded_values_
 
     batch_size =
         std::min(batch_size, num_buffered_values_ - num_decoded_values_);
@@ -480,213 +479,13 @@ struct ParquetTraits
         static constexpr gdf_dtype gdfDType = GdfDType; \
     }
 
-TYPE_TRAITS_FACTORY(::parquet::BooleanType, GDF_invalid);
+TYPE_TRAITS_FACTORY(::parquet::BooleanType, GDF_INT8);
 TYPE_TRAITS_FACTORY(::parquet::Int32Type, GDF_INT32);
 TYPE_TRAITS_FACTORY(::parquet::Int64Type, GDF_INT64);
 TYPE_TRAITS_FACTORY(::parquet::FloatType, GDF_FLOAT32);
 TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
 
 #undef TYPE_TRAITS_FACTORY
-
-//#define TO_GDF_COLUMN_USING_READBATCHSPACED 1
-
-#ifdef TO_GDF_COLUMN_USING_READBATCHSPACED
-template <class DataType>
-std::size_t
-ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels,
-                                    std::int16_t *const repetition_levels,
-                                    const gdf_column &column)
-{
-    typename DataType::c_type *const values =
-        static_cast<typename DataType::c_type *const>(column.data);
-    std::uint8_t *const valid_bits = static_cast<std::uint8_t *>(column.valid);
-
-    static std::int64_t levels_read = 0;
-    static std::int64_t values_read = 0;
-    static std::int64_t nulls_count = 0;
-
-    static const std::size_t min_batch_size = 4096;
-    std::size_t batch = 0;
-    std::size_t batch_actual = 0;
-    std::size_t batch_size = 8;
-    std::size_t total_read = 0;
-
-    do
-    {
-        batch = ReadBatchSpaced(
-            batch_size,
-            definition_levels,
-            repetition_levels,
-            values + batch_actual,
-            valid_bits + static_cast<std::ptrdiff_t>(batch_actual / 8),
-            0,
-            &levels_read,
-            &values_read,
-            &nulls_count);
-        total_read += static_cast<std::size_t>(values_read);
-        batch_actual += batch;
-        batch_size = std::max(batch_size * 2, min_batch_size);
-    } while (batch > 0 || levels_read > 0);
-
-    return total_read;
-}
-#else
-
-static inline __device__ __host__ uint8_t _ByteWithBit(ptrdiff_t i)
-{
-    static uint8_t kBitmask[8] = {1, 2, 4, 8, 16, 32, 64, 128};
-    return kBitmask[i];
-}
-
-static inline __device__ __host__ uint8_t _FlippedBitmask(ptrdiff_t i)
-{
-    static uint8_t kFlippedBitmask[] = {254, 253, 251, 247, 239, 223, 191, 127};
-    return kFlippedBitmask[i];
-
-}
-
-static inline __device__ __host__ void _TurnBitOn(uint8_t *const bits, std::ptrdiff_t i)
-{
-    bits[i / 8] |= _ByteWithBit(i % 8);
-}
-
-static inline __device__ __host__ void _TurnBitOff(uint8_t *const bits, std::ptrdiff_t i)
-{
-    bits[i / 8] &= _FlippedBitmask(i % 8);
-}
-
-static inline size_t _CeilToByteLength(size_t n)
-{
-    return (n + 7) & ~7;
-}
-
-static inline size_t _BytesLengthToBitmapLength(size_t n)
-{
-    return _CeilToByteLength(n) / 8;
-}
-
-
-size_t get_number_of_bytes_for_valid (size_t column_size) {
-    return sizeof(gdf_valid_type) * (column_size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
-}
-
-std::string chartobin(gdf_valid_type c, int size = 8)
-{
-    std::string bin;
-    bin.resize(size);
-    bin[0] = 0;
-    int i;
-    for (i = 0; i < size; i++)
-    {
-        bin[i] = (c % 2) + '0';
-        c /= 2;
-    }
-    return bin;
-}
-
-std::string gdf_valid_to_str(gdf_valid_type *valid, size_t column_size)
-{
-    size_t n_bytes = get_number_of_bytes_for_valid(column_size);
-    std::string response;
-    for (int i = 0; i < n_bytes; i++)
-    {
-        int length = n_bytes != i + 1 ? GDF_VALID_BITSIZE : column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
-        auto result = chartobin(valid[i], length);
-        response += std::string(result);
-    }
-    return response;
-}
-
-
-auto print_binary(gdf_valid_type n, int size) -> void {
-    std::cout << chartobin(n) << "\t sz: " <<  size <<  "\tbinary: " << chartobin(n, size) << std::endl;
-}
-
-
-template <typename ValueType = int8_t>
-auto print_column(gdf_column * column) -> void {
-    ValueType* host_out = (ValueType*)column->data;
-    auto bitmap = column->valid;
-    std::cout<<"Printing Column\t null_count:" << column->null_count << "\t type " << column->dtype <<  std::endl;
-    int  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
-     for(int i = 0; i < column->size; i++) {
-         int col_position =  i / 8;
-         int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
-         int bit_offset =  (length_col - 1) - (i % 8);
-         ValueType value    = static_cast<ValueType *>(column->data)[i];
-         if ( bitmap[i / 8] & (1 << (i % 8)) ) {
-             std::cout << "host_out[" << i << "] = " << value <<"\t\tvalid="<< 1 <<std::endl;
-         } else {
-             std::cout << "host_out[" << i << "] = " << '\0' <<"\t\tvalid="<< 0 <<std::endl;
-         }
-     }
-    for (int i = 0; i < n_bytes; i++) {
-        int length = n_bytes != i+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
-        print_binary(bitmap[i], length);
-    }
-//    delete[] host_out;
-//    delete[] host_valid_out;
-    std::cout<<std::endl<<std::endl;
-}
-
-
-// // #define USING_THRUST_FOR_DEF_LEVELS 1
-
-// static inline size_t _GenerateNullBitmap(const int16_t *const levels, const size_t levels_length, const int16_t max_definition_level, uint8_t *const null_bitmap_ptr)
-// {
-//     size_t null_count = 0;
-//     if (max_definition_level > 0)
-//     {
-
-// #ifdef USING_GPU_FOR_DEF_LEVELS
-//         thrust::device_vector<int16_t> d_levels(levels, levels + levels_length);
-
-//         thrust::transform(thrust::device,
-//                           thrust::counting_iterator<int>(0),
-//                           thrust::counting_iterator<int>(levels_length),
-//                           d_levels.begin(),
-//                           thrust::make_discard_iterator(),
-//                           bitmask_functor{max_definition_level, null_bitmap_ptr});
-//         @todo : null_count in gpu
-// #else
-//         auto num_chars = _BytesLengthToBitmapLength(levels_length);
-//         uint8_t *h_null_bitmap = new uint8_t[num_chars];
-//         for (int i = 0; i < levels_length; ++i)
-//         {
-//             if (levels[i] == max_definition_level)
-//             {
-//                 _TurnBitOn(h_null_bitmap, i);
-//             }
-//             else
-//             {
-//                 null_count += 1;
-//             }
-//         }
-//         cudaMemcpy(null_bitmap_ptr, h_null_bitmap, num_chars, cudaMemcpyHostToDevice);
-// #endif // ! USING_GPU_FOR_DEF_LEVELS
-//     }
-//     else
-//     {
-//         auto num_chars = _BytesLengthToBitmapLength(levels_length);
-//         std::cout << "num_chars for valid: " << num_chars << std::endl;
-//         thrust::fill(thrust::device, null_bitmap_ptr, null_bitmap_ptr + num_chars - 1, 255);
-//         uint8_t last_char_value = 0;
-//         size_t levels_length_prev = levels_length - levels_length % 8;
-//         std::cout << "from to: " << levels_length_prev << "->" << levels_length << std::endl;
-//         size_t bit_index = 0;
-//         for (int index = levels_length_prev; index < levels_length; ++index)
-//         {
-//             _TurnBitOn(&last_char_value, bit_index);
-//             bit_index++;
-//         }
-//         thrust::fill(thrust::device, null_bitmap_ptr + num_chars - 1, null_bitmap_ptr + num_chars, last_char_value);
-//     }
-//     return null_count;
-// }
-
-//@todo
-// 1. read levels using gpu_decoder
-// 2.
 
 struct is_equal
 {
@@ -720,122 +519,117 @@ void compact_to_sparse_for_nulls(T *data_in, T *data_out, const int16_t *definit
     thrust::scatter(thrust::device, data_in, data_in + num_not_null, work_space, data_out);
 }
 
+#define WARP_BYTE 4
+#define WARP_SIZE 32
 
+__global__ void def_levels_to_valid(uint8_t* valid, const int16_t *def_levels, const  int size, const  int max_definition_level) {
+    int blksz = blockDim.x * blockDim.y * blockDim.z;
+    int blkid = gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x;
+    int blkof = blksz * blkid;
+    int thdid = blkof + blockDim.x * blockDim.y * threadIdx.z + blockDim.x * threadIdx.y + threadIdx.x;
 
-struct bitmask_functor : public thrust::binary_function<int, int16_t, int>
-{
-    uint8_t *const valid_bits;
-    int16_t max_definition_level;
-    int64_t valid_bits_offset;
-
-    bitmask_functor(int max_definition_level, uint8_t *const valid_bits, int64_t valid_bits_offset)
-        : max_definition_level(max_definition_level),
-          valid_bits(valid_bits),
-          valid_bits_offset(valid_bits_offset)
-    {
-    }
-    __host__ __device__ int operator()(int i, int16_t level)
-    {
-        int iter = valid_bits_offset + i;
-        if (level == max_definition_level) {
-            valid_bits[iter / 8]  |= _ByteWithBit(iter % 8);
-        } else if (level < max_definition_level){
-            valid_bits[iter / 8]  |= _FlippedBitmask(iter % 8);
+    uint32_t bitmask = 0;
+    if (thdid < size) {
+        bitmask = 1 << (thdid % WARP_SIZE);
+        if (def_levels[thdid] == max_definition_level) {
+            bitmask &= (1 << (thdid % WARP_SIZE));
+        } else if (def_levels[thdid] < max_definition_level) {
+            bitmask &= (0 << (thdid % WARP_SIZE));
         }
-        return 0;
     }
-};
 
-static inline void
-_DefinitionLevelsToBitmap(const std::int16_t *def_levels,
-                          std::int64_t        levels_length,
-                          const std::int16_t  max_definition_level,
-                          std::int64_t *      values_read,
-                          std::int64_t *      null_count,
-                          std::uint8_t *      null_bitmap_ptr,
-                          const std::int64_t  valid_bits_offset) {
+    __syncwarp();
 
-    ::arrow::internal::BitmapWriter valid_bits_writer(null_bitmap_ptr, valid_bits_offset, levels_length);
+    for (int offset = 16; offset > 0; offset /= 2)
+        bitmask += __shfl_down_sync(0xFFFFFFFF, bitmask, offset);
 
-    for (std::int64_t i = 0; i < levels_length; ++i) {
-        if (def_levels[i] == max_definition_level) {
-            valid_bits_writer.Set();
-        } else {
-            if (def_levels[i] < max_definition_level) {
-                valid_bits_writer.Clear();
-                *null_count += 1;
-            } else {
-                throw ::parquet::ParquetException(
-                        "definition level exceeds maximum");
-            }
-        }
-
-        valid_bits_writer.Next();
+    if ((thdid % WARP_SIZE) == 0) {
+        int index = thdid / WARP_SIZE * WARP_BYTE;
+        valid[index + 0] = 0xFF & bitmask;
+        valid[index + 1] = 0XFF & (bitmask >> 8);
+        valid[index + 2] = 0XFF & (bitmask >> 16);
+        valid[index + 3] = 0XFF & (bitmask >> 24);
     }
-    valid_bits_writer.Finish();
-    //// *values_read = valid_bits_writer.position();
-
-
-
-    //  if (max_definition_level > 0) {
-    //     thrust::device_vector<int16_t> d_levels(def_levels, def_levels + levels_length);
-    //     thrust::transform(thrust::device,
-    //                       thrust::counting_iterator<int>(0),
-    //                       thrust::counting_iterator<int>(levels_length),
-    //                       d_levels.begin(),
-    //                       thrust::make_discard_iterator(),
-    //                       bitmask_functor{max_definition_level, null_bitmap_ptr, valid_bits_offset});
-    // } else {
-    //     std::cout <<  "$$CASE: max_definition_level == 0 " << std::endl;
-    //     auto num_chars = _BytesLengthToBitmapLength(levels_length);
-    //     thrust::fill(thrust::device, null_bitmap_ptr, null_bitmap_ptr + num_chars - 1, 255);
-    //     uint8_t last_char_value = 0;
-    //     size_t levels_length_prev = levels_length - levels_length % 8;
-    //     size_t bit_index = 0;
-    //     for (int index = levels_length_prev; index < levels_length; ++index)
-    //     {
-    //         _TurnBitOn(&last_char_value, bit_index);
-    //         bit_index++;
-    //     }
-    //     thrust::fill(thrust::device, null_bitmap_ptr + num_chars - 1, null_bitmap_ptr + num_chars, last_char_value);
-    // }
 }
 
-// static inline void
-// _DefinitionLevelsToBitmap(const std::int16_t *def_levels,
-//                           std::int64_t        num_def_levels,
-//                           const std::int16_t  max_definition_level,
-//                           std::int64_t *      values_read,
-//                           std::int64_t *      null_count,
-//                           std::uint8_t *      d_valid_bits,
-//                           const std::int64_t  valid_bits_offset) {
+static inline  uint8_t _ByteWithBit(ptrdiff_t i)
+{
+    static uint8_t kBitmask[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+    return kBitmask[i];
+}
 
-//     auto n_bytes = get_number_of_bytes_for_valid (values_read);
-//     std::uint8_t * valid_bits = new std::uint8_t[n_bytes];
+static inline  uint8_t _FlippedBitmask(ptrdiff_t i)
+{
+    static uint8_t kFlippedBitmask[] = {254, 253, 251, 247, 239, 223, 191, 127};
+    return kFlippedBitmask[i];
 
-//     ::arrow::internal::BitmapWriter valid_bits_writer(valid_bits, valid_bits_offset, num_def_levels);
+}
 
-//     for (std::int64_t i = 0; i < num_def_levels; ++i) {
-//         if (def_levels[i] == max_definition_level) {
-//             valid_bits_writer.Set();
-//         } else {
-//             if (def_levels[i] < max_definition_level) {
-//                 valid_bits_writer.Clear();
-//                 *null_count += 1;
-//             } else {
-//                 throw ::parquet::ParquetException(
-//                         "definition level exceeds maximum");
-//             }
-//         }
+static inline  void _TurnBitOn(uint8_t *const bits, std::ptrdiff_t i)
+{
+    bits[i / 8] |= _ByteWithBit(i % 8);
+}
 
-//         valid_bits_writer.Next();
-//     }
-//     valid_bits_writer.Finish();
-//     *values_read = valid_bits_writer.position();
+static inline  void _TurnBitOff(uint8_t *const bits, std::ptrdiff_t i)
+{
+    bits[i / 8] &= _FlippedBitmask(i % 8);
+}
 
-//     cudaMemcpy(d_valid_bits, valid_bits, n_bytes, cudaMemcpyHostToDevice);
-//     delete []valid_bits;
-// }
+static inline size_t _CeilToByteLength(size_t n) {
+    return (n + 7) & ~7;
+}
+
+static inline size_t _BytesLengthToBitmapLength(size_t n){
+    return _CeilToByteLength(n) / 8;
+}
+
+static inline void
+_DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
+                          std::int64_t        def_length,
+                          const std::int16_t  max_definition_level,
+                          std::int64_t *      null_count,
+                          std::uint8_t *      d_valid_ptr,
+                          const std::int64_t  valid_bits_offset) {
+
+    if (max_definition_level > 0) {
+        dim3 grid(2, 2, 2); //@todo: optimal params flor grid and blocks
+        dim3 block(32, 2, 2);
+        if (valid_bits_offset % 8 == 0) {
+            def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8, d_def_levels, def_length, max_definition_level);
+        } else {
+            int left_bits_length = valid_bits_offset % 8;
+            int rigth_bits_length = 8 - left_bits_length;
+            uint8_t mask;
+            cudaMemcpy(&mask, d_valid_ptr + (valid_bits_offset/8), 1, cudaMemcpyDeviceToHost);
+
+            thrust::host_vector<int16_t> h_def_levels(rigth_bits_length);
+            cudaMemcpy(h_def_levels.data(), d_def_levels, rigth_bits_length * sizeof(int16_t), cudaMemcpyDeviceToHost);
+            for(size_t i = 0; i < h_def_levels.size(); i++) {
+                if (h_def_levels[i] == max_definition_level) {
+                    mask |= _ByteWithBit(i + left_bits_length);
+                } else {
+                    if (h_def_levels[i] < max_definition_level) {
+                        mask &= _FlippedBitmask(i + left_bits_length);
+                        //*null_count += 1; // @todo: null_count support
+                    }
+                }
+            }
+            cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
+            def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, d_def_levels + rigth_bits_length, def_length, max_definition_level);
+        }
+    } else {
+        auto num_chars = _BytesLengthToBitmapLength(def_length);
+        thrust::fill(thrust::device, d_valid_ptr, d_valid_ptr + num_chars - 1, 255);
+        uint8_t last_char_value = 0;
+        size_t levels_length_prev = def_length - def_length % 8;
+        size_t bit_index = 0;
+        for (int index = levels_length_prev; index < def_length; ++index) {
+            _TurnBitOn(&last_char_value, bit_index);
+            bit_index++;
+        }
+        thrust::fill(thrust::device, d_valid_ptr + num_chars - 1, d_valid_ptr + num_chars, last_char_value);
+    }
+}
 
 template <class DataType>
 size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels, std::int16_t *const repetition_levels,
@@ -844,37 +638,37 @@ size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels
     using c_type = typename DataType::c_type;
 
     c_type *const values = static_cast<c_type *const>(column.data);
-    std::uint8_t *const valid_bits = static_cast<std::uint8_t *>(column.valid);
+    std::uint8_t *const d_valid_bits = static_cast<std::uint8_t *>(column.valid);
 
-    // size_t values_to_read = num_buffered_values_ - num_decoded_values_;
-    size_t values_to_read = std::min<size_t>(8, num_buffered_values_ - num_decoded_values_);
+    size_t values_to_read = num_buffered_values_ - num_decoded_values_;
+    //TEST: min batches => size_t values_to_read = std::min<size_t>(8, num_buffered_values_ - num_decoded_values_);
 
     int64_t values_read;
     int64_t rows_read_total = 0;
     int64_t null_count = 0;
     int64_t values_read_counter = 0;
 
-    auto n_bytes = get_number_of_bytes_for_valid (num_buffered_values_);// temporal
-    std::uint8_t * h_valid_bits = new std::uint8_t[n_bytes];
     while (this->HasNext()) {
+        auto def_levels_curr = definition_levels + rows_read_total;
+
         int64_t rows_read = this->ReadBatch(static_cast<std::int64_t>(values_to_read),
-                                            definition_levels  + rows_read_total,
+                                            def_levels_curr,
                                             nullptr,
                                             static_cast<T *>(values + values_read_counter), // corregir saltos de values
                                             &values_read);
 
-        _DefinitionLevelsToBitmap(definition_levels  + rows_read_total,
+        thrust::device_vector<int16_t> d_def_levels(def_levels_curr, def_levels_curr + rows_read);
+
+        _DefinitionLevelsToBitmap(thrust::raw_pointer_cast(d_def_levels.data()),
                                   rows_read,
                                   descr_->max_definition_level(),
-                                  &values_read,
                                   &null_count,
-                                  h_valid_bits, //valid_bits
+                                  d_valid_bits,
                                   rows_read_total);
 
         rows_read_total += rows_read;
         values_read_counter += values_read;
     }
-    cudaMemcpy(valid_bits, h_valid_bits, n_bytes, cudaMemcpyHostToDevice);
 
     if (rows_read_total != values_read_counter) {
         thrust::device_vector<int> work_space_vector(rows_read_total);
@@ -891,8 +685,6 @@ size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels
     }
     return static_cast<std::size_t>(rows_read_total);
 }
-
-#endif
 
 template class ColumnReader<::parquet::BooleanType>;
 template class ColumnReader<::parquet::Int32Type>;
