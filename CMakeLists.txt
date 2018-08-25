@@ -108,19 +108,6 @@ if(HT_LEGACY_ALLOCATOR)
   set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS};-DHT_LEGACY_ALLOCATOR)
 endif()
 
-cuda_add_library(gdf-parquet
-    src/parquet/api.cpp
-    src/parquet/column_reader.cu
-    src/parquet/file_reader.cpp
-    src/parquet/file_reader_contents.cpp
-    src/parquet/page_reader.cpp
-    src/parquet/row_group_reader_contents.cpp
-    src/arrow/cu_decoder.cu
-    src/arrow/util/pinned_allocator.cu
-    )
-
-target_link_libraries(gdf-parquet Apache::ParquetCpp)
-
 cuda_add_library(gdf SHARED
     src/binaryops.cu
     src/bitmaskops.cu
@@ -140,9 +127,18 @@ cuda_add_library(gdf SHARED
     src/streamcompactionops.cu
     src/unaryops.cu
     #src/windowedops.cu
+    src/parquet/api.cpp
+    src/parquet/column_reader.cu
+    src/parquet/file_reader.cpp
+    src/parquet/file_reader_contents.cpp
+    src/parquet/page_reader.cpp
+    src/parquet/row_group_reader_contents.cpp
+    src/arrow/cu_decoder.cu
+    src/arrow/util/pinned_allocator.cu
 )
 
-target_link_libraries(gdf arrow gdf-parquet)
+target_link_libraries(gdf arrow Apache::ParquetCpp)
+
 
 # Command to symlink files into the build directory
 add_custom_command(  # link the include directory

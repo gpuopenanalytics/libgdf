@@ -483,11 +483,8 @@ struct ParquetTraits
 TYPE_TRAITS_FACTORY(::parquet::BooleanType, GDF_invalid);
 TYPE_TRAITS_FACTORY(::parquet::Int32Type, GDF_INT32);
 TYPE_TRAITS_FACTORY(::parquet::Int64Type, GDF_INT64);
-// TYPE_TRAITS_FACTORY(::parquet::Int96Type, GDF_invalid);
 TYPE_TRAITS_FACTORY(::parquet::FloatType, GDF_FLOAT32);
 TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
-// TYPE_TRAITS_FACTORY(::parquet::ByteArrayType, GDF_invalid);
-// TYPE_TRAITS_FACTORY(::parquet::FLBAType, GDF_invalid);
 
 #undef TYPE_TRAITS_FACTORY
 
@@ -695,11 +692,11 @@ struct is_equal
 {
     int16_t max_definition_level;
 
-    is_equal(int16_t max_definition_level) 
+    is_equal(int16_t max_definition_level)
         : max_definition_level(max_definition_level)
     {
-    
-    } 
+
+    }
     __host__ __device__ bool operator()(const int16_t &x)
     {
         return x == max_definition_level;
@@ -738,7 +735,7 @@ struct bitmask_functor : public thrust::binary_function<int, int16_t, int>
     {
     }
     __host__ __device__ int operator()(int i, int16_t level)
-    {   
+    {
         int iter = valid_bits_offset + i;
         if (level == max_definition_level) {
             valid_bits[iter / 8]  |= _ByteWithBit(iter % 8);
@@ -801,7 +798,7 @@ _DefinitionLevelsToBitmap(const std::int16_t *def_levels,
     //         bit_index++;
     //     }
     //     thrust::fill(thrust::device, null_bitmap_ptr + num_chars - 1, null_bitmap_ptr + num_chars, last_char_value);
-    // }   
+    // }
 }
 
 // static inline void
@@ -851,12 +848,12 @@ size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels
 
     // size_t values_to_read = num_buffered_values_ - num_decoded_values_;
     size_t values_to_read = std::min<size_t>(8, num_buffered_values_ - num_decoded_values_);
- 
+
     int64_t values_read;
     int64_t rows_read_total = 0;
     int64_t null_count = 0;
     int64_t values_read_counter = 0;
-    
+
     auto n_bytes = get_number_of_bytes_for_valid (num_buffered_values_);// temporal
     std::uint8_t * h_valid_bits = new std::uint8_t[n_bytes];
     while (this->HasNext()) {
@@ -873,7 +870,7 @@ size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels
                                   &null_count,
                                   h_valid_bits, //valid_bits
                                   rows_read_total);
- 
+
         rows_read_total += rows_read;
         values_read_counter += values_read;
     }
@@ -884,11 +881,11 @@ size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels
         int* work_space = thrust::raw_pointer_cast(work_space_vector.data());
         thrust::device_vector<c_type> d_values_in(values, values + rows_read_total);
         thrust::device_vector<int16_t> d_levels(definition_levels, definition_levels + rows_read_total);
-        
+
         compact_to_sparse_for_nulls(thrust::raw_pointer_cast(d_values_in.data()),
                                     values,
                                     thrust::raw_pointer_cast(d_levels.data()),
-                                    descr_->max_definition_level(), 
+                                    descr_->max_definition_level(),
                                     rows_read_total,
                                     work_space);
     }
@@ -900,11 +897,8 @@ size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels
 template class ColumnReader<::parquet::BooleanType>;
 template class ColumnReader<::parquet::Int32Type>;
 template class ColumnReader<::parquet::Int64Type>;
-// template class ColumnReader<::parquet::Int96Type>;
 template class ColumnReader<::parquet::FloatType>;
 template class ColumnReader<::parquet::DoubleType>;
-// template class ColumnReader<::parquet::ByteArrayType>;
-// template class ColumnReader<::parquet::FLBAType>;
 
 } // namespace parquet
 } // namespace gdf

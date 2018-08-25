@@ -41,11 +41,8 @@ struct parquet_physical_traits {};
 PARQUET_PHYSICAL_TRAITS_FACTORY(BOOLEAN, INT8);
 PARQUET_PHYSICAL_TRAITS_FACTORY(INT32, INT32);
 PARQUET_PHYSICAL_TRAITS_FACTORY(INT64, INT64);
-PARQUET_PHYSICAL_TRAITS_FACTORY(INT96, invalid);
 PARQUET_PHYSICAL_TRAITS_FACTORY(FLOAT, FLOAT32);
 PARQUET_PHYSICAL_TRAITS_FACTORY(DOUBLE, FLOAT64);
-PARQUET_PHYSICAL_TRAITS_FACTORY(BYTE_ARRAY, invalid);
-PARQUET_PHYSICAL_TRAITS_FACTORY(FIXED_LEN_BYTE_ARRAY, invalid);
 
 #undef PARQUET_PHYSICAL_TRAITS_FACTORY
 
@@ -62,11 +59,8 @@ const std::unordered_map<::parquet::Type::type, gdf_dtype, ParquetTypeHash>
     {::parquet::Type::BOOLEAN, GDF_INT8},
     {::parquet::Type::INT32, GDF_INT32},
     {::parquet::Type::INT64, GDF_INT64},
-    {::parquet::Type::INT96, GDF_invalid},
     {::parquet::Type::FLOAT, GDF_FLOAT32},
     {::parquet::Type::DOUBLE, GDF_FLOAT64},
-    {::parquet::Type::BYTE_ARRAY, GDF_invalid},
-    {::parquet::Type::FIXED_LEN_BYTE_ARRAY, GDF_invalid},
   };
 
 const std::
@@ -152,11 +146,8 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
                 WHEN(BOOLEAN);
                 WHEN(INT32);
                 WHEN(INT64);
-                WHEN(INT96);
                 WHEN(FLOAT);
                 WHEN(DOUBLE);
-                WHEN(BYTE_ARRAY);
-                WHEN(FIXED_LEN_BYTE_ARRAY);
             default:
 #ifdef GDF_DEBUG
                 std::cerr << "Column type error from file" << std::endl;
@@ -248,11 +239,8 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
             WHEN(BOOLEAN);
             WHEN(INT32);
             WHEN(INT64);
-            WHEN(INT96);
             WHEN(FLOAT);
             WHEN(DOUBLE);
-            WHEN(BYTE_ARRAY);
-            WHEN(FIXED_LEN_BYTE_ARRAY);
         default:
 #ifdef GDF_DEBUG
             std::cerr << "Column type not supported" << std::endl;

@@ -64,11 +64,8 @@ private:
 using BoolReader              = ColumnReader<::parquet::BooleanType>;
 using Int32Reader             = ColumnReader<::parquet::Int32Type>;
 using Int64Reader             = ColumnReader<::parquet::Int64Type>;
-// using Int96Reader             = ColumnReader<::parquet::Int96Type>;
 using FloatReader             = ColumnReader<::parquet::FloatType>;
 using DoubleReader            = ColumnReader<::parquet::DoubleType>;
-// using ByteArrayReader         = ColumnReader<::parquet::ByteArrayType>;
-// using FixedLenByteArrayReader = ColumnReader<::parquet::FLBAType>;
 
 }  // namespace parquet
 }  // namespace gdf
