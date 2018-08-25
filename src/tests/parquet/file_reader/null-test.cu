@@ -50,7 +50,8 @@ protected:
     virtual void SetUp() override;
     virtual void TearDown() override;
 
-    static constexpr std::size_t kRowsPerGroup = 100;
+    static constexpr std::size_t kGroups       = 2;
+    static constexpr std::size_t kRowsPerGroup = 50;
 
     const std::string filename;
 
@@ -59,12 +60,6 @@ private:
 };
 
 using Types = ::testing::Types<::parquet::Int64Type>;
-/*<::parquet::BooleanType,
-                               ::parquet::Int32Type,
-                               ::parquet::Int32Type,
-                               ::parquet::Int64Type,
-                               ::parquet::FloatType,
-                               ::parquet::DoubleType>;*/
 TYPED_TEST_CASE(NullTest, Types);
 
 template <class DataType>
@@ -101,18 +96,20 @@ NullTest<DataType>::GenerateFile() {
         std::shared_ptr<::parquet::ParquetFileWriter> file_writer =
           ::parquet::ParquetFileWriter::Open(stream, schema, properties);
 
-        ::parquet::RowGroupWriter *row_group_writer =
-          file_writer->AppendRowGroup(kRowsPerGroup);
+        for (std::size_t i = 0; i < kGroups; i++) {
+            ::parquet::RowGroupWriter *row_group_writer =
+              file_writer->AppendRowGroup(kRowsPerGroup);
 
-        ::parquet::TypedColumnWriter<DataType> *writer =
-          static_cast<::parquet::TypedColumnWriter<DataType> *>(
-            row_group_writer->NextColumn());
-        std::int16_t repetition_level = 0;
-        for (std::size_t i = 0; i < kRowsPerGroup; i++) {
-            TYPE         value            = GenerateValue(i);
-            std::int16_t definition_level = i % 2;
-            writer->WriteBatch(
-              1, &definition_level, &repetition_level, &value);
+            ::parquet::TypedColumnWriter<DataType> *writer =
+              static_cast<::parquet::TypedColumnWriter<DataType> *>(
+                row_group_writer->NextColumn());
+            std::int16_t repetition_level = 0;
+            for (std::size_t i = 0; i < kRowsPerGroup; i++) {
+                TYPE         value            = GenerateValue(i);
+                std::int16_t definition_level = i % 2;
+                writer->WriteBatch(
+                  1, &definition_level, &repetition_level, &value);
+            }
         }
 
         file_writer->Close();
@@ -156,6 +153,7 @@ TYPED_TEST(NullTest, ReadAll) {
     using value_type = typename TypeParam::c_type;
 
     const std::size_t rowsPerGroup = this->kRowsPerGroup;
+    const std::size_t groups       = this->kGroups;
 
     gdf_column column{
       .data       = nullptr,
@@ -183,7 +181,7 @@ TYPED_TEST(NullTest, ReadAll) {
 
     gdf_column host_column = convert_to_host_gdf_column<value_type>(&column);
 
-    for (std::size_t i = 0; i < rowsPerGroup; i++) {
+    for (std::size_t i = 0; i < groups * rowsPerGroup; i++) {
         value_type   expected = this->GenerateValue(i);
         std::int64_t value    = static_cast<value_type *>(host_column.data)[i];
         if (i % 2) { EXPECT_EQ(expected, value); }
