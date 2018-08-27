@@ -108,6 +108,8 @@ void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
     std::vector<int32_t> valuesBuffer(amountToRead);
     thrust::device_vector<int32_t> d_valuesBuffer(amountToRead);
 
+    thrust::device_vector<int16_t> d_defLevels(amountToRead);
+
     std::vector<int16_t> dresult(amountToRead, -1);
     std::vector<int16_t> rresult(amountToRead,
                                  -1); // repetition levels must not be nullptr in order to avoid skipping null values
@@ -121,8 +123,8 @@ void checkInt32Values(const std::shared_ptr<parquet::RowGroupReader> row_group)
     {
         int64_t rows_read =
             int32_reader->ReadBatchSpaced(amountToRead,
-                                          dresult.data(),
-                                          rresult.data(),
+            			thrust::raw_pointer_cast(d_defLevels.data()),
+                                          nullptr,
 										  thrust::raw_pointer_cast(d_valuesBuffer.data()),
 										  thrust::raw_pointer_cast(d_valid_bits.data()),
 										  rows_read_total,

@@ -170,20 +170,19 @@ public:
         std::vector<uint64_t> rleValues;
         int numRle;
         int numBitpacked;
-        std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
-        std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
+        std::vector<int> unpack32InputOffsets, unpack32InputRunLengths, unpack32OutputOffsets;
         std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets;
 
         bit_reader_.SetGpuBatchMetadata(
-                1, buffer, literal_batch, values_read, unpack32InputOffsets, bitpackset,
+                1, buffer, literal_batch, values_read, unpack32InputOffsets, unpack32InputRunLengths,
                 unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                 remainderSetSize, remainderOutputOffsets);
 
         gdf::arrow::internal::unpack_using_gpu<bool> (
                 bit_reader_.get_buffer(), bit_reader_.get_buffer_len(),
                 unpack32InputOffsets,
-                bitpackset,
+				unpack32InputRunLengths,
                 unpack32OutputOffsets,
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets, 1, buffer, literal_batch);

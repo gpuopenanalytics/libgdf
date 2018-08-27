@@ -69,14 +69,14 @@ namespace arrow {
             bool GetValue(int num_bits, T* v);
 
             template <typename T>
-            void SetGpuBatchMetadata(int num_bits, T* v, int batch_size, int values_read,  
-                std::vector<int>& unpack32InputOffsets,
-                std::vector< std::pair<uint32_t, uint32_t> >& bitpackset,
-                std::vector<int>& unpack32OutputOffsets,
-                std::vector<int>& remainderInputOffsets,
-                std::vector<int>& remainderBitOffsets,
-                std::vector<int>& remainderSetSize,
-                std::vector<int>& remainderOutputOffsets);
+            void SetGpuBatchMetadata(int num_bits, T* v, int batch_size, int values_read,
+                                std::vector<int>& unpack32InputOffsets,
+            					std::vector<int>& unpack32InputRunLengths,
+                                std::vector<int>& unpack32OutputOffsets,
+                                std::vector<int>& remainderInputOffsets,
+                                std::vector<int>& remainderBitOffsets,
+                                std::vector<int>& remainderSetSize,
+                                std::vector<int>& remainderOutputOffsets);
 
             /// Get a number of values from the buffer. Return the number of values
             /// actually read.
@@ -172,94 +172,93 @@ namespace arrow {
 
 
         template <typename T>
-        inline void
-        BitReader::SetGpuBatchMetadata(int num_bits, T* v, int batch_size, int values_read,
-            std::vector<int>& unpack32InputOffsets,
-            std::vector< std::pair<uint32_t, uint32_t> > &bitpackset,
-            std::vector<int>& unpack32OutputOffsets,
-            std::vector<int>& remainderInputOffsets,
-            std::vector<int>& remainderBitOffsets,
-            std::vector<int>& remainderSetSize,
-            std::vector<int>& remainderOutputOffsets)
-        {
-            DCHECK(buffer_ != NULL);
-            // TODO: revisit this limit if necessary
-            DCHECK_LE(num_bits, 32);
-            //	  DCHECK_LE(num_bits, static_cast<int>(sizeof(T) * 8));
+                inline void
+                BitReader::SetGpuBatchMetadata(int num_bits, T* v, int batch_size, int values_read,
+                    std::vector<int>& unpack32InputOffsets,
+					std::vector<int>& unpack32InputRunLengths,
+                    std::vector<int>& unpack32OutputOffsets,
+                    std::vector<int>& remainderInputOffsets,
+                    std::vector<int>& remainderBitOffsets,
+                    std::vector<int>& remainderSetSize,
+                    std::vector<int>& remainderOutputOffsets)
+                {
+                    DCHECK(buffer_ != NULL);
+                    // TODO: revisit this limit if necessary
+                    DCHECK_LE(num_bits, 32);
+                    //	  DCHECK_LE(num_bits, static_cast<int>(sizeof(T) * 8));
 
-        
-            int bit_offset = bit_offset_;
-            int byte_offset = byte_offset_;
-            uint64_t buffered_values = buffered_values_;
-            int max_bytes = max_bytes_;
-            const uint8_t* buffer = buffer_;
 
-            uint64_t needed_bits = num_bits * batch_size;
-            uint64_t remaining_bits = (max_bytes - byte_offset) * 8 - bit_offset;
-            if (remaining_bits < needed_bits) {
-                batch_size = static_cast<int>(remaining_bits) / num_bits;
-            }
+                    int bit_offset = bit_offset_;
+                    int byte_offset = byte_offset_;
+                    uint64_t buffered_values = buffered_values_;
+                    int max_bytes = max_bytes_;
+                    const uint8_t* buffer = buffer_;
 
-            int i = 0;
-            if (ARROW_PREDICT_FALSE(bit_offset != 0)) {
-                int byte_offset_start = byte_offset;
-                int bit_offset_start = bit_offset;
-                int i_start = i + values_read;
-
-                int count = 0;
-                for (; i < batch_size && bit_offset != 0; ++i) {
-                    bit_offset += num_bits;
-                    if (bit_offset >= 64) {
-                        byte_offset += 8;
-                        bit_offset -= 64;
+                    uint64_t needed_bits = num_bits * batch_size;
+                    uint64_t remaining_bits = (max_bytes - byte_offset) * 8 - bit_offset;
+                    if (remaining_bits < needed_bits) {
+                        batch_size = static_cast<int>(remaining_bits) / num_bits;
                     }
-                    count++;
-                }
-                if (count > 0) {
-                    remainderInputOffsets.push_back(byte_offset_start);
-                    remainderBitOffsets.push_back(bit_offset_start);
-                    remainderOutputOffsets.push_back(i_start);
-                    remainderSetSize.push_back(count);
-                }
-            }
 
-            int unpack_batch_size = (batch_size - i) / 32 * 32;
-            int num_loops = unpack_batch_size / 32;
-            int start_input_offset = byte_offset;
-            for (int j = 0; j < num_loops; ++j) {
-                unpack32InputOffsets.push_back(byte_offset);
-                unpack32OutputOffsets.push_back(i + values_read);
-                i += 32;
-                byte_offset += 32 * num_bits / 8;
-                
-            }
-            if (num_loops > 0) {
-                bitpackset.push_back(std::make_pair<uint32_t, uint32_t>(start_input_offset, byte_offset - start_input_offset));
-            }
-            int byte_offset_start = byte_offset;
-            int bit_offset_start = bit_offset;
-            int i_start = i + values_read;
+                    int i = 0;
+                    if (ARROW_PREDICT_FALSE(bit_offset != 0)) {
+                        int byte_offset_start = byte_offset;
+                        int bit_offset_start = bit_offset;
+                        int i_start = i + values_read;
 
-            int count = 0;
-            for (; i < batch_size; ++i) {
-                bit_offset += num_bits;
-                if (bit_offset >= 64) {
-                    byte_offset += 8;
-                    bit_offset -= 64;
+                        int count = 0;
+                        for (; i < batch_size && bit_offset != 0; ++i) {
+                            bit_offset += num_bits;
+                            if (bit_offset >= 64) {
+                                byte_offset += 8;
+                                bit_offset -= 64;
+                            }
+                            count++;
+                        }
+                        if (count > 0) {
+                            remainderInputOffsets.push_back(byte_offset_start);
+                            remainderBitOffsets.push_back(bit_offset_start);
+                            remainderOutputOffsets.push_back(i_start);
+                            remainderSetSize.push_back(count);
+                        }
+                    }
+
+                    int unpack_batch_size = (batch_size - i) / 32 * 32;
+
+
+                    if (unpack_batch_size > 32){
+                    	unpack32InputOffsets.push_back(byte_offset);
+                    	unpack32InputRunLengths.push_back(unpack_batch_size);
+                    	unpack32OutputOffsets.push_back(i + values_read);
+                    	i += unpack_batch_size;
+                    	byte_offset += unpack_batch_size * num_bits / 8;
+                    }
+
+
+                    int byte_offset_start = byte_offset;
+                    int bit_offset_start = bit_offset;
+                    int i_start = i + values_read;
+
+                    int count = 0;
+                    for (; i < batch_size; ++i) {
+                        bit_offset += num_bits;
+                        if (bit_offset >= 64) {
+                            byte_offset += 8;
+                            bit_offset -= 64;
+                        }
+                        count++;
+                    }
+                    if (count > 0) {
+                        remainderInputOffsets.push_back(byte_offset_start);
+                        remainderBitOffsets.push_back(bit_offset_start);
+                        remainderOutputOffsets.push_back(i_start);
+                        remainderSetSize.push_back(count);
+                    }
+
+                    bit_offset_ = bit_offset;
+                    byte_offset_ = byte_offset;
+                    buffered_values_ = buffered_values;
                 }
-                count++;
-            }
-            if (count > 0) {
-                remainderInputOffsets.push_back(byte_offset_start);
-                remainderBitOffsets.push_back(bit_offset_start);
-                remainderOutputOffsets.push_back(i_start);
-                remainderSetSize.push_back(count);
-            }
-            
-            bit_offset_ = bit_offset;
-            byte_offset_ = byte_offset;
-            buffered_values_ = buffered_values;
-        }
 
         template <typename T>
         inline int BitReader::GetBatch(int num_bits, T* v, int batch_size)

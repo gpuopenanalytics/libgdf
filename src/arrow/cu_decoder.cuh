@@ -33,7 +33,7 @@ namespace internal {
                      const std::vector<uint32_t> &rle_runs,
                      const std::vector<uint64_t> &rle_values,
                      const std::vector<int> &input_offset,
-                     const std::vector<std::pair<uint32_t, uint32_t>>& bitpackset,
+					 const std::vector<int> &intput_runlengths,
                      const std::vector<int> &output_offset,
                      const std::vector<int> &remainderInputOffsets,
                      const std::vector<int> &remainderBitOffsets,
@@ -45,7 +45,7 @@ namespace internal {
     template<typename T>
     int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
                  const std::vector<int>& input_offset,
-                 const std::vector<std::pair<uint32_t, uint32_t>>& bitpackset,
+				 const std::vector<int>& input_runlengths,
                  const std::vector<int>& output_offset,
                  const std::vector<int>& remainderInputOffsets,
                  const std::vector<int>& remainderBitOffsets,

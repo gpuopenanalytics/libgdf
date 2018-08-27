@@ -40,7 +40,7 @@ protected:
     void
     SetUp() final {
         static constexpr std::size_t kGroups       = 2;
-        static constexpr std::size_t kRowsPerGroup = 50;
+        static constexpr std::size_t kRowsPerGroup = 500;
         try {
             std::shared_ptr<::arrow::io::FileOutputStream> stream;
             PARQUET_THROW_NOT_OK(

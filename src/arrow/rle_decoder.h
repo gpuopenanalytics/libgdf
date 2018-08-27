@@ -147,8 +147,7 @@ namespace arrow {
             std::vector<uint64_t> rleValues;
             int numRle;
             int numBitpacked;
-            std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
-            std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
+            std::vector<int> unpack32InputOffsets, unpack32InputRunLengths, unpack32OutputOffsets;
             std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets;
 
@@ -177,7 +176,7 @@ namespace arrow {
                     rleValues.push_back(0);
                     numBitpacked++;
                     bit_reader_.SetGpuBatchMetadata(
-                        bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets, bitpackset,
+                        bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets, unpack32InputRunLengths,
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                         remainderSetSize, remainderOutputOffsets);
                     literal_count_ -= literal_batch;
@@ -191,7 +190,7 @@ namespace arrow {
                 this->bit_reader_.get_buffer(), this->bit_reader_.get_buffer_len(),
                 rleRuns, rleValues, 
                 unpack32InputOffsets,
-                bitpackset,
+				unpack32InputRunLengths,
                 unpack32OutputOffsets,
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets, isRleVector, bit_width_, batch_size);
