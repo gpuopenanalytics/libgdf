@@ -157,7 +157,7 @@ bool ColumnReader<DataType>::ReadNewPage()
             if (descr_->max_definition_level() > 0)
             {
                 std::int64_t def_levels_bytes =
-                    definition_level_decoder_.SetData(
+                    def_level_decoder_.SetData(
                         page->definition_level_encoding(),
                         descr_->max_definition_level(),
                         static_cast<int>(num_buffered_values_),
@@ -243,249 +243,6 @@ _HasSpacedValues(const ::parquet::ColumnDescriptor *descr)
     }
 }
 
-static inline void
-_DefinitionLevelsToBitmap(const std::int16_t *def_levels,
-                          std::int64_t num_def_levels,
-                          const std::int16_t max_definition_level,
-                          const std::int16_t max_repetition_level,
-                          std::int64_t *values_read,
-                          std::int64_t *null_count,
-                          std::uint8_t *valid_bits,
-                          const std::int64_t valid_bits_offset)
-{
-    ::arrow::internal::BitmapWriter valid_bits_writer(
-        valid_bits, valid_bits_offset, num_def_levels);
-
-    for (std::int64_t i = 0; i < num_def_levels; ++i)
-    {
-        if (def_levels[i] == max_definition_level)
-        {
-            valid_bits_writer.Set();
-        }
-        else if (max_repetition_level > 0)
-        {
-            if (def_levels[i] == (max_definition_level - 1))
-            {
-                valid_bits_writer.Clear();
-                *null_count += 1;
-            }
-            else
-            {
-                continue;
-            }
-        }
-        else
-        {
-            if (def_levels[i] < max_definition_level)
-            {
-                valid_bits_writer.Clear();
-                *null_count += 1;
-            }
-            else
-            {
-                throw ::parquet::ParquetException(
-                    "definition level exceeds maximum");
-            }
-        }
-
-        valid_bits_writer.Next();
-    }
-    valid_bits_writer.Finish();
-    *values_read = valid_bits_writer.position();
-}
-
-template <class DecoderType, class T>
-static inline std::int64_t
-_ReadValuesSpaced(DecoderType *decoder,
-                  std::int64_t batch_size,
-                  T *out,
-                  std::int64_t null_count,
-                  std::uint8_t *valid_bits,
-                  std::int64_t valid_bits_offset)
-{
-    return decoder->DecodeSpaced(out,
-                                 static_cast<int>(batch_size),
-                                 static_cast<int>(null_count),
-                                 valid_bits,
-                                 valid_bits_offset);
-}
-
-template <typename DataType>
-inline std::int64_t
-ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
-                                        std::int16_t *definition_levels,
-                                        std::int16_t *repetition_levels,
-                                        T *values,
-                                        std::uint8_t *valid_bits,
-                                        std::int64_t valid_bits_offset, //
-                                        std::int64_t *levels_read,
-                                        std::int64_t *values_read,
-                                        std::int64_t *nulls_count)
-{
-    if (!HasNext())
-    {
-        *levels_read = 0;
-        *values_read = 0;
-        *nulls_count = 0;
-        return 0;
-    }
-
-    std::int64_t total_values;
-
-    batch_size =
-        std::min(batch_size, num_buffered_values_ - num_decoded_values_);
-
-    if (descr_->max_definition_level() > 0)
-    {
-        std::int64_t num_def_levels =
-            ReadDefinitionLevels(batch_size, definition_levels);
-
-        if (descr_->max_repetition_level() > 0)
-        {
-            std::int64_t num_rep_levels =
-                ReadRepetitionLevels(batch_size, repetition_levels);
-            if (num_def_levels != num_rep_levels)
-            {
-                throw ::parquet::ParquetException(
-                    "Number of decoded rep / def levels did not match");
-            }
-        }
-
-        const bool has_spaced_values = _HasSpacedValues(descr_);
-
-        std::int64_t null_count = 0;
-        if (!has_spaced_values)
-        {
-            int values_to_read = 0;
-            for (std::int64_t i = 0; i < num_def_levels; ++i)
-            {
-                if (definition_levels[i] == descr_->max_definition_level())
-                {
-                    ++values_to_read;
-                }
-            }
-            std::cout << "*ReadBatchSpaced: before _ReadValues" << std::endl;
-
-            total_values =
-                _ReadValues(current_decoder_, values_to_read, values);
-            for (std::int64_t i = 0; i < total_values; i++)
-            {
-                //check: valid_bits_offset + i
-                ::arrow::BitUtil::SetBit(valid_bits, valid_bits_offset + i);
-            }
-            *values_read = total_values;
-        }
-        else
-        {
-            std::int16_t max_definition_level = descr_->max_definition_level();
-            std::int16_t max_repetition_level = descr_->max_repetition_level();
-            _DefinitionLevelsToBitmap(definition_levels,
-                                      num_def_levels,
-                                      max_definition_level,
-                                      max_repetition_level,
-                                      values_read,
-                                      &null_count,
-                                      valid_bits,
-                                      valid_bits_offset);
-
-            total_values = _ReadValuesSpaced(current_decoder_,
-                                             *values_read,
-                                             values,
-                                             static_cast<int>(null_count),
-                                             valid_bits,
-                                             valid_bits_offset);
-        }
-        *levels_read = num_def_levels;
-        *nulls_count = null_count;
-    }
-    else
-    {
-        total_values = _ReadValues(current_decoder_, batch_size, values);
-        for (std::int64_t i = 0; i < total_values; i++)
-        {
-            ::arrow::BitUtil::SetBit(valid_bits, valid_bits_offset + i);
-        }
-        *nulls_count = 0;
-        *levels_read = total_values;
-    }
-
-    ConsumeBufferedValues(*levels_read);
-
-    return total_values;
-}
-
-template <class DataType>
-inline std::int64_t
-ColumnReader<DataType>::ReadBatch(std::int64_t batch_size,
-                                  std::int16_t *def_levels,
-                                  std::int16_t *rep_levels,
-                                  T *values,
-                                  std::int64_t *values_read)
-{
-    if (!HasNext())
-    {
-        *values_read = 0;
-        return 0;
-    }
-    batch_size = std::min(batch_size, num_buffered_values_ - num_decoded_values_);
-
-    std::int64_t num_def_levels = 0;
-    std::int64_t num_rep_levels = 0;
-
-    std::int64_t values_to_read = 0;
-
-    if (descr_->max_definition_level() > 0 && def_levels)
-    {
-        num_def_levels = ReadDefinitionLevels(batch_size, def_levels);
-        for (std::int64_t i = 0; i < num_def_levels; ++i)
-        {
-            if (def_levels[i] == descr_->max_definition_level())
-            {
-                ++values_to_read;
-            }
-        }
-    }
-    else
-    {
-        values_to_read = batch_size;
-    }
-
-    if (descr_->max_repetition_level() > 0 && rep_levels)
-    {
-        num_rep_levels = ReadRepetitionLevels(batch_size, rep_levels);
-        if (def_levels && num_def_levels != num_rep_levels)
-        {
-            throw ::parquet::ParquetException(
-                "Number of decoded rep / def levels did not match");
-        }
-    }
-
-    *values_read = _ReadValues(current_decoder_, values_to_read, values);
-    std::int64_t total_values = std::max(num_def_levels, *values_read);
-    ConsumeBufferedValues(total_values);
-
-    return total_values;
-}
-
-template <class DataType>
-struct ParquetTraits
-{
-};
-
-#define TYPE_TRAITS_FACTORY(ParquetType, GdfDType)      \
-    template <>                                         \
-    struct ParquetTraits<ParquetType>                   \
-    {                                                   \
-        static constexpr gdf_dtype gdfDType = GdfDType; \
-    }
-
-TYPE_TRAITS_FACTORY(::parquet::BooleanType, GDF_INT8);
-TYPE_TRAITS_FACTORY(::parquet::Int32Type, GDF_INT32);
-TYPE_TRAITS_FACTORY(::parquet::Int64Type, GDF_INT64);
-TYPE_TRAITS_FACTORY(::parquet::FloatType, GDF_FLOAT32);
-TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
-
-#undef TYPE_TRAITS_FACTORY
 
 struct is_equal
 {
@@ -583,10 +340,32 @@ static inline size_t _BytesLengthToBitmapLength(size_t n){
     return _CeilToByteLength(n) / 8;
 }
 
+static inline void _TurnBitOnForValids(std::int64_t        def_length,
+                                       std::uint8_t *      d_valids,
+                                       const std::int64_t  valid_bits_offset) 
+{
+    if (valid_bits_offset % 8 == 0) {
+        auto  d_valid_ptr = d_valids + valid_bits_offset/8;
+        auto num_chars = _BytesLengthToBitmapLength(def_length);
+        thrust::fill(thrust::device, d_valid_ptr, d_valid_ptr + num_chars - 1, 255);
+        uint8_t last_char_value = 0;
+        size_t levels_length_prev = def_length - def_length % 8;
+        size_t bit_index = 0;
+        for (int index = levels_length_prev; index < def_length; ++index) {
+            _TurnBitOn(&last_char_value, bit_index);
+            bit_index++;
+        }
+        thrust::fill(thrust::device, d_valid_ptr + num_chars - 1, d_valid_ptr + num_chars, last_char_value);        
+    } else {
+        //@todo: offset not Alignment 
+    }
+}
+
 static inline void
 _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
                           std::int64_t        def_length,
                           const std::int16_t  max_definition_level,
+                          std::int64_t *      values_read,
                           std::int64_t *      null_count,
                           std::uint8_t *      d_valid_ptr,
                           const std::int64_t  valid_bits_offset) {
@@ -610,150 +389,253 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
                 } else {
                     if (h_def_levels[i] < max_definition_level) {
                         mask &= _FlippedBitmask(i + left_bits_length);
-                        //*null_count += 1; // @todo: null_count support
                     }
                 }
             }
             cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
             def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, d_def_levels + rigth_bits_length, def_length, max_definition_level);
-        }
+       }
+       int result = thrust::count(thrust::device_pointer_cast(d_def_levels), thrust::device_pointer_cast(d_def_levels) + def_length, max_definition_level);
+       *null_count = result;
+       *values_read = def_length - *null_count;
     } else {
-        auto num_chars = _BytesLengthToBitmapLength(def_length);
-        thrust::fill(thrust::device, d_valid_ptr, d_valid_ptr + num_chars - 1, 255);
-        uint8_t last_char_value = 0;
-        size_t levels_length_prev = def_length - def_length % 8;
-        size_t bit_index = 0;
-        for (int index = levels_length_prev; index < def_length; ++index) {
-            _TurnBitOn(&last_char_value, bit_index);
-            bit_index++;
-        }
-        thrust::fill(thrust::device, d_valid_ptr + num_chars - 1, d_valid_ptr + num_chars, last_char_value);
+        // auto num_chars = _BytesLengthToBitmapLength(def_length);
+        // thrust::fill(thrust::device, d_valid_ptr, d_valid_ptr + num_chars - 1, 255);
+        // uint8_t last_char_value = 0;
+        // size_t levels_length_prev = def_length - def_length % 8;
+        // size_t bit_index = 0;
+        // for (int index = levels_length_prev; index < def_length; ++index) {
+        //     _TurnBitOn(&last_char_value, bit_index);
+        //     bit_index++;
+        // }
+        // thrust::fill(thrust::device, d_valid_ptr + num_chars - 1, d_valid_ptr + num_chars, last_char_value);
     }
 }
-
-template <class DataType>
-size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels, std::int16_t *const repetition_levels,
-                                           const gdf_column &column)
+ 
+template <class DecoderType, class T>
+static inline std::int64_t
+_ReadValuesSpaced(DecoderType *decoder,
+                  std::int64_t batch_size,
+                  T *out,
+                  std::int64_t null_count,
+                  std::uint8_t *valid_bits,
+                  std::int64_t valid_bits_offset)
 {
-    using c_type = typename DataType::c_type;
+    return decoder->DecodeSpaced(out,
+                                 static_cast<int>(batch_size),
+                                 static_cast<int>(null_count),
+                                 valid_bits,
+                                 valid_bits_offset);
+}
 
-    c_type *const values = static_cast<c_type *const>(column.data);
-    std::uint8_t *const d_valid_bits = static_cast<std::uint8_t *>(column.valid);
-
-    size_t values_to_read = num_buffered_values_ - num_decoded_values_;
-    //TEST: min batches => size_t values_to_read = std::min<size_t>(8, num_buffered_values_ - num_decoded_values_);
-
-    int64_t values_read;
-    int64_t rows_read_total = 0;
-    int64_t null_count = 0;
-    int64_t values_read_counter = 0;
-
-    while (this->HasNext()) {
-        auto def_levels_curr = definition_levels + rows_read_total;
-
-        int64_t rows_read = this->ReadBatch(static_cast<std::int64_t>(values_to_read),
-                                            def_levels_curr,
-                                            nullptr,
-                                            static_cast<T *>(values + values_read_counter), // corregir saltos de values
-                                            &values_read);
-
-        thrust::device_vector<int16_t> d_def_levels(def_levels_curr, def_levels_curr + rows_read);
-
-        _DefinitionLevelsToBitmap(thrust::raw_pointer_cast(d_def_levels.data()),
-                                  rows_read,
-                                  descr_->max_definition_level(),
-                                  &null_count,
-                                  d_valid_bits,
-                                  rows_read_total);
-
-        rows_read_total += rows_read;
-        values_read_counter += values_read;
+template <typename DataType>
+inline std::int64_t
+ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
+                                        std::int16_t *definition_levels,
+                                        std::int16_t *repetition_levels,
+                                        T *values,
+                                        std::uint8_t *valid_bits,
+                                        std::int64_t valid_bits_offset, //
+                                        std::int64_t *levels_read,
+                                        std::int64_t *values_read,
+                                        std::int64_t *nulls_count)
+{
+    assert(repetition_levels == nullptr);
+    if (!HasNext())
+    {
+        *levels_read = 0;
+        *values_read = 0;
+        *nulls_count = 0;
+        return 0;
     }
 
-    if (rows_read_total != values_read_counter) {
-        thrust::device_vector<int> work_space_vector(rows_read_total);
-        int* work_space = thrust::raw_pointer_cast(work_space_vector.data());
-        thrust::device_vector<c_type> d_values_in(values, values + rows_read_total);
-        thrust::device_vector<int16_t> d_levels(definition_levels, definition_levels + rows_read_total);
+    std::int64_t total_values;
 
-        compact_to_sparse_for_nulls(thrust::raw_pointer_cast(d_values_in.data()),
-                                    values,
-                                    thrust::raw_pointer_cast(d_levels.data()),
-                                    descr_->max_definition_level(),
-                                    rows_read_total,
-                                    work_space);
+    batch_size = std::min(batch_size, num_buffered_values_ - num_decoded_values_);
+
+    if (descr_->max_definition_level() > 0)
+    {
+        std::int64_t num_def_levels = ReadDefinitionLevels(batch_size, definition_levels);
+
+        const bool has_spaced_values = _HasSpacedValues(descr_);
+
+        std::int64_t null_count = 0;
+        if (!has_spaced_values)
+        {
+            int result = thrust::count(thrust::device_pointer_cast(definition_levels), thrust::device_pointer_cast(definition_levels) + num_def_levels,  descr_->max_definition_level());
+            int values_to_read = result;
+
+            total_values = _ReadValues(current_decoder_, values_to_read, values);
+            // for (std::int64_t i = 0; i < total_values; i++) {
+            //     ::arrow::BitUtil::SetBit(valid_bits, valid_bits_offset + i);
+            // }
+           _TurnBitOnForValids(total_values, valid_bits, valid_bits_offset);
+            *values_read = total_values;
+        }
+        else
+        {
+            std::int16_t max_definition_level = descr_->max_definition_level();
+            std::int16_t max_repetition_level = descr_->max_repetition_level();
+            
+            // _DefinitionLevelsToBitmap(definition_levels,
+            //                           num_def_levels,
+            //                           max_definition_level,
+            //                           max_repetition_level,
+            //                           values_read,
+            //                           &null_count,
+            //                           valid_bits,
+            //                           valid_bits_offset);
+
+            _DefinitionLevelsToBitmap(
+                definition_levels,
+                num_def_levels,
+                max_definition_level,
+                values_read,
+                &null_count,
+                valid_bits,
+                valid_bits_offset);
+
+            total_values = _ReadValues(current_decoder_, *values_read, values);
+            total_values = num_def_levels;//new total_values after sparse!
+            std::cout << "num_def_levels: " << num_def_levels << std::endl;
+            std::cout << "total_values: " << total_values << std::endl;
+            std::cout << "*values_read: " << *values_read << std::endl;
+
+            if (total_values != *values_read) {
+                thrust::device_vector<int> work_space_vector(total_values);
+                int* work_space = thrust::raw_pointer_cast(work_space_vector.data());
+                thrust::device_vector<T> d_values_in(values, values + total_values);
+                compact_to_sparse_for_nulls(thrust::raw_pointer_cast(d_values_in.data()),
+                                            values,
+                                            definition_levels,
+                                            max_definition_level,
+                                            total_values,
+                                            work_space);
+            }
+            
+            // total_values = _ReadValuesSpaced(current_decoder_,
+            //                                  *values_read,
+            //                                  values,
+            //                                  static_cast<int>(null_count),
+            //                                  valid_bits,
+            //                                  valid_bits_offset);
+        }
+        *levels_read = num_def_levels;
+        *nulls_count = null_count;
     }
-    return static_cast<std::size_t>(rows_read_total);
+    else {
+        total_values = _ReadValues(current_decoder_, batch_size, values);
+        // for (std::int64_t i = 0; i < total_values; i++)
+        // {
+        //     ::arrow::BitUtil::SetBit(valid_bits, valid_bits_offset + i);
+        // }
+        _TurnBitOnForValids(total_values, valid_bits, valid_bits_offset);
+
+        *nulls_count = 0;
+        *levels_read = total_values;
+    }
+
+    ConsumeBufferedValues(*levels_read);
+
+    return total_values;
 }
 
 template <class DataType>
-size_t
-ColumnReader<DataType>::ToGdfColumn(const gdf_column &column, const std::ptrdiff_t offset) {
-    if (!HasNext()) { return 0; }
+inline std::int64_t
+ColumnReader<DataType>::ReadBatch(std::int64_t batch_size,
+                                  std::int16_t *def_levels,
+                                  std::int16_t *rep_levels,
+                                  T *values,
+                                  std::int64_t *values_read)
+{
+    assert(rep_levels == nullptr);
+    if (!HasNext())
+    {
+        *values_read = 0;
+        return 0;
+    }
+    batch_size = std::min(batch_size, num_buffered_values_ - num_decoded_values_);
 
+    std::int64_t num_def_levels = 0;
+    std::int64_t num_rep_levels = 0;
+
+    std::int64_t values_to_read = 0;
+
+    if (descr_->max_definition_level() > 0 && def_levels)
+    {
+        num_def_levels = ReadDefinitionLevels(batch_size, def_levels);
+        int result = thrust::count(thrust::device_pointer_cast(def_levels), thrust::device_pointer_cast(def_levels) + num_def_levels,  descr_->max_definition_level());
+        values_to_read = result;
+    }
+    else
+    {
+        values_to_read = batch_size;
+    }
+
+    *values_read = _ReadValues(current_decoder_, values_to_read, values);
+    std::int64_t total_values = std::max(num_def_levels, *values_read);
+    ConsumeBufferedValues(total_values);
+
+    return total_values;
+}
+
+template <class DataType>
+struct ParquetTraits
+{
+};
+
+#define TYPE_TRAITS_FACTORY(ParquetType, GdfDType)      \
+    template <>                                         \
+    struct ParquetTraits<ParquetType>                   \
+    {                                                   \
+        static constexpr gdf_dtype gdfDType = GdfDType; \
+    }
+
+TYPE_TRAITS_FACTORY(::parquet::BooleanType, GDF_INT8);
+TYPE_TRAITS_FACTORY(::parquet::Int32Type, GDF_INT32);
+TYPE_TRAITS_FACTORY(::parquet::Int64Type, GDF_INT64);
+TYPE_TRAITS_FACTORY(::parquet::FloatType, GDF_FLOAT32);
+TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
+
+#undef TYPE_TRAITS_FACTORY
+
+
+template <class DataType>
+std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset) {
+    if (!HasNext()) { 
+        return 0; 
+    }
     using c_type = typename DataType::c_type;
 
     c_type *const values = static_cast<c_type *const>(column.data) + offset;
     std::uint8_t *const d_valid_bits =
       static_cast<std::uint8_t *>(column.valid) + (offset / 8);
 
-    size_t values_to_read = num_buffered_values_ - num_decoded_values_;
-
-    int64_t values_read;
+    static std::int64_t levels_read = 0;
+    static std::int64_t values_read = 0;
+    static std::int64_t nulls_count = 0;
+    
     int64_t rows_read_total     = 0;
-    int64_t null_count          = 0;
-    int64_t values_read_counter = 0;
+    std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
 
-
-    std::int16_t *definition_levels = new std::int16_t[values_to_read];
-    std::int16_t *repetition_levels = new std::int16_t[values_to_read];
+    thrust::device_vector<int16_t> d_def_levels(values_to_read);//this size is work group size 
+    std::int16_t *d_definition_levels = thrust::raw_pointer_cast(d_def_levels.data());
 
     do {
-        auto def_levels_curr = definition_levels + rows_read_total;
-
-        int64_t rows_read = this->ReadBatch(
-          static_cast<std::int64_t>(values_to_read),
-          def_levels_curr,
-          nullptr,
-          static_cast<T *>(
-            values + values_read_counter),  // corregir saltos de values
-          &values_read);
-
-        thrust::device_vector<int16_t> d_def_levels(
-          def_levels_curr, def_levels_curr + rows_read);
-
-        _DefinitionLevelsToBitmap(
-          thrust::raw_pointer_cast(d_def_levels.data()),
-          rows_read,
-          descr_->max_definition_level(),
-          &null_count,
-          d_valid_bits,
-          rows_read_total + (offset % 8));
-
+        values_to_read = num_buffered_values_ - num_decoded_values_;
+        int64_t rows_read = ReadBatchSpaced(
+                            values_to_read,
+                            d_definition_levels + rows_read_total,
+                            nullptr,
+                            static_cast<T *>(values + rows_read_total),   
+                            d_valid_bits,
+                            rows_read_total + (offset % 8),
+                            &levels_read,
+                            &values_read,
+                            &nulls_count); 
+        
         rows_read_total += rows_read;
-        values_read_counter += values_read;
     } while (this->HasNext());
-
-    if (rows_read_total != values_read_counter) {
-        thrust::device_vector<int> work_space_vector(rows_read_total);
-        int *work_space = thrust::raw_pointer_cast(work_space_vector.data());
-        thrust::device_vector<c_type>  d_values_in(values,
-                                                  values + rows_read_total);
-        thrust::device_vector<int16_t> d_levels(
-          definition_levels, definition_levels + rows_read_total);
-
-        compact_to_sparse_for_nulls(
-          thrust::raw_pointer_cast(d_values_in.data()),
-          values,
-          thrust::raw_pointer_cast(d_levels.data()),
-          descr_->max_definition_level(),
-          rows_read_total,
-          work_space);
-    }
-
-    delete[] definition_levels;
-    delete[] repetition_levels;
-
     return static_cast<std::size_t>(rows_read_total);
 }
 

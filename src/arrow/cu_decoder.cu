@@ -206,14 +206,15 @@ __host__ __device__ inline const uint32_t* unpack32(const uint32_t* in, uint32_t
     return UnpackFunctionPtr[num_bits](in, out);
 }
 
+template<class T>
 struct unpack_functor
-    : public thrust::binary_function<uint8_t, int, uint32_t>
+    : public thrust::binary_function<uint8_t, T, uint32_t>
 {
     int num_bits;
     unpack_functor(int num_bits) : num_bits(num_bits) {
 
     }
-    __host__ __device__ uint32_t operator()(uint8_t &input, int &output)
+    __host__ __device__ uint32_t operator()(uint8_t &input, T &output)
     {
         uint32_t *input_ptr = (uint32_t *)&input;
         uint32_t *output_ptr = (uint32_t *)&output;
@@ -225,14 +226,16 @@ struct unpack_functor
 };
 
 typedef thrust::tuple<int, int, int, int> Int4;
+
+template<class T>
 struct remainder_functor : public thrust::unary_function<Int4, int>
 {
     int max_bytes;
     int num_bits;
     uint8_t *d_buffer;
-    int *ptr_output;
+    T *ptr_output;
     remainder_functor(int max_bytes, int num_bits, uint8_t *buffer,
-                      int *ptr_output)
+                      T *ptr_output)
         : max_bytes(max_bytes), num_bits(num_bits), d_buffer(buffer), ptr_output(ptr_output)
     {
     }
@@ -262,13 +265,14 @@ struct remainder_functor : public thrust::unary_function<Int4, int>
     }
 };
 
+template<typename T>
 void gpu_bit_packing_remainder( const uint8_t *buffer,
                                 const int buffer_len,
                                 const std::vector<int> &remainderInputOffsets,
                                 const std::vector<int> &remainderBitOffsets,
                                 const std::vector<int> &remainderSetSize,
                                 const std::vector<int> &remainderOutputOffsets,
-                                thrust::device_vector<int>& d_output,
+                                thrust::device_vector<T>& d_output,
                                 int num_bits) 
 {
     int sum_set_size = 0;
@@ -302,19 +306,20 @@ void gpu_bit_packing_remainder( const uint8_t *buffer,
     thrust::transform(
         thrust::device, zip_iterator_begin, zip_iterator_end,
         thrust::make_discard_iterator(),
-        remainder_functor(max_bytes, num_bits, d_buffer.data().get(),
+        remainder_functor<T>(max_bytes, num_bits, d_buffer.data().get(),
                           d_output.data().get()));
 
     pinnedAllocator.pinnedFree(h_buffer);
 }
 
-//@todo: stream computing 
+
+template<typename T>
 void gpu_bit_packing(const uint8_t *buffer, 
                      const int buffer_len,
                      const std::vector<int> &input_offset,
                      const std::vector<std::pair<uint32_t, uint32_t>>& bitpackset,
                      const std::vector<int> &output_offset,
-                     thrust::device_vector<int>& d_output, 
+                     thrust::device_vector<T>& d_output, 
                      int num_bits) 
 {
     thrust::device_vector<int> d_output_offset(output_offset);
@@ -338,7 +343,7 @@ void gpu_bit_packing(const uint8_t *buffer,
 	    thrust::make_permutation_iterator(d_bit_buffer.begin(), d_bit_offset.begin()),
 	    thrust::make_permutation_iterator(d_bit_buffer.end(), d_bit_offset.end()),
 	    thrust::make_permutation_iterator(d_output.begin(), d_output_offset.begin()),
-	    thrust::make_discard_iterator(), unpack_functor(num_bits));
+	    thrust::make_discard_iterator(), unpack_functor<T>(num_bits));
     pinnedAllocator.pinnedFree(h_bit_buffer);
 }
  
@@ -379,6 +384,40 @@ struct copy_functor : public thrust::unary_function<int, T>
     }
 };
 
+template<typename T>
+int decode_def_levels(const uint8_t* buffer, const int buffer_len,
+                const std::vector<uint32_t> &rle_runs,
+                const std::vector<uint64_t> &rle_values,
+                const std::vector<int>& input_offset,
+                const std::vector<std::pair<uint32_t, uint32_t>>& bitpackset,
+                const std::vector<int>& output_offset,
+                const std::vector<int>& remainderInputOffsets,
+                const std::vector<int>& remainderBitOffsets,
+                const std::vector<int>& remainderSetSize,
+                const std::vector<int>& remainderOutputOffsets,
+                int num_bits,
+                T* output, int batch_size) 
+{
+    // thrust::device_ptr<T> dev_ptr = thrust::device_pointer_cast(output);
+    // thrust::device_vector<T> d_indices(dev_ptr, dev_ptr + batch_size);
+    thrust::device_vector<int> d_indices(batch_size);
+
+    thrust::device_vector<uint32_t> d_counts(rle_runs);
+    thrust::device_vector<uint64_t> d_values(rle_values);
+    gpu_expand(d_counts.begin(), d_counts.end(), d_values.begin(), d_indices.begin());
+
+    gpu_bit_packing(buffer, buffer_len, input_offset, bitpackset, output_offset, d_indices, num_bits);
+    gpu_bit_packing_remainder(buffer, buffer_len, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
+    
+    cudaMemcpy(output, thrust::raw_pointer_cast(d_indices.data()), sizeof(T) * batch_size, cudaMemcpyDeviceToDevice);
+
+    thrust::host_vector<T> h_output(batch_size); 
+    cudaMemcpy(h_output.data(), thrust::raw_pointer_cast(d_indices.data()), sizeof(T) * batch_size, cudaMemcpyDeviceToHost);
+    
+    thrust::transform(thrust::device, d_indices.begin(), d_indices.end(), output, copy_functor<T>());
+    return batch_size;
+}
+                
 template<typename T>
 int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
                 const std::vector<int>& input_offset,
@@ -434,6 +473,34 @@ template int unpack_using_gpu<bool>(const uint8_t* buffer, const int buffer_len,
             int num_bits, 
             bool* output, int batch_size 
             );
+
+
+template int unpack_using_gpu<int16_t>(const uint8_t* buffer, const int buffer_len, 
+            const std::vector<int>& input_offset, 
+            const std::vector<std::pair<uint32_t, uint32_t>>& bitpackset, 
+            const std::vector<int>& output_offset,  
+            const std::vector<int>& remainderInputOffsets, 
+            const std::vector<int>& remainderBitOffsets,  
+            const std::vector<int>& remainderSetSize, 
+            const std::vector<int>& remainderOutputOffsets, 
+            int num_bits, 
+            int16_t* output, int batch_size 
+            );
+
+template int decode_def_levels<int16_t>(const uint8_t* buffer, const int buffer_len,
+                const std::vector<uint32_t> &rle_runs,
+                const std::vector<uint64_t> &rle_values,
+                const std::vector<int>& input_offset,
+                const std::vector<std::pair<uint32_t, uint32_t>>& bitpackset,
+                const std::vector<int>& output_offset,
+                const std::vector<int>& remainderInputOffsets,
+                const std::vector<int>& remainderBitOffsets,
+                const std::vector<int>& remainderSetSize,
+                const std::vector<int>& remainderOutputOffsets,
+                int num_bits,
+                int16_t* output, int batch_size);
+
+                
 
 } // namespace internal
 } // namespace arrow

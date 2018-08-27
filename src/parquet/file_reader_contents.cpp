@@ -1,6 +1,7 @@
 /*
  * Copyright 2018 BlazingDB, Inc.
  *     Copyright 2018 Cristhian Alberto Gonzales Castillo <cristhian@blazingdb.com>
+ *     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +19,8 @@
 #include "file_reader_contents.h"
 
 #include "row_group_reader_contents.h"
+
+#include "file_reader.h"
 
 namespace gdf {
 namespace parquet {
@@ -44,7 +47,7 @@ FileReaderContents::GetRowGroup(int i) {
     std::unique_ptr<internal::RowGroupReaderContents> contents(
       new internal::RowGroupReaderContents(
         source_.get(), file_metadata_.get(), i, properties_));
-    return std::make_shared<::parquet::RowGroupReader>(std::move(contents));
+    return std::static_pointer_cast<::parquet::RowGroupReader>(std::make_shared<GdfRowGroupReader>(std::move(contents)));
 }
 
 std::shared_ptr<::parquet::FileMetaData>

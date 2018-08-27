@@ -133,6 +133,7 @@ cuda_add_library(gdf SHARED
     src/parquet/file_reader_contents.cpp
     src/parquet/page_reader.cpp
     src/parquet/row_group_reader_contents.cpp
+    src/parquet/decoder/cu_level_decoder.cu
     src/arrow/cu_decoder.cu
     src/arrow/util/pinned_allocator.cu
 )

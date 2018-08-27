@@ -48,6 +48,20 @@ namespace internal {
                  const std::vector<int>& remainderOutputOffsets,
                  int num_bits,
                  T* output, int batch_size);
+
+    template<typename T>
+    int decode_def_levels(const uint8_t* buffer, const int buffer_len,
+                 const std::vector<uint32_t> &rle_runs,
+                 const std::vector<uint64_t> &rle_values,
+                 const std::vector<int>& input_offset,
+                 const std::vector<std::pair<uint32_t, uint32_t>>& bitpackset,
+                 const std::vector<int>& output_offset,
+                 const std::vector<int>& remainderInputOffsets,
+                 const std::vector<int>& remainderBitOffsets,
+                 const std::vector<int>& remainderSetSize,
+                 const std::vector<int>& remainderOutputOffsets,
+                 int num_bits,
+                 T* output, int batch_size);
 }
 } // namespace arrow
 } // namespace gdf

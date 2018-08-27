@@ -1,6 +1,7 @@
 /*
  * Copyright 2018 BlazingDB, Inc.
  *     Copyright 2018 Cristhian Alberto Gonzales Castillo <cristhian@blazingdb.com>
+ *     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +20,8 @@
 #define _GDF_PARQUET_COLUMN_READER_H
 
 #include <parquet/column_reader.h>
-
 #include <gdf/gdf.h>
+#include "decoder/cu_level_decoder.h"
 
 namespace gdf {
 namespace parquet {
@@ -29,6 +30,11 @@ template <class DataType>
 class ColumnReader : public ::parquet::ColumnReader {
 public:
     using T = typename DataType::c_type;
+
+     ColumnReader(const ::parquet::ColumnDescriptor* schema, std::unique_ptr<::parquet::PageReader> pager,
+                      ::arrow::MemoryPool* pool = ::arrow::default_memory_pool())
+            : ::parquet::ColumnReader(schema, std::move(pager), pool), current_decoder_(nullptr) {}
+
 
     bool HasNext();
 
@@ -48,12 +54,16 @@ public:
                                  std::int64_t *values_read,
                                  std::int64_t *nulls_count);
 
-    std::size_t ToGdfColumn(std::int16_t *const definition_levels,
-                            std::int16_t *const repetition_levels,
-                            const gdf_column &  column);
+    std::size_t ToGdfColumn(const gdf_column &  column, const std::ptrdiff_t offset = 0);
 
-    std::size_t ToGdfColumn(const gdf_column &   column,
-                            const std::ptrdiff_t offset = 0);
+    int64_t ReadDefinitionLevels(int64_t batch_size, int16_t* levels) {
+        if (descr_->max_definition_level() == 0) {
+            return 0;
+        }
+        return def_level_decoder_.Decode(static_cast<int>(batch_size), levels);
+    }
+ 
+
 
 private:
     bool ReadNewPage() final;
@@ -62,6 +72,7 @@ private:
 
     std::unordered_map<int, std::shared_ptr<DecoderType>> decoders_;
     DecoderType *                                         current_decoder_;
+    gdf::parquet::decoder::CUDALevelDecoder               def_level_decoder_;
 };
 
 using BoolReader              = ColumnReader<::parquet::BooleanType>;

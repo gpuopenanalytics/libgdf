@@ -109,21 +109,42 @@ namespace arrow {
         template <typename T>
         inline int RleDecoder::GetBatch(T* values, int batch_size)
         {
-            std::cout << "GetBatch\n";
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
+
+            std::vector<uint16_t> isRleVector;
+            std::vector<uint32_t> rleRuns;
+            std::vector<uint64_t> rleValues;
+            int numRle;
+            int numBitpacked;
+            std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
+            std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
+            std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
+                    remainderOutputOffsets;
 
             while (values_read < batch_size) {
                 if (repeat_count_ > 0) {
                     int repeat_batch = std::min(batch_size - values_read, static_cast<int>(repeat_count_));
-                    std::fill(values + values_read, values + values_read + repeat_batch,
-                        static_cast<T>(current_value_));
+                    // std::fill(values + values_read, values + values_read + repeat_batch, static_cast<T>(current_value_));
+                    rleRuns.push_back(repeat_batch);
+                    isRleVector.push_back(1);
+                    rleValues.push_back(current_value_);
+
                     repeat_count_ -= repeat_batch;
                     values_read += repeat_batch;
                 } else if (literal_count_ > 0) {
                     int literal_batch = std::min(batch_size - values_read, static_cast<int>(literal_count_));
-                    int actual_read = bit_reader_.GetBatch(bit_width_, values + values_read, literal_batch);
-                    DCHECK_EQ(actual_read, literal_batch);
+                    rleRuns.push_back(literal_batch);
+                    isRleVector.push_back(0);
+                    rleValues.push_back(0);
+
+                    bit_reader_.SetGpuBatchMetadata(
+                        bit_width_, values + values_read, literal_batch, values_read, unpack32InputOffsets, bitpackset,
+                        unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
+                        remainderSetSize, remainderOutputOffsets);
+
+                    // int actual_read = bit_reader_.GetBatch(bit_width_, values + values_read, literal_batch);
+                    // DCHECK_EQ(actual_read, literal_batch);
                     literal_count_ -= literal_batch;
                     values_read += literal_batch;
                 } else {
@@ -131,6 +152,14 @@ namespace arrow {
                         return values_read;
                 }
             }
+            gdf::arrow::internal::decode_def_levels(
+                    this->bit_reader_.get_buffer(), this->bit_reader_.get_buffer_len(),
+                    rleRuns, rleValues, 
+                    unpack32InputOffsets,
+                    bitpackset,
+                    unpack32OutputOffsets,
+                    remainderInputOffsets, remainderBitOffsets, remainderSetSize,
+                    remainderOutputOffsets, bit_width_, values, batch_size);
 
             return values_read;
         }
@@ -169,7 +198,7 @@ namespace arrow {
                 } else if (literal_count_ > 0) {
                     int literal_batch = std::min(batch_size - values_read, static_cast<int>(literal_count_));
 
-                    const int buffer_size = 1024;
+                    const int buffer_size = 1024; //@todo, check this buffer size for optimization
                     int indices[buffer_size];
                     literal_batch = std::min(literal_batch, buffer_size);
                     rleRuns.push_back(literal_batch);
