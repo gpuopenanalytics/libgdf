@@ -104,9 +104,9 @@ NullTest<DataType>::GenerateFile() {
               static_cast<::parquet::TypedColumnWriter<DataType> *>(
                 row_group_writer->NextColumn());
             std::int16_t repetition_level = 0;
-            for (std::size_t i = 0; i < kRowsPerGroup; i++) {
-                TYPE         value            = GenerateValue(i);
-                std::int16_t definition_level = i % 2;
+            for (std::size_t j = 0; j < kRowsPerGroup; j++) {
+                TYPE         value = GenerateValue(i * kRowsPerGroup + j);
+                std::int16_t definition_level = j % 2;
                 writer->WriteBatch(
                   1, &definition_level, &repetition_level, &value);
             }
@@ -164,18 +164,22 @@ TYPED_TEST(NullTest, ReadAll) {
       .dtype_info = {},
     };
 
-    std::size_t valid_size = get_number_of_bytes_for_valid(rowsPerGroup);
+    std::size_t valid_size =
+      get_number_of_bytes_for_valid(rowsPerGroup * groups);
 
-    cudaMalloc(&column.data, rowsPerGroup * sizeof(value_type));
+    cudaMalloc(&column.data, rowsPerGroup * groups * sizeof(value_type));
     cudaMalloc(&column.valid, valid_size);
 
-    std::int16_t definition_levels[rowsPerGroup];
-    std::int16_t repetition_levels[rowsPerGroup];
+    const std::size_t total_read = column_reader->ToGdfColumn(column);
 
-    const std::size_t total_read =
-      column_reader->ToGdfColumn(definition_levels, repetition_levels, column);
+    column_reader =
+      std::static_pointer_cast<gdf::parquet::ColumnReader<TypeParam>>(
+        reader->RowGroup(1)->Column(0));
 
-    column.size = static_cast<gdf_size_type>(rowsPerGroup);
+    ASSERT_TRUE(column_reader->HasNext());
+    const std::size_t total_read2 = column_reader->ToGdfColumn(column, 50);
+
+    column.size = static_cast<gdf_size_type>(rowsPerGroup * groups);
 
     EXPECT_EQ(rowsPerGroup, total_read);
 

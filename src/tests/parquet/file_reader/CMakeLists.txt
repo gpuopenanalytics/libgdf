@@ -23,7 +23,7 @@ set(PARQUET_FILE_PATH
 GDF_ADD_PARQUET_TEST(file_reader-test
     #file_reader-test.cpp
     #single_column_file-test.cpp
-    #api-test.cpp
+    api-test.cu
     null-test.cu
     ../../helper/utils.cuh
     ../../helper/utils.cu)

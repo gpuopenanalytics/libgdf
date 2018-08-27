@@ -52,6 +52,9 @@ public:
                             std::int16_t *const repetition_levels,
                             const gdf_column &  column);
 
+    std::size_t ToGdfColumn(const gdf_column &   column,
+                            const std::ptrdiff_t offset = 0);
+
 private:
     bool ReadNewPage() final;
 

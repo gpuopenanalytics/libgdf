@@ -686,6 +686,77 @@ size_t ColumnReader<DataType>::ToGdfColumn(std::int16_t *const definition_levels
     return static_cast<std::size_t>(rows_read_total);
 }
 
+template <class DataType>
+size_t
+ColumnReader<DataType>::ToGdfColumn(const gdf_column &column, const std::ptrdiff_t offset) {
+    if (!HasNext()) { return 0; }
+
+    using c_type = typename DataType::c_type;
+
+    c_type *const values = static_cast<c_type *const>(column.data) + offset;
+    std::uint8_t *const d_valid_bits =
+      static_cast<std::uint8_t *>(column.valid) + (offset / 8);
+
+    size_t values_to_read = num_buffered_values_ - num_decoded_values_;
+
+    int64_t values_read;
+    int64_t rows_read_total     = 0;
+    int64_t null_count          = 0;
+    int64_t values_read_counter = 0;
+
+
+    std::int16_t *definition_levels = new std::int16_t[values_to_read];
+    std::int16_t *repetition_levels = new std::int16_t[values_to_read];
+
+    do {
+        auto def_levels_curr = definition_levels + rows_read_total;
+
+        int64_t rows_read = this->ReadBatch(
+          static_cast<std::int64_t>(values_to_read),
+          def_levels_curr,
+          nullptr,
+          static_cast<T *>(
+            values + values_read_counter),  // corregir saltos de values
+          &values_read);
+
+        thrust::device_vector<int16_t> d_def_levels(
+          def_levels_curr, def_levels_curr + rows_read);
+
+        _DefinitionLevelsToBitmap(
+          thrust::raw_pointer_cast(d_def_levels.data()),
+          rows_read,
+          descr_->max_definition_level(),
+          &null_count,
+          d_valid_bits,
+          rows_read_total + (offset % 8));
+
+        rows_read_total += rows_read;
+        values_read_counter += values_read;
+    } while (this->HasNext());
+
+    if (rows_read_total != values_read_counter) {
+        thrust::device_vector<int> work_space_vector(rows_read_total);
+        int *work_space = thrust::raw_pointer_cast(work_space_vector.data());
+        thrust::device_vector<c_type>  d_values_in(values,
+                                                  values + rows_read_total);
+        thrust::device_vector<int16_t> d_levels(
+          definition_levels, definition_levels + rows_read_total);
+
+        compact_to_sparse_for_nulls(
+          thrust::raw_pointer_cast(d_values_in.data()),
+          values,
+          thrust::raw_pointer_cast(d_levels.data()),
+          descr_->max_definition_level(),
+          rows_read_total,
+          work_space);
+    }
+
+    delete[] definition_levels;
+    delete[] repetition_levels;
+
+    return static_cast<std::size_t>(rows_read_total);
+}
+
 template class ColumnReader<::parquet::BooleanType>;
 template class ColumnReader<::parquet::Int32Type>;
 template class ColumnReader<::parquet::Int64Type>;
