@@ -74,7 +74,7 @@ std::string chartobin(gdf_valid_type c, int size/* = 8*/)
     bin.resize(size);
     bin[0] = 0;
     int i;
-    for (i = size - 1; i >= 0; i--)
+    for (i = 0; i < size; i++)
     {
         bin[i] = (c % 2) + '0';
         c /= 2;

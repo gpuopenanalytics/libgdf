@@ -132,7 +132,7 @@ gdf_column convert_to_device_gdf_column (gdf_column *column) {
 
 template <typename ValueType = int8_t>
 gdf_column convert_to_host_gdf_column (gdf_column *column) {
-    auto host_out = get_gdf_data_from_device(column);
+    auto host_out = get_gdf_data_from_device<ValueType>(column);
     auto host_valid_out = get_gdf_valid_from_device(column);
     
     auto output = *column;
@@ -145,26 +145,28 @@ gdf_column convert_to_host_gdf_column (gdf_column *column) {
 template <typename ValueType = int8_t>
 auto print_column(gdf_column * column) -> void {
     auto host_out = get_gdf_data_from_device<ValueType>(column);
-    auto host_valid_out = get_gdf_valid_from_device(column);
+    auto bitmap = get_gdf_valid_from_device(column);
     std::cout<<"Printing Column\t null_count:" << column->null_count << "\t type " << column->dtype <<  std::endl;
     int  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
     for(int i = 0; i < column->size; i++) {
         int col_position =  i / 8;
         int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
         int bit_offset =  (length_col - 1) - (i % 8);
-        if (sizeof(ValueType) == 1) {
-            std::cout << "host_out[" << i << "] = " << ((int)host_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
 
-        } else {
-            std::cout << "host_out[" << i << "] = " << ((ValueType)host_out[i])<<" valid="<<((host_valid_out[col_position] >> bit_offset ) & 1)<<std::endl;
-        }
+        ValueType value    = static_cast<ValueType *>(host_out)[i];
+
+        if ( bitmap[i / 8] & (1 << (i % 8)) ) {
+             std::cout << "host_out[" << i << "] = " << value <<"\t\tvalid="<< 1 <<std::endl;
+         } else {
+             std::cout << "host_out[" << i << "] = " << '\0' <<"\t\tvalid="<< 0 <<std::endl;
+         }
     }
     for (int i = 0; i < n_bytes; i++) {
         int length = n_bytes != i+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
-        print_binary(host_valid_out[i], length);
+        print_binary(bitmap[i], length);
     }
     delete[] host_out;
-    delete[] host_valid_out;
+    delete[] bitmap;
     std::cout<<std::endl<<std::endl;
 }
 template <typename ValueType = int8_t>

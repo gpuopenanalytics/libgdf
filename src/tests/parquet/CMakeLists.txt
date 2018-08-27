@@ -48,26 +48,27 @@ endif()
 
 function(GDF_ADD_PARQUET_BENCHMARK TARGET)
     if(GDF_BENCHMARK)
-
         list(REMOVE_AT ARGV 0)
         cuda_add_executable(${TARGET} ${ARGV})
         target_include_directories(${TARGET}
             PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
         target_link_libraries(${TARGET}
             Google::Benchmark Google::Benchmark::Main
-            Threads::Threads gdf gdf-parquet)
+            Threads::Threads gdf)
     endif()
 endfunction()
 
 function(GDF_ADD_PARQUET_TEST TARGET)
+    message(STATUS "${TARGET} will link against: gdf parquet")
     list(REMOVE_AT ARGV 0)
     cuda_add_executable(${TARGET} ${ARGV})
     target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
-    target_link_libraries(${TARGET} GTest::GTest GTest::Main gdf-parquet)
+    target_link_libraries(${TARGET} gmock_main gmock GTest::GTest gdf)
     get_property(ARGN TARGET ${TARGET} PROPERTY SOURCES)
-#    gtest_add_tests(${TARGET} "" ${ARGN})
+    # gtest_add_tests(${TARGET} "" ${ARGN})
 endfunction()
 
 add_subdirectory(file_reader)
 add_subdirectory(decoding)
 add_subdirectory(benchmark)
+add_subdirectory(gdf_column)

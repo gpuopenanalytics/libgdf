@@ -17,8 +17,11 @@
 
 #include <arrow/util/bit-util.h>
 #include <arrow/util/logging.h>
+
 #include <parquet/column_reader.h>
 #include <parquet/file/metadata.h>
+
+#include <thrust/device_ptr.h>
 
 #include "column_reader.h"
 #include "file_reader.h"
@@ -28,26 +31,6 @@
 BEGIN_NAMESPACE_GDF_PARQUET
 
 namespace {
-
-template <::parquet::Type::type TYPE>
-struct parquet_physical_traits {};
-
-#define PARQUET_PHYSICAL_TRAITS_FACTORY(TYPE, DTYPE)                          \
-    template <>                                                               \
-    struct parquet_physical_traits<::parquet::Type::TYPE> {                   \
-        static constexpr gdf_dtype dtype = GDF_##DTYPE;                       \
-    }
-
-PARQUET_PHYSICAL_TRAITS_FACTORY(BOOLEAN, INT8);
-PARQUET_PHYSICAL_TRAITS_FACTORY(INT32, INT32);
-PARQUET_PHYSICAL_TRAITS_FACTORY(INT64, INT64);
-PARQUET_PHYSICAL_TRAITS_FACTORY(INT96, invalid);
-PARQUET_PHYSICAL_TRAITS_FACTORY(FLOAT, FLOAT32);
-PARQUET_PHYSICAL_TRAITS_FACTORY(DOUBLE, FLOAT64);
-PARQUET_PHYSICAL_TRAITS_FACTORY(BYTE_ARRAY, invalid);
-PARQUET_PHYSICAL_TRAITS_FACTORY(FIXED_LEN_BYTE_ARRAY, invalid);
-
-#undef PARQUET_PHYSICAL_TRAITS_FACTORY
 
 struct ParquetTypeHash {
     template <class T>
@@ -62,11 +45,8 @@ const std::unordered_map<::parquet::Type::type, gdf_dtype, ParquetTypeHash>
     {::parquet::Type::BOOLEAN, GDF_INT8},
     {::parquet::Type::INT32, GDF_INT32},
     {::parquet::Type::INT64, GDF_INT64},
-    {::parquet::Type::INT96, GDF_invalid},
     {::parquet::Type::FLOAT, GDF_FLOAT32},
     {::parquet::Type::DOUBLE, GDF_FLOAT64},
-    {::parquet::Type::BYTE_ARRAY, GDF_invalid},
-    {::parquet::Type::FIXED_LEN_BYTE_ARRAY, GDF_invalid},
   };
 
 const std::
@@ -117,14 +97,15 @@ static inline gdf_error
 _ReadFile(const std::unique_ptr<FileReader> &file_reader,
           const std::vector<std::size_t> &   indices,
           gdf_column *const                  gdf_columns) {
-
+    const std::shared_ptr<::parquet::FileMetaData> &metadata =
+      file_reader->metadata();
     const std::size_t num_rows =
-      static_cast<std::size_t>(file_reader->metadata()->num_rows());
+      static_cast<std::size_t>(metadata->num_rows());
     const std::size_t num_row_groups =
-      static_cast<std::size_t>(file_reader->metadata()->num_row_groups());
+      static_cast<std::size_t>(metadata->num_row_groups());
 
-    std::int16_t *const definition_levels = new std::int16_t[num_rows];
-    std::int16_t *const repetition_levels = new std::int16_t[num_rows];
+    std::size_t offsets[indices.size()];
+    for (std::size_t i = 0; i < indices.size(); i++) { offsets[i] = 0; }
 
     for (std::size_t row_group_index = 0; row_group_index < num_row_groups;
          row_group_index++) {
@@ -141,22 +122,21 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
 
             switch (column_reader->type()) {
 #define WHEN(TYPE)                                                            \
-    case ::parquet::Type::TYPE:                                               \
-        DCHECK_GE(                                                            \
-          num_rows,                                                           \
-          std::static_pointer_cast<gdf::parquet::ColumnReader<                \
-            ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader)       \
-            ->ToGdfColumn(                                                    \
-              definition_levels, repetition_levels, _gdf_column));            \
-        break
+    case ::parquet::Type::TYPE: {                                             \
+        std::shared_ptr<gdf::parquet::ColumnReader<                           \
+          ::parquet::DataType<::parquet::Type::TYPE>>>                        \
+          reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
+            ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader);      \
+        if (reader->HasNext()) {                                              \
+            offsets[column_reader_index] +=                                   \
+              reader->ToGdfColumn(_gdf_column, offsets[column_reader_index]); \
+        }                                                                     \
+    } break
                 WHEN(BOOLEAN);
                 WHEN(INT32);
                 WHEN(INT64);
-                WHEN(INT96);
                 WHEN(FLOAT);
                 WHEN(DOUBLE);
-                WHEN(BYTE_ARRAY);
-                WHEN(FIXED_LEN_BYTE_ARRAY);
             default:
 #ifdef GDF_DEBUG
                 std::cerr << "Column type error from file" << std::endl;
@@ -166,9 +146,6 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
             }
         }
     }
-
-    delete[] definition_levels;
-    delete[] repetition_levels;
 
     return GDF_SUCCESS;
 }
@@ -181,20 +158,18 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     const std::size_t value_byte_size =
       static_cast<std::size_t>(::parquet::type_traits<TYPE>::value_byte_size);
 
-    try {
-        _gdf_column.data =
-          static_cast<void *>(new std::uint8_t[num_rows * value_byte_size]);
-    } catch (const std::bad_alloc &e) {
+    cudaError_t status =
+      cudaMalloc(&_gdf_column.data, num_rows * value_byte_size);
+    if (status != cudaSuccess) {
 #ifdef GDF_DEBUG
         std::cerr << "Allocation error for data\n" << e.what() << std::endl;
 #endif
         return GDF_IO_ERROR;
     }
 
-    try {
-        _gdf_column.valid = static_cast<gdf_valid_type *>(
-          new std::uint8_t[arrow::BitUtil::BytesForBits(num_rows)]);
-    } catch (const std::bad_alloc &e) {
+    status = cudaMalloc(reinterpret_cast<void **>(&_gdf_column.valid),
+                        arrow::BitUtil::BytesForBits(num_rows));
+    if (status != cudaSuccess) {
 #ifdef GDF_DEBUG
         std::cerr << "Allocation error for valid\n" << e.what() << std::endl;
 #endif
@@ -205,7 +180,7 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     _gdf_column.dtype = _DTypeFrom(column_descriptor);
 
     return GDF_SUCCESS;
-}
+}  // namespace
 
 static inline std::vector<const ::parquet::ColumnDescriptor *>
 _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
@@ -248,11 +223,8 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
             WHEN(BOOLEAN);
             WHEN(INT32);
             WHEN(INT64);
-            WHEN(INT96);
             WHEN(FLOAT);
             WHEN(DOUBLE);
-            WHEN(BYTE_ARRAY);
-            WHEN(FIXED_LEN_BYTE_ARRAY);
         default:
 #ifdef GDF_DEBUG
             std::cerr << "Column type not supported" << std::endl;

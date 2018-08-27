@@ -20,6 +20,8 @@
 #include "file_reader.h"
 #include "file_reader_contents.h"
 
+#include <iostream>
+
 namespace gdf {
 namespace parquet {
 

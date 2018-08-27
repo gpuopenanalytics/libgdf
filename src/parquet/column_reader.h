@@ -32,6 +32,12 @@ public:
 
     bool HasNext();
 
+    std::int64_t ReadBatch(std::int64_t  batch_size,
+                          std::int16_t *def_levels,
+                          std::int16_t *rep_levels,
+                          T *           values,
+                          std::int64_t *values_read);
+
     std::int64_t ReadBatchSpaced(std::int64_t  batch_size,
                                  std::int16_t *definition_levels,
                                  std::int16_t *repetition_levels,
@@ -46,6 +52,9 @@ public:
                             std::int16_t *const repetition_levels,
                             const gdf_column &  column);
 
+    std::size_t ToGdfColumn(const gdf_column &   column,
+                            const std::ptrdiff_t offset = 0);
+
 private:
     bool ReadNewPage() final;
 
@@ -58,11 +67,8 @@ private:
 using BoolReader              = ColumnReader<::parquet::BooleanType>;
 using Int32Reader             = ColumnReader<::parquet::Int32Type>;
 using Int64Reader             = ColumnReader<::parquet::Int64Type>;
-// using Int96Reader             = ColumnReader<::parquet::Int96Type>;
 using FloatReader             = ColumnReader<::parquet::FloatType>;
 using DoubleReader            = ColumnReader<::parquet::DoubleType>;
-// using ByteArrayReader         = ColumnReader<::parquet::ByteArrayType>;
-// using FixedLenByteArrayReader = ColumnReader<::parquet::FLBAType>;
 
 }  // namespace parquet
 }  // namespace gdf

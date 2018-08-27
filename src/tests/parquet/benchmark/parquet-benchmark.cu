@@ -212,8 +212,7 @@ checkDouble(const gdf_column &double_column) {
         assert(expected == value);
     }
 }
-
-template <typename LeftValueType, typename RightValueType>
+ 
 void filterops_test(gdf_column* lhs, gdf_column* rhs)
 {
     int column_size = lhs->size;
@@ -224,9 +223,28 @@ void filterops_test(gdf_column* lhs, gdf_column* rhs)
     // print_column<int8_t>(&output);
 
     auto gdf_operator = GDF_EQUALS;
+
     gdf_error error = gpu_comparison(lhs, rhs, &output, gdf_operator);
-    check_column_for_comparison_operation<LeftValueType, RightValueType>(lhs, rhs, &output, gdf_operator);
-    delete_gdf_column(&output);
+
+
+    #define WHEN(leftDataType, rightDataType, LeftValueType, RightValueType)                                  \
+        if ((leftDataType) == lhs->dtype && (rightDataType) == rhs->dtype) {                          \
+            check_column_for_comparison_operation<LeftValueType, RightValueType>(lhs, rhs, &output, gdf_operator); \
+            delete_gdf_column(&output); \
+            return ; \
+        }
+
+        WHEN(GDF_INT8, GDF_INT8, int8_t, int8_t);
+        WHEN(GDF_INT8, GDF_INT32, int8_t, int32_t)
+        WHEN(GDF_INT8, GDF_INT64, int8_t, int64_t)
+        WHEN(GDF_INT8, GDF_FLOAT32, int8_t, float)
+        WHEN(GDF_INT8, GDF_FLOAT64, int8_t, double)
+
+        
+        
+    #undef WHEN
+ 
+
 }
 
 template <ReaderType T>
@@ -256,14 +274,10 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
                 columns.push_back(output);
             // }
         }
-    } 
-    // check columns 
-    // checkBoolean(columns[0]);
-    // checkInt64(columns[1]);
-    // checkDouble(columns[2]);
+    }  
     
-    for(size_t i = 0; i < columns.size() - 1; i++) {
-        filterops_test<bool, bool>(&columns[i], &columns[i + 1]);
+    for(size_t i = 0; i < columns.size(); i++) {
+        filterops_test(&columns[0], &columns[i]);
     }
     
     for(size_t i = 0; i < columns.size(); i++)
