@@ -69,6 +69,5 @@ function(GDF_ADD_PARQUET_TEST TARGET)
 endfunction()
 
 add_subdirectory(file_reader)
-add_subdirectory(decoding)
 add_subdirectory(benchmark)
 add_subdirectory(gdf_column)
