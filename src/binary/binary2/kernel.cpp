@@ -58,7 +58,7 @@ R"***(
         }
     }
 
-    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeDef, typename TypeOpe>
+    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeVal, typename TypeOpe>
     __global__
     void kernel_v_s_d(int size, gdf_data def_data,
                       TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data,
@@ -77,13 +77,11 @@ R"***(
 
             TypeVax vax_data_aux = vax_data[i];
             if ((is_vax_valid & mask) != mask) {
-                vax_data_aux = (TypeDef)def_data;
+                vax_data_aux = (TypeVal)def_data;
             }
 
             AbstractOperation<TypeOpe> operation;
             out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, (TypeVay)vay_data);
-
-            __syncwarp();
 
             shiftMask(mask);
 
@@ -94,7 +92,7 @@ R"***(
     }
 
 
-    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeDef, typename TypeOpe>
+    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeVal, typename TypeOpe>
     __global__
     void kernel_v_v_d(int size, gdf_data def_data,
                       TypeOut* out_data, TypeVax* vax_data, TypeVay* vay_data,
@@ -115,10 +113,10 @@ R"***(
             TypeVax vax_data_aux = vax_data[i];
             TypeVay vay_data_aux = vay_data[i];
             if ((is_vax_valid & mask) != mask) {
-                vax_data_aux = (TypeDef)def_data;
+                vax_data_aux = (TypeVal)def_data;
             }
             else if ((is_vay_valid & mask) != mask) {
-                vay_data_aux = (TypeDef)def_data;
+                vay_data_aux = (TypeVal)def_data;
             }
             if ((is_vax_valid | is_vay_valid) == mask) {
                 AbstractOperation<TypeOpe> operation;
@@ -126,8 +124,6 @@ R"***(
             } else {
                 mask = 0;
             }
-
-            __syncwarp();
 
             shiftMask(mask);
 
