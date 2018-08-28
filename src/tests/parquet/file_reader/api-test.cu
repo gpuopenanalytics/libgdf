@@ -204,7 +204,7 @@ protected:
 
 TEST_F(ParquetReaderAPITest, ReadAll) {
     gdf_error error_code = gdf::parquet::read_parquet(
-      filename.c_str(), nullptr, nullptr, &columns, &columns_length);
+      filename.c_str(), nullptr, &columns, &columns_length);
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
@@ -213,9 +213,9 @@ TEST_F(ParquetReaderAPITest, ReadAll) {
     EXPECT_EQ(columns[0].size, columns[1].size);
     EXPECT_EQ(columns[1].size, columns[2].size);
 
-    // checkBoolean(columns[0]);
-    // checkInt64(columns[1]);
-    // checkDouble(columns[2]);
+    checkBoolean(columns[0]);
+    checkInt64(columns[1]);
+    checkDouble(columns[2]);
 }
 
 TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
@@ -223,12 +223,30 @@ TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
       "double_field", "int64_field", nullptr};
 
     gdf_error error_code = gdf::parquet::read_parquet(
-      filename.c_str(), nullptr, column_names, &columns, &columns_length);
+      filename.c_str(), column_names, &columns, &columns_length);
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
     EXPECT_EQ(2, columns_length);
 
-    // checkDouble(columns[0]);
-    // checkInt64(columns[1]);
+    checkDouble(columns[0]);
+    checkInt64(columns[1]);
+}
+
+TEST_F(ParquetReaderAPITest, ByIdsInOrder) {
+    const std::vector<std::size_t> row_group_indices = {0, 1};
+    const std::vector<std::size_t> column_indices    = {0, 1, 2};
+
+    std::vector<gdf_column *> columns;
+
+    gdf_error error_code = gdf::parquet::read_parquet_by_ids(
+      filename, row_group_indices, column_indices, columns);
+
+    EXPECT_EQ(GDF_SUCCESS, error_code);
+
+    EXPECT_EQ(3, columns.size());
+
+    checkBoolean(*columns[0]);
+    checkInt64(*columns[1]);
+    checkDouble(*columns[2]);
 }

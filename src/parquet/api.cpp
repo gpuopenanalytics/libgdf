@@ -150,6 +150,63 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
     return GDF_SUCCESS;
 }
 
+static inline gdf_error
+_ReadFile(const std::unique_ptr<FileReader> &file_reader,
+          const std::vector<std::size_t> &   row_group_indices,
+          const std::vector<std::size_t> &   column_indices,
+          gdf_column *const                  gdf_columns) {
+    const std::shared_ptr<::parquet::FileMetaData> &metadata =
+      file_reader->metadata();
+    const std::size_t num_rows =
+      static_cast<std::size_t>(metadata->num_rows());
+    const std::size_t num_row_groups =
+      static_cast<std::size_t>(metadata->num_row_groups());
+
+    std::size_t offsets[column_indices.size()];
+    for (std::size_t i = 0; i < column_indices.size(); i++) { offsets[i] = 0; }
+
+    for (const std::size_t row_group_index : row_group_indices) {
+        const auto row_group_reader =
+          file_reader->RowGroup(static_cast<int>(row_group_index));
+
+        for (std::size_t column_reader_index = 0;
+             column_reader_index < column_indices.size();
+             column_reader_index++) {
+            const gdf_column &_gdf_column = gdf_columns[column_reader_index];
+            const std::shared_ptr<::parquet::ColumnReader> column_reader =
+              row_group_reader->Column(
+                static_cast<int>(column_indices[column_reader_index]));
+
+            switch (column_reader->type()) {
+#define WHEN(TYPE)                                                            \
+    case ::parquet::Type::TYPE: {                                             \
+        std::shared_ptr<gdf::parquet::ColumnReader<                           \
+          ::parquet::DataType<::parquet::Type::TYPE>>>                        \
+          reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
+            ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader);      \
+        if (reader->HasNext()) {                                              \
+            offsets[column_reader_index] +=                                   \
+              reader->ToGdfColumn(_gdf_column, offsets[column_reader_index]); \
+        }                                                                     \
+    } break
+                WHEN(BOOLEAN);
+                WHEN(INT32);
+                WHEN(INT64);
+                WHEN(FLOAT);
+                WHEN(DOUBLE);
+            default:
+#ifdef GDF_DEBUG
+                std::cerr << "Column type error from file" << std::endl;
+#endif
+                return GDF_IO_ERROR;
+#undef WHEN
+            }
+        }
+    }
+
+    return GDF_SUCCESS;
+}
+
 template <::parquet::Type::type TYPE>
 static inline gdf_error
 _AllocateGdfColumn(const std::size_t                        num_rows,
@@ -185,8 +242,7 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
 static inline std::vector<const ::parquet::ColumnDescriptor *>
 _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
                        const std::vector<std::size_t> &   indices) {
-    const auto &row_group_reader =
-      file_reader->RowGroup(0);
+    const auto &row_group_reader = file_reader->RowGroup(0);
 
     std::vector<const ::parquet::ColumnDescriptor *> column_descriptors;
     column_descriptors.reserve(indices.size());
@@ -257,8 +313,7 @@ public:
 
         column_names.reserve(num_columns);
 
-        auto row_group_reader =
-          file_reader->RowGroup(0);
+        auto row_group_reader = file_reader->RowGroup(0);
         for (std::size_t i = 0; i < num_columns; i++) {
             column_names.emplace_back(
               row_group_reader->Column(i)->descr()->name());
@@ -352,39 +407,58 @@ _OpenFile(const std::string &filename) try {
 
 }  // namespace
 
+gdf_error
+read_parquet_by_ids(const std::string &             filename,
+                    const std::vector<std::size_t> &row_group_indices,
+                    const std::vector<std::size_t> &column_indices,
+                    std::vector<gdf_column *> &     out_gdf_columns) {
+    const std::unique_ptr<FileReader> file_reader = _OpenFile(filename);
+
+    if (!file_reader) { return GDF_IO_ERROR; }
+
+    if (_CheckMinimalData(file_reader) != GDF_SUCCESS) { return GDF_IO_ERROR; }
+
+    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
+
+    if (gdf_columns == nullptr) { return GDF_IO_ERROR; }
+
+    if (_AllocateGdfColumns(file_reader, column_indices, gdf_columns)
+        != GDF_SUCCESS) {
+        return GDF_IO_ERROR;
+    }
+
+    if (_ReadFile(file_reader, row_group_indices, column_indices, gdf_columns)
+        != GDF_SUCCESS) {
+        return GDF_IO_ERROR;
+    }
+
+    for (std::size_t i = 0; i < column_indices.size(); i++) {
+        out_gdf_columns.push_back(&gdf_columns[i]);
+    }
+
+    return GDF_SUCCESS;
+}
+
 extern "C" {
 
 gdf_error
 read_parquet(const char *const        filename,
-             const char *const        engine,
              const char *const *const columns,
              gdf_column **const       out_gdf_columns,
              size_t *const            out_gdf_columns_length) {
-    if (engine != nullptr) {
-#ifdef GDF_DEBUG
-        std::cerr << "Unsupported engine" << std::endl;
-#endif
-        return GDF_IO_ERROR;
-    }
     const std::unique_ptr<FileReader> file_reader = _OpenFile(filename);
-    if (!file_reader) {
-        std::cout << "***GDF_IO_ERROR\n";
-        return GDF_IO_ERROR;
-    }
 
     if (!file_reader) { return GDF_IO_ERROR; }
 
     if (_CheckMinimalData(file_reader) != GDF_SUCCESS) { return GDF_IO_ERROR; }
 
     const ColumnNames  column_names(file_reader);
-
     const ColumnFilter column_filter(columns);
 
     const std::vector<std::size_t> indices =
       column_filter.IndicesFrom(column_names);
 
-    gdf_column *const gdf_columns =
-      _CreateGdfColumns(file_reader->metadata()->num_columns());
+    gdf_column *const gdf_columns = _CreateGdfColumns(indices.size());
 
     if (gdf_columns == nullptr) { return GDF_IO_ERROR; }
 

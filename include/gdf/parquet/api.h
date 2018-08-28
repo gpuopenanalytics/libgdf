@@ -33,14 +33,31 @@ BEGIN_NAMESPACE_GDF_PARQUET
 
 /// \brief Read parquet file into array of gdf columns
 /// \param[in] filename path to parquet file
-/// \param[in] engine backend to use for reading
 /// \param[in] columns will be read from the file
 /// \param[out] out_gdf_columns array
 /// \param[out] out_gdf_columns_length number of columns
 extern "C" gdf_error read_parquet(const char *const        filename,
-                                  const char *const        engine,
                                   const char *const *const columns,
                                   gdf_column **const       out_gdf_columns,
                                   size_t *const out_gdf_columns_length);
 
 END_NAMESPACE_GDF_PARQUET
+
+#ifdef __cplusplus
+
+#include <string>
+#include <vector>
+
+namespace gdf {
+namespace parquet {
+
+gdf_error
+read_parquet_by_ids(const std::string &             filename,
+                    const std::vector<std::size_t> &row_group_indices,
+                    const std::vector<std::size_t> &column_indices,
+                    std::vector<gdf_column *> &     out_gdf_columns);
+
+}  // namespace parquet
+}  // namespace gdf
+
+#endif
