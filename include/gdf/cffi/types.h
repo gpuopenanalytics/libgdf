@@ -1,3 +1,5 @@
+#pragma once
+
 typedef size_t gdf_size_type;
 typedef gdf_size_type gdf_index_type;
 typedef unsigned char gdf_valid_type;
@@ -37,6 +39,10 @@ union gdf_data {
     int64_t  tmst;  // GDF_TIMESTAMP
 };
 
+/*
+ * GDF error enum type.
+ * Any changes here should be reflected in `gdf_error_get_name` as well.
+ */
 typedef enum {
     GDF_SUCCESS=0,
     GDF_CUDA_ERROR,
@@ -46,9 +52,12 @@ typedef enum {
     GDF_DATASET_EMPTY,
     GDF_VALIDITY_MISSING,
     GDF_VALIDITY_UNSUPPORTED,
+    GDF_INVALID_API_CALL,
     GDF_JOIN_DTYPE_MISMATCH,
     GDF_JOIN_TOO_MANY_COLUMNS,
+    GDF_GROUPBY_TOO_MANY_COLUMNS,
     GDF_UNSUPPORTED_METHOD,
+    GDF_INVALID_AGGREGATOR,
 } gdf_error;
 
 typedef enum {
@@ -78,6 +87,7 @@ typedef struct gdf_column_{
     gdf_valid_type *valid;
     gdf_size_type size;
     gdf_dtype dtype;
+    gdf_size_type null_count;
     gdf_dtype_extra_info dtype_info;
 } gdf_column;
 
@@ -86,6 +96,15 @@ typedef enum {
   GDF_HASH,
   N_GDF_METHODS,  /* additional methods should go BEFORE N_GDF_METHODS */
 } gdf_method;
+
+typedef enum {
+  GDF_QUANT_LINEAR =0,
+  GDF_QUANT_LOWER,
+  GDF_QUANT_HIGHER,
+  GDF_QUANT_MIDPOINT,
+  GDF_QUANT_NEAREST,
+  N_GDF_QUANT_METHODS,
+} gdf_quantile_method;
 
 typedef enum {
   GDF_SUM = 0,
@@ -125,6 +144,8 @@ typedef struct gdf_context_{
   int flag_sorted;        /* 0 = No, 1 = yes */
   gdf_method flag_method; /* what method is used */
   int flag_distinct;      /* for COUNT: DISTINCT = 1, else = 0 */
+  int flag_sort_result;   /* When method is GDF_HASH, 0 = result is not sorted, 1 = result is sorted */
+  int flag_sort_inplace;  /* 0 = No sort in place allowed, 1 = else */
 } gdf_context;
 
 struct _OpaqueIpcParser;
@@ -141,3 +162,33 @@ typedef struct _OpaqueSegmentedRadixsortPlan gdf_segmented_radixsort_plan_type;
 
 struct _OpaqueJoinResult;
 typedef struct _OpaqueJoinResult gdf_join_result_type;
+
+
+typedef enum{
+	GDF_ORDER_ASC,
+	GDF_ORDER_DESC
+} order_by_type;
+
+typedef enum{
+	GDF_EQUALS,
+	GDF_NOT_EQUALS,
+	GDF_LESS_THAN,
+	GDF_LESS_THAN_OR_EQUALS,
+	GDF_GREATER_THAN,
+	GDF_GREATER_THAN_OR_EQUALS
+} gdf_comparison_operator;
+
+typedef enum{
+	GDF_WINDOW_RANGE,
+	GDF_WINDOW_ROW
+} window_function_type;
+
+typedef enum{
+	GDF_WINDOW_AVG,
+	GDF_WINDOW_SUM,
+	GDF_WINDOW_MAX,
+	GDF_WINDOW_MIN,
+	GDF_WINDOW_COUNT,
+	GDF_WINDOW_STDDEV,
+	GDF_WINDOW_VAR //variance
+} window_reduction_type;

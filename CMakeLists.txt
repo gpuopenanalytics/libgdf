@@ -21,7 +21,6 @@
 #    $ cmake ..          # configure build system
 #    $ make              # make libgdf
 #    $ make pytest       # trigger test
-#    $ make pytest-ci    # trigger test with jUnit.xml output
 #    $ make install      # install libgdf
 
 PROJECT(libgdf)
@@ -33,6 +32,7 @@ message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
+
 
 # Include CMake modules
 include(FeatureSummary)
@@ -91,7 +91,7 @@ IF(CUDA_VERSION_MAJOR GREATER 8)
 ENDIF(CUDA_VERSION_MAJOR GREATER 8)
 
 IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G;-lineinfo)
 ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
 
 # switch between hash-join and sort-join
@@ -100,6 +100,8 @@ if(HASH_JOIN)
   message("-- Using the hash-based join implementation")
   set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS};-DHASH_JOIN)
 endif()
+
+
 
 # switch between cudaMalloc and cudaMallocManaged for hash tables
 option(HT_LEGACY_ALLOCATOR "legacy allocator for hash tables" ON)
@@ -117,22 +119,35 @@ get_directory_property(gdfs_source_files DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src
 
 cuda_add_library(gdf SHARED
     src/binaryops.cu
+    src/bitmaskops.cu
     src/column.cpp
+    src/context.cpp
+    src/cudautils.cu
+    src/datetimeops.cu
     src/errorhandling.cpp
-    src/unaryops.cu
+    src/filterops.cu
+    src/hashops.cu
     src/ipc.cu
     src/reductions.cu
-    src/sorting.cu
-    src/joining.cu
+    src/join/joining.cu
     src/hashing.cu
     src/scan.cu
     src/segmented_sorting.cu
-    src/datetimeops.cu
+    src/sorting.cu
     src/sqls_ops.cu
+    src/streamcompactionops.cu
+    src/unaryops.cu
+    #src/windowedops.cu
+    src/quantiles.cu
     ${gdfs_source_files}
 )
 
-target_link_libraries(gdf arrow)
+if (ARROW_NUMERIC_VERSION EQUAL 900)
+  # arrow-0.9 requires boost_regex
+  target_link_libraries(gdf arrow boost_regex)
+else()
+  target_link_libraries(gdf arrow)
+endif()
 
 # Command to symlink files into the build directory
 add_custom_command(  # link the include directory
@@ -158,14 +173,8 @@ add_custom_target(   # target to link the python files and trigger cffi
 # The test target
 add_custom_target(pytest DEPENDS copy_python)
 add_custom_command(TARGET pytest POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${CMAKE_BINARY_DIR} py.test -v
+                   COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CMAKE_BINARY_DIR} py.test -v
                    WORKING_DIRECTORY --cache-clear tests)
-
-# The test CI target with junit.xml output
-add_custom_target(pytest-ci DEPENDS copy_python)
-add_custom_command(TARGET pytest POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${CMAKE_BINARY_DIR} py.test -v
-                   WORKING_DIRECTORY --cache-clear --junitxml=junit.xml tests)
 
 # The install target
 install(TARGETS gdf LIBRARY DESTINATION lib)
@@ -184,6 +193,5 @@ if(GTEST_FOUND)
 else()
     message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
 endif()
-
 # Print the project summary
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
