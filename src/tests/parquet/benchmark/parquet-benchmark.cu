@@ -46,27 +46,16 @@ struct Readers<kGdf> {
     typedef typename gdf::parquet::FileReader   FileReader;            
      
 
-    static inline gdf_error init_gdf_buffers(void **device_values, gdf_valid_type** host_valid, uint32_t values_malloc_size, gdf_size_type column_size){
+    static inline gdf_error init_gdf_buffers(void **device_values, gdf_valid_type** device_valid, uint32_t values_malloc_size, gdf_size_type column_size){
         cudaError_t cuda_error = cudaMalloc(device_values, values_malloc_size);
         auto n_bytes = get_number_of_bytes_for_valid(column_size);
-        //cudaMalloc((void **)&device_valid, n_bytes);
-
-        *host_valid = (gdf_valid_type*)malloc(n_bytes);
+        cudaMalloc(device_valid, n_bytes);
         return GDF_SUCCESS;
     }
      
 
-    static inline gdf_error buffer_to_gdf_column(gdf_column *output, void *device_values, gdf_valid_type* host_valid, uint32_t values_malloc_size, gdf_size_type column_size, gdf_dtype dtype) {
-         
-        gdf_valid_type *device_valid;
-        auto n_bytes = get_number_of_bytes_for_valid(column_size);
-        cudaMalloc((void **)&device_valid, n_bytes);
-        cudaMemcpy(device_valid, host_valid, n_bytes, cudaMemcpyHostToDevice);
-
-        auto zero_bits = count_zero_bits(host_valid, column_size);
-        free(host_valid);
-
-        return gdf_column_view_augmented(output, device_values, device_valid, column_size, dtype, zero_bits);
+    static inline gdf_error buffer_to_gdf_column(gdf_column *output, void *device_values, gdf_valid_type* device_valid, uint32_t values_malloc_size, gdf_size_type column_size, gdf_dtype dtype) {
+        return gdf_column_view_init(output, device_values, device_valid, column_size, dtype, 0);
     }
 };
 
@@ -101,7 +90,7 @@ struct Readers<kParquet> {
 
         free(host_values);
         free(host_valid);
-        return gdf_column_view_augmented(output, device_values, device_valid, column_size, dtype, zero_bits);
+        return gdf_column_view_init(output, device_values, device_valid, column_size, dtype, zero_bits);
     }
 };
 
@@ -215,34 +204,34 @@ checkDouble(const gdf_column &double_column) {
  
 void filterops_test(gdf_column* lhs, gdf_column* rhs)
 {
-    int column_size = lhs->size;
-    // print_column<LeftValueType>(lhs);
-    // print_column<RightValueType>(rhs);
+    // int column_size = lhs->size;
+    // // print_column<LeftValueType>(lhs);
+    // // print_column<RightValueType>(rhs);
 
-    gdf_column output = gen_gdb_column<int8_t>(column_size, 0);
-    // print_column<int8_t>(&output);
+    // gdf_column output = gen_gdb_column<int8_t>(column_size, 0);
+    // // print_column<int8_t>(&output);
 
-    auto gdf_operator = GDF_EQUALS;
+    // auto gdf_operator = GDF_EQUALS;
 
-    gdf_error error = gpu_comparison(lhs, rhs, &output, gdf_operator);
+    // gdf_error error = gpu_comparison(lhs, rhs, &output, gdf_operator);
 
 
-    #define WHEN(leftDataType, rightDataType, LeftValueType, RightValueType)                                  \
-        if ((leftDataType) == lhs->dtype && (rightDataType) == rhs->dtype) {                          \
-            check_column_for_comparison_operation<LeftValueType, RightValueType>(lhs, rhs, &output, gdf_operator); \
-            delete_gdf_column(&output); \
-            return ; \
-        }
+    // #define WHEN(leftDataType, rightDataType, LeftValueType, RightValueType)                                  \
+    //     if ((leftDataType) == lhs->dtype && (rightDataType) == rhs->dtype) {                          \
+    //         check_column_for_comparison_operation<LeftValueType, RightValueType>(lhs, rhs, &output, gdf_operator); \
+    //         delete_gdf_column(&output); \
+    //         return ; \
+    //     }
 
-        WHEN(GDF_INT8, GDF_INT8, int8_t, int8_t);
-        WHEN(GDF_INT8, GDF_INT32, int8_t, int32_t)
-        WHEN(GDF_INT8, GDF_INT64, int8_t, int64_t)
-        WHEN(GDF_INT8, GDF_FLOAT32, int8_t, float)
-        WHEN(GDF_INT8, GDF_FLOAT64, int8_t, double)
+    //     WHEN(GDF_INT8, GDF_INT8, int8_t, int8_t);
+    //     WHEN(GDF_INT8, GDF_INT32, int8_t, int32_t)
+    //     WHEN(GDF_INT8, GDF_INT64, int8_t, int64_t)
+    //     WHEN(GDF_INT8, GDF_FLOAT32, int8_t, float)
+    //     WHEN(GDF_INT8, GDF_FLOAT64, int8_t, double)
 
         
         
-    #undef WHEN
+    // #undef WHEN
  
 
 }
@@ -258,7 +247,7 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
     std::vector<gdf_column> columns;
 
     for (int rowGroupIndex = 0; rowGroupIndex < numRowGroups; rowGroupIndex++) {
-        std::shared_ptr<parquet::RowGroupReader> groupReader = parquet_reader->RowGroup(rowGroupIndex);
+        auto groupReader = parquet_reader->RowGroup(rowGroupIndex);
         const parquet::RowGroupMetaData *rowGroupMetadata = groupReader->metadata();
         for (int columnIndex = 0; columnIndex < file_metadata->num_columns(); columnIndex++) {
             const parquet::ColumnDescriptor *column = schema->Column(columnIndex);

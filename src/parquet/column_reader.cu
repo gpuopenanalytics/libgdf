@@ -309,6 +309,32 @@ __global__ void def_levels_to_valid(uint8_t* valid, const int16_t *def_levels, c
     }
 }
 
+__global__ void def_levels_to_valid(uint8_t* valid, const  int size) {
+    int blksz = blockDim.x * blockDim.y * blockDim.z;
+    int blkid = gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x;
+    int blkof = blksz * blkid;
+    int thdid = blkof + blockDim.x * blockDim.y * threadIdx.z + blockDim.x * threadIdx.y + threadIdx.x;
+
+    uint32_t bitmask = 0;
+    if (thdid < size) {
+        bitmask = 1 << (thdid % WARP_SIZE);
+        bitmask &= (1 << (thdid % WARP_SIZE));        
+    }
+
+    __syncwarp();
+
+    for (int offset = 16; offset > 0; offset /= 2)
+        bitmask += __shfl_down_sync(0xFFFFFFFF, bitmask, offset);
+
+    if ((thdid % WARP_SIZE) == 0) {
+        int index = thdid / WARP_SIZE * WARP_BYTE;
+        valid[index + 0] = 0xFF & bitmask;
+        valid[index + 1] = 0XFF & (bitmask >> 8);
+        valid[index + 2] = 0XFF & (bitmask >> 16);
+        valid[index + 3] = 0XFF & (bitmask >> 24);
+    }
+}
+
 static inline  uint8_t _ByteWithBit(ptrdiff_t i)
 {
     static uint8_t kBitmask[8] = {1, 2, 4, 8, 16, 32, 64, 128};
@@ -341,23 +367,25 @@ static inline size_t _BytesLengthToBitmapLength(size_t n){
 }
 
 static inline void _TurnBitOnForValids(std::int64_t        def_length,
-                                       std::uint8_t *      d_valids,
+                                       std::uint8_t *      d_valid_ptr,
                                        const std::int64_t  valid_bits_offset) 
 {
+    //@todo: optimal params flor grid and blocks
+    dim3 grid(2, 2, 2); 
+    dim3 block(32, 2, 2);
     if (valid_bits_offset % 8 == 0) {
-        auto  d_valid_ptr = d_valids + valid_bits_offset/8;
-        auto num_chars = _BytesLengthToBitmapLength(def_length);
-        thrust::fill(thrust::device, d_valid_ptr, d_valid_ptr + num_chars - 1, 255);
-        uint8_t last_char_value = 0;
-        size_t levels_length_prev = def_length - def_length % 8;
-        size_t bit_index = 0;
-        for (int index = levels_length_prev; index < def_length; ++index) {
-            _TurnBitOn(&last_char_value, bit_index);
-            bit_index++;
-        }
-        thrust::fill(thrust::device, d_valid_ptr + num_chars - 1, d_valid_ptr + num_chars, last_char_value);        
+        def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8, def_length);
     } else {
-        //@todo: offset not Alignment 
+        int left_bits_length = valid_bits_offset % 8;
+        int rigth_bits_length = 8 - left_bits_length;
+        uint8_t mask;
+        cudaMemcpy(&mask, d_valid_ptr + (valid_bits_offset/8), 1, cudaMemcpyDeviceToHost);
+
+        for(size_t i = 0; i < rigth_bits_length; i++) {
+            mask |= _ByteWithBit(i + left_bits_length);
+        }
+        cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
+        def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, def_length);
     }
 }
 
@@ -371,7 +399,8 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
                           const std::int64_t  valid_bits_offset) {
 
     if (max_definition_level > 0) {
-        dim3 grid(2, 2, 2); //@todo: optimal params flor grid and blocks
+        //@todo: optimal params flor grid and blocks
+        dim3 grid(2, 2, 2); 
         dim3 block(32, 2, 2);
         if (valid_bits_offset % 8 == 0) {
             def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8, d_def_levels, def_length, max_definition_level);
@@ -399,16 +428,7 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
        *null_count = result;
        *values_read = def_length - *null_count;
     } else {
-        // auto num_chars = _BytesLengthToBitmapLength(def_length);
-        // thrust::fill(thrust::device, d_valid_ptr, d_valid_ptr + num_chars - 1, 255);
-        // uint8_t last_char_value = 0;
-        // size_t levels_length_prev = def_length - def_length % 8;
-        // size_t bit_index = 0;
-        // for (int index = levels_length_prev; index < def_length; ++index) {
-        //     _TurnBitOn(&last_char_value, bit_index);
-        //     bit_index++;
-        // }
-        // thrust::fill(thrust::device, d_valid_ptr + num_chars - 1, d_valid_ptr + num_chars, last_char_value);
+         _TurnBitOnForValids(def_length, d_valid_ptr, valid_bits_offset);
     }
 }
  
@@ -440,7 +460,7 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
                                         std::int64_t *values_read,
                                         std::int64_t *nulls_count)
 {
-    assert(repetition_levels == nullptr);
+    // assert(repetition_levels == nullptr);
     if (!HasNext())
     {
         *levels_read = 0;
@@ -497,9 +517,6 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
 
             total_values = _ReadValues(current_decoder_, *values_read, values);
             total_values = num_def_levels;//new total_values after sparse!
-            std::cout << "num_def_levels: " << num_def_levels << std::endl;
-            std::cout << "total_values: " << total_values << std::endl;
-            std::cout << "*values_read: " << *values_read << std::endl;
 
             if (total_values != *values_read) {
                 thrust::device_vector<int> work_space_vector(total_values);
@@ -548,7 +565,7 @@ ColumnReader<DataType>::ReadBatch(std::int64_t batch_size,
                                   T *values,
                                   std::int64_t *values_read)
 {
-    assert(rep_levels == nullptr);
+    // assert(rep_levels == nullptr);
     if (!HasNext())
     {
         *values_read = 0;
