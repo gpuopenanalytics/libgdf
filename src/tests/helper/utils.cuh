@@ -6,7 +6,6 @@
 #include <cassert>
 
 #include <gdf/gdf.h>
-#include <gdf/cffi/functions.h>
 #include <thrust/functional.h>
 #include <thrust/device_ptr.h>
 #include <thrust/iterator/counting_iterator.h>
@@ -62,6 +61,18 @@ inline gdf_dtype gdf_enum_type_for<double>()
 inline auto get_number_of_bytes_for_valid (size_t column_size) -> size_t {
     return sizeof(gdf_valid_type) * (column_size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
 }
+
+
+inline gdf_error gdf_column_view_init(gdf_column *column, void *data, gdf_valid_type *valid,
+		gdf_size_type size, gdf_dtype dtype, gdf_size_type null_count) {
+	column->data = data;
+	column->valid = valid;
+	column->size = size;
+	column->dtype = dtype;
+	column->null_count = null_count;
+	return GDF_SUCCESS;
+}
+
 
 auto print_binary(gdf_valid_type n, int size = 8) -> void ;
 
@@ -126,7 +137,7 @@ gdf_column convert_to_device_gdf_column (gdf_column *column) {
     cudaMemcpy(valid_value_pointer, host_valid, n_bytes, cudaMemcpyHostToDevice);
 
     gdf_column output;
-    gdf_column_view_augmented(&output, (void *)raw_pointer, valid_value_pointer, column_size, column->dtype, column->null_count);
+    gdf_column_view_init(&output, (void *)raw_pointer, valid_value_pointer, column_size, column->dtype, column->null_count);
     return output;
 }
 
@@ -194,7 +205,7 @@ gdf_column gen_gdb_column(size_t column_size, ValueType init_value)
     gdf_column output;
     auto zero_bits = output.null_count = count_zero_bits(host_valid, column_size);
 
-    gdf_column_view_augmented(&output,
+    gdf_column_view_init(&output,
                              (void *)raw_pointer, valid_value_pointer,
                              column_size,
                              gdf_enum_type_value,

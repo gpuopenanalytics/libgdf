@@ -54,7 +54,7 @@ function(GDF_ADD_PARQUET_BENCHMARK TARGET)
             PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
         target_link_libraries(${TARGET}
             Google::Benchmark Google::Benchmark::Main
-            Threads::Threads gdf)
+            Threads::Threads gdf-parquet)
     endif()
 endfunction()
 
@@ -63,7 +63,7 @@ function(GDF_ADD_PARQUET_TEST TARGET)
     list(REMOVE_AT ARGV 0)
     cuda_add_executable(${TARGET} ${ARGV})
     target_include_directories(${TARGET} PUBLIC ${CMAKE_SOURCE_DIR}/src/parquet)
-    target_link_libraries(${TARGET} gmock_main gmock GTest::GTest gdf)
+    target_link_libraries(${TARGET} gmock_main gmock GTest::GTest gdf-parquet)
     get_property(ARGN TARGET ${TARGET} PROPERTY SOURCES)
     # gtest_add_tests(${TARGET} "" ${ARGN})
 endfunction()
