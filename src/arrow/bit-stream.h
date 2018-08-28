@@ -1,6 +1,7 @@
 /*
  * Copyright 2018 BlazingDB, Inc.
  *     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
+ *     Copyright 2018 William Malpica <william@blazingdb.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -207,7 +208,7 @@ namespace arrow {
                         int i_start = i + values_read;
 
                         int count = 0;
-                        for (; i < batch_size && bit_offset != 0; ++i) {
+                        for (; i < batch_size && bit_offset != 0; ++i) {   // TODO this loop can be replaced with math
                             bit_offset += num_bits;
                             if (bit_offset >= 64) {
                                 byte_offset += 8;
@@ -240,7 +241,7 @@ namespace arrow {
                     int i_start = i + values_read;
 
                     int count = 0;
-                    for (; i < batch_size; ++i) {
+                    for (; i < batch_size; ++i) {  // TODO this loop can be replaced with math
                         bit_offset += num_bits;
                         if (bit_offset >= 64) {
                             byte_offset += 8;

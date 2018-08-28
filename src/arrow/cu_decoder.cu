@@ -1,6 +1,7 @@
 /*
  * Copyright 2018 BlazingDB, Inc.
  *     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
+ *     Copyright 2018 William Malpica <william@blazingdb.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -262,36 +263,22 @@ struct remainder_functor : public thrust::unary_function<Int4, int>
     }
 };
 
-void gpu_bit_packing_remainder( const uint8_t *buffer,
-                                const int buffer_len,
+
+void gpu_bit_packing_remainder( thrust::device_vector<uint8_t> & d_buffer,
                                 const std::vector<int> &remainderInputOffsets,
                                 const std::vector<int> &remainderBitOffsets,
                                 const std::vector<int> &remainderSetSize,
                                 const std::vector<int> &remainderOutputOffsets,
                                 thrust::device_vector<int>& d_output,
-                                int num_bits) 
+                                int num_bits)
 {
-    int sum_set_size = 0;
-    for (int i = 0; i < remainderInputOffsets.size(); i++){
-        sum_set_size += (remainderSetSize[i] / 4 + 1) * 8;  
-    }
-    int offset = 0;
-    uint8_t* h_buffer;
-    pinnedAllocator.pinnedAllocate((void **)&h_buffer, sum_set_size * sizeof (uint8_t) );
-    thrust::host_vector<int> remainder_new_input_offsets;
-    for (int i = 0; i < remainderInputOffsets.size(); i++) {
-        auto offset_sz = (remainderSetSize[i] / 4 + 1) * 8;
-        memcpy ( &h_buffer[offset], &buffer[ remainderInputOffsets[i] ], offset_sz);
-        remainder_new_input_offsets.push_back(offset);
-        offset += offset_sz;
-    }
-    thrust::device_vector<uint8_t> d_buffer(h_buffer, h_buffer + sum_set_size * sizeof (uint8_t));
-    thrust::device_vector<int> d_remainder_input_offsets(remainder_new_input_offsets);
+
+    thrust::device_vector<int> d_remainder_input_offsets(remainderInputOffsets);
     thrust::device_vector<int> d_remainder_bit_offsets(remainderBitOffsets);
     thrust::device_vector<int> d_remainder_setsize(remainderSetSize);
     thrust::device_vector<int> d_remainder_output_offsets(remainderOutputOffsets);
 
-    int max_bytes = buffer_len;
+    int max_bytes = d_buffer.size();
     auto zip_iterator_begin = thrust::make_zip_iterator(thrust::make_tuple(
         d_remainder_bit_offsets.begin(), d_remainder_input_offsets.begin(),
         d_remainder_output_offsets.begin(), d_remainder_setsize.begin()));
@@ -305,7 +292,6 @@ void gpu_bit_packing_remainder( const uint8_t *buffer,
         remainder_functor(max_bytes, num_bits, d_buffer.data().get(),
                           d_output.data().get()));
 
-    pinnedAllocator.pinnedFree(h_buffer);
 }
 
 //@todo: stream computing 
@@ -364,10 +350,10 @@ int decode_using_gpu(const T * d_dictionary, int num_dictionary_values, T* d_out
     	gpu_expand(d_counts.begin(), d_counts.end(), d_values.begin(), d_indices.begin());
     }
 
+    thrust::device_vector<uint8_t> d_buffer(buffer_len);
+    thrust::copy(buffer, buffer + buffer_len, d_buffer.begin());
     if (input_offset.size() > 0){
     	unpack_functor func(num_bits);
-    	thrust::device_vector<uint8_t> d_buffer(buffer_len);
-    	thrust::copy(buffer, buffer + buffer_len, d_buffer.begin());
     	thrust::device_vector<int> d_input_offsets(input_offset);
     	thrust::device_vector<int> d_input_runlengths(input_runlengths);
     	thrust::device_vector<int> d_output_offset(output_offset);
@@ -394,7 +380,7 @@ int decode_using_gpu(const T * d_dictionary, int num_dictionary_values, T* d_out
     	//    std::cout<<"input_offset.size(): "<<input_offset.size()<<std::endl;
 
 
-    	decode_bitpacking<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_indices.data()),
+    	decode_bitpacking_32sets<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_indices.data()),
     			thrust::raw_pointer_cast(d_input_offsets.data()), thrust::raw_pointer_cast(d_input_runlengths.data()), input_offset.size(),
 				thrust::raw_pointer_cast(d_output_offset.data()), num_bits, max_num_sets_in_run, func);
 
@@ -408,7 +394,7 @@ int decode_using_gpu(const T * d_dictionary, int num_dictionary_values, T* d_out
 //    }
 //    std::cout<<"END"<<std::endl;
 
-    gpu_bit_packing_remainder(buffer, buffer_len, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
+    gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
     
     thrust::gather(thrust::device,
                 d_indices.begin(), d_indices.end(),
@@ -438,13 +424,14 @@ int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
                 int num_bits,
                 T* device_output, int batch_size) 
 {
-    thrust::device_vector<int> d_output_int(batch_size);
+
+	thrust::device_vector<int> d_output_int(batch_size);
+    thrust::device_vector<uint8_t> d_buffer(buffer_len);
+    thrust::copy(buffer, buffer + buffer_len, d_buffer.begin());
 
     if (input_offset.size() > 0){
 
     	unpack_functor func(num_bits);
-    	thrust::device_vector<uint8_t> d_buffer(buffer_len);
-    	thrust::copy(buffer, buffer + buffer_len, d_buffer.begin());
     	thrust::device_vector<int> d_input_offsets(input_offset);
     	thrust::device_vector<int> d_input_runlengths(input_runlengths);
     	thrust::device_vector<int> d_output_offset(output_offset);
@@ -471,13 +458,13 @@ int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
     	//    std::cout<<"input_offset.size(): "<<input_offset.size()<<std::endl;
 
 
-    	decode_bitpacking<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_output_int.data()),
+    	decode_bitpacking_32sets<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_output_int.data()),
     			thrust::raw_pointer_cast(d_input_offsets.data()), thrust::raw_pointer_cast(d_input_runlengths.data()), input_offset.size(),
 				thrust::raw_pointer_cast(d_output_offset.data()), num_bits, max_num_sets_in_run, func);
 
     }
 
-    gpu_bit_packing_remainder(buffer, buffer_len, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_output_int, num_bits);
+    gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_output_int, num_bits);
 
     thrust::transform(thrust::device, d_output_int.begin(), d_output_int.end(), device_output, copy_functor<T>());
     return batch_size;

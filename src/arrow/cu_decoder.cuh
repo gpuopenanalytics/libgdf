@@ -86,7 +86,7 @@ namespace internal {
 
     template<typename Func>
     __global__
-    void decode_bitpacking(uint8_t *buffer, int *output, int *input_offsets, int *input_run_lengths, int num_sets,
+    void decode_bitpacking_32sets(uint8_t *buffer, int *output, int *input_offsets, int *input_run_lengths, int num_sets,
     		int * output_offsets, short bit_width, int max_num_sets_in_run, Func unpack_func)
     {
 
@@ -121,7 +121,6 @@ namespace internal {
     		}
     	}
     }
-
 
 }
 } // namespace arrow
