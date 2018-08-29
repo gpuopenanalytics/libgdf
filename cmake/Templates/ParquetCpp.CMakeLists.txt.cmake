@@ -21,7 +21,7 @@ project(parquetcpp-download NONE)
 
 include(ExternalProject)
 
-set(PARQUET_VERSION apache-parquet-cpp-1.3.1)
+set(PARQUET_VERSION apache-parquet-cpp-1.4.0)
 
 if (NOT $ENV{PARQUET_VERSION} STREQUAL "")
     set(PARQUET_VERSION $ENV{PARQUET_VETSION})
@@ -38,7 +38,7 @@ ExternalProject_Add(parquetcpp
         -DPARQUET_BUILD_SHARED=OFF
         -DPARQUET_BUILD_TESTS=OFF
     GIT_REPOSITORY https://github.com/apache/parquet-cpp.git
-    GIT_TAG apache-parquet-cpp-1.3.1
+    GIT_TAG apache-parquet-cpp-1.4.0
     INSTALL_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/parquetcpp-install"
     SOURCE_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/thirdparty/parquetcpp-src"
 )

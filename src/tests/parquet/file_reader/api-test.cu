@@ -23,7 +23,7 @@
 #include <boost/filesystem.hpp>
 
 #include <parquet/column_writer.h>
-#include <parquet/file/writer.h>
+#include <parquet/file_writer.h>
 #include <parquet/properties.h>
 #include <parquet/schema.h>
 #include <parquet/types.h>

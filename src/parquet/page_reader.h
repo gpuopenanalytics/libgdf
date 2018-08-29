@@ -31,6 +31,8 @@ public:
 
     std::shared_ptr<::parquet::Page> NextPage() final;
 
+    void set_max_page_header_size(std::uint32_t size) override;
+
 private:
     static const std::uint32_t kDefaultMaxPageHeaderSize = 16 * 1024 * 1024;
     static const std::uint32_t kDefaultPageHeaderSize    = 16 * 1024;

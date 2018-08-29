@@ -23,7 +23,7 @@
 #include <boost/filesystem.hpp>
 
 #include <parquet/column_writer.h>
-#include <parquet/file/writer.h>
+#include <parquet/file_writer.h>
 #include <parquet/properties.h>
 #include <parquet/schema.h>
 #include <parquet/types.h>
@@ -206,7 +206,7 @@ protected:
 
 TEST_F(ParquetReaderAPITest, ReadAll) {
     gdf_error error_code = gdf::parquet::read_parquet(
-      filename.c_str(), nullptr, nullptr, &columns, &columns_length);
+      filename.c_str(), nullptr, &columns, &columns_length);
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
@@ -225,7 +225,7 @@ TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
       "double_field", "int64_field", nullptr};
 
     gdf_error error_code = gdf::parquet::read_parquet(
-      filename.c_str(), nullptr, column_names, &columns, &columns_length);
+      filename.c_str(), column_names, &columns, &columns_length);
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 

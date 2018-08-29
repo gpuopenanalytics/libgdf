@@ -19,7 +19,7 @@
 #include <arrow/util/logging.h>
 
 #include <parquet/column_reader.h>
-#include <parquet/file/metadata.h>
+#include <parquet/metadata.h>
 
 #include <thrust/device_ptr.h>
 

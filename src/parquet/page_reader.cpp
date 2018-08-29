@@ -30,13 +30,13 @@ inline void
 DeserializeThriftMsg(const std::uint8_t *buf,
                      std::uint32_t *     len,
                      T *                 deserialized_msg) {
-    boost::shared_ptr<apache::thrift::transport::TMemoryBuffer> tmem_transport(
+    std::shared_ptr<apache::thrift::transport::TMemoryBuffer> tmem_transport(
       new apache::thrift::transport::TMemoryBuffer(
         const_cast<std::uint8_t *>(buf), *len));
     apache::thrift::protocol::TCompactProtocolFactoryT<
       apache::thrift::transport::TMemoryBuffer>
-                                                           tproto_factory;
-    boost::shared_ptr<apache::thrift::protocol::TProtocol> tproto =
+                                                         tproto_factory;
+    std::shared_ptr<apache::thrift::protocol::TProtocol> tproto =
       tproto_factory.getProtocol(tmem_transport);
 
     try {
@@ -189,6 +189,11 @@ PageReader::NextPage() {
         }
     }
     return std::shared_ptr<::parquet::Page>(nullptr);
+}
+
+void
+PageReader::set_max_page_header_size(std::uint32_t size) {
+    max_page_header_size_ = size;
 }
 
 }  // namespace internal
