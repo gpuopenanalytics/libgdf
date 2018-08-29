@@ -42,10 +42,7 @@ typedef enum {
     GDF_JOIN_TOO_MANY_COLUMNS,
     GDF_GROUPBY_TOO_MANY_COLUMNS,
     GDF_UNSUPPORTED_METHOD,
-<<<<<<< HEAD
     GDF_INVALID_AGGREGATOR,
-=======
->>>>>>> ed7eb8d8203a334a7e3fc2a5af299cca1f54146c
     GDF_C_ERROR,
 } gdf_error;
 
@@ -73,7 +70,6 @@ typedef struct gdf_column_{
     gdf_dtype dtype;
     gdf_size_type null_count;
     gdf_dtype_extra_info dtype_info;
-    gdf_size_type 	null_count;			// host-side:	number of null records
     char *			col_name;			// host-side:	null terminated string
 } gdf_column;
 
