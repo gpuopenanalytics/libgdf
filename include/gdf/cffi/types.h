@@ -42,7 +42,10 @@ typedef enum {
     GDF_JOIN_TOO_MANY_COLUMNS,
     GDF_GROUPBY_TOO_MANY_COLUMNS,
     GDF_UNSUPPORTED_METHOD,
+<<<<<<< HEAD
     GDF_INVALID_AGGREGATOR,
+=======
+>>>>>>> ed7eb8d8203a334a7e3fc2a5af299cca1f54146c
     GDF_C_ERROR,
 } gdf_error;
 

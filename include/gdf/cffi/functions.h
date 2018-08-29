@@ -565,6 +565,7 @@ gdf_error gdf_group_by_count(int ncols,                    // # columns
                              gdf_column* out_col_agg,      //aggregation result
                              gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
 
+<<<<<<< HEAD
 gdf_error gdf_quantile_exact(	gdf_column*         col_in,       //input column;
                                 gdf_quantile_method prec,         //precision: type of quantile method calculation
                                 double              q,            //requested quantile in [0,1]
@@ -577,6 +578,8 @@ gdf_error gdf_quantile_aprrox(	gdf_column*  col_in,       //input column;
                                 double       q,            //requested quantile in [0,1]
                                 void*        t_erased_res, //type-erased result of same type as column;
                                 gdf_context* ctxt);        //context info
+=======
+>>>>>>> ed7eb8d8203a334a7e3fc2a5af299cca1f54146c
 /**  IO
  *
  *
