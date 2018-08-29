@@ -17,6 +17,11 @@ typedef enum {
     N_GDF_TYPES, /* additional types should go BEFORE N_GDF_TYPES */
 } gdf_dtype;
 
+
+/*
+ * GDF error enum type.
+ * Any changes here should be reflected in `gdf_error_get_name` as well.
+ */
 typedef enum {
     GDF_SUCCESS=0,
     GDF_CUDA_ERROR,
@@ -29,8 +34,10 @@ typedef enum {
     GDF_INVALID_API_CALL,
     GDF_JOIN_DTYPE_MISMATCH,
     GDF_JOIN_TOO_MANY_COLUMNS,
+    GDF_GROUPBY_TOO_MANY_COLUMNS,
     GDF_UNSUPPORTED_METHOD,
     GDF_IO_ERROR,
+    GDF_INVALID_AGGREGATOR,
 } gdf_error;
 
 typedef enum {
@@ -66,6 +73,15 @@ typedef enum {
 } gdf_method;
 
 typedef enum {
+  GDF_QUANT_LINEAR =0,
+  GDF_QUANT_LOWER,
+  GDF_QUANT_HIGHER,
+  GDF_QUANT_MIDPOINT,
+  GDF_QUANT_NEAREST,
+  N_GDF_QUANT_METHODS,
+} gdf_quantile_method;
+
+typedef enum {
   GDF_SUM = 0,
   GDF_MIN,
   GDF_MAX,
@@ -80,6 +96,8 @@ typedef struct gdf_context_{
   int flag_sorted;        /* 0 = No, 1 = yes */
   gdf_method flag_method; /* what method is used */
   int flag_distinct;      /* for COUNT: DISTINCT = 1, else = 0 */
+  int flag_sort_result;   /* When method is GDF_HASH, 0 = result is not sorted, 1 = result is sorted */
+  int flag_sort_inplace;  /* 0 = No sort in place allowed, 1 = else */
 } gdf_context;
 
 struct _OpaqueIpcParser;
