@@ -21,6 +21,8 @@
 function(configure_test TEST_NAME Tests_SRCS)
     message(STATUS "${TEST_NAME} will link against: gdf arrow")
 
+    link_directories(${CUDA_LIBRARY_DIR})
+
     cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
 
     target_link_libraries(${TEST_NAME} gmock_main gmock GTest::GTest gdf arrow cuda nvrtc)

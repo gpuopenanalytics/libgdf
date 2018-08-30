@@ -1,22 +1,16 @@
-# cmake -DCMAKE_BUILD_TYPE=Release -DBINARY_OPERATION_VERSION:STRING=V1 ../../code/libgdf
 
-if (NOT DEFINED BINARY_OPERATION_VERSION)
-    list(APPEND gdfs_source_files "")
-    return()
-endif()
-
+option(BINARY_OPERATION_VERSION "Select binary operation version" "V2")
 
 if (${BINARY_OPERATION_VERSION} STREQUAL "V1")
-    message("BINARY_OPERATION_VERSION: V1 Selected")
+    message("-- Binary Operation Version: V1")
     list(APPEND gdfs_source_files
          "${CMAKE_CURRENT_LIST_DIR}/common/types.cpp"
          "${CMAKE_CURRENT_LIST_DIR}/common/mediator.cu"
     )
 endif()
 
-
 if (${BINARY_OPERATION_VERSION} STREQUAL "V2")
-    message("BINARY_OPERATION_VERSION: V2 Selected")
+    message("-- Binary Operation Version: V2 - NVRTC")
     list(APPEND gdfs_source_files
          "${CMAKE_CURRENT_LIST_DIR}/binary2/binary.cpp"
          "${CMAKE_CURRENT_LIST_DIR}/binary2/kernel_gdf_data.cpp"

@@ -31,6 +31,7 @@ set(CMAKE_CXX_STANDARD 11)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Configuration/")
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
 
 
@@ -55,6 +56,9 @@ if(CUDA_FOUND)
 
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11;--expt-extended-lambda)
     message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+
+    include(ConfigCuda RESULT_VARIABLE result)
+    message("-- ConfigCuda: " ${result})
 else()
     message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()

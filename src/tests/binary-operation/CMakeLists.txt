@@ -8,6 +8,10 @@ set(GDF_SOURCE_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/integration/binary-operation-test.cpp")
 
 
+## Add link directory
+link_directories(${CUDA_LIBRARY_DIR})
+
+
 ## Add test
 add_executable(${GDF_TEST_NAME} ${GDF_SOURCE_FILES})
 add_test(NAME ${GDF_TEST_NAME} COMMAND ${GDF_TEST_NAME})
