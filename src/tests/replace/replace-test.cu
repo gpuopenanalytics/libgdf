@@ -61,7 +61,35 @@ MakeGdfColumn(thrust::device_vector<T> &device_vector) {
 }
 
 template <class T>
-class ReplaceTest : public testing::Test {};
+class ReplaceTest : public testing::Test {
+protected:
+    thrust::device_ptr<T>
+    test(const std::initializer_list<T> &data_list,
+         const std::initializer_list<T> &to_replace_list,
+         const std::initializer_list<T> &values_list) {
+        device_data     = MakeDeviceVector<T>(data_list);
+        to_replace_data = MakeDeviceVector<T>(to_replace_list);
+        values_data     = MakeDeviceVector<T>(values_list);
+
+        column     = MakeGdfColumn(device_data);
+        to_replace = MakeGdfColumn(to_replace_data);
+        values     = MakeGdfColumn(values_data);
+
+        const gdf_error status = gdf_replace(&column, &to_replace, &values);
+
+        EXPECT_EQ(GDF_SUCCESS, status);
+
+        return thrust::device_ptr<T>(static_cast<T *>(column.data));
+    }
+
+    thrust::device_vector<T> device_data;
+    thrust::device_vector<T> to_replace_data;
+    thrust::device_vector<T> values_data;
+
+    gdf_column column;
+    gdf_column to_replace;
+    gdf_column values;
+};
 
 using Types = testing::
   Types<std::int8_t, std::int16_t, std::int32_t, std::int64_t, float, double>;
@@ -69,24 +97,9 @@ using Types = testing::
 TYPED_TEST_CASE(ReplaceTest, Types);
 
 TYPED_TEST(ReplaceTest, ReplaceEvenPosition) {
-    thrust::device_vector<TypeParam> device_data =
-      MakeDeviceVector<TypeParam>({1, 2, 3, 4, 5, 6, 7, 8});
-    gdf_column column = MakeGdfColumn(device_data);
+    thrust::device_ptr<TypeParam> results =
+      this->test({1, 2, 3, 4, 5, 6, 7, 8}, {2, 4, 6, 8}, {0, 2, 4, 6});
 
-    thrust::device_vector<TypeParam> to_replace_data =
-      MakeDeviceVector<TypeParam>({2, 4, 6, 8});
-    thrust::device_vector<TypeParam> values_data =
-      MakeDeviceVector<TypeParam>({0, 2, 4, 6});
-
-    gdf_column to_replace = MakeGdfColumn(to_replace_data);
-    gdf_column values     = MakeGdfColumn(values_data);
-
-    const gdf_error status = gdf_replace(&column, &to_replace, &values);
-
-    EXPECT_EQ(GDF_SUCCESS, status);
-
-    thrust::device_ptr<TypeParam> results(
-      static_cast<TypeParam *>(column.data));
     EXPECT_EQ(0, results[1]);
     EXPECT_EQ(2, results[3]);
     EXPECT_EQ(4, results[5]);
@@ -94,24 +107,9 @@ TYPED_TEST(ReplaceTest, ReplaceEvenPosition) {
 }
 
 TYPED_TEST(ReplaceTest, Unordered) {
-    thrust::device_vector<TypeParam> device_data =
-      MakeDeviceVector<TypeParam>({7, 5, 6, 3, 1, 2, 8, 4});
-    gdf_column column = MakeGdfColumn(device_data);
+    thrust::device_ptr<TypeParam> results =
+      this->test({7, 5, 6, 3, 1, 2, 8, 4}, {2, 4, 6, 8}, {0, 2, 4, 6});
 
-    thrust::device_vector<TypeParam> to_replace_data =
-      MakeDeviceVector<TypeParam>({2, 4, 6, 8});
-    thrust::device_vector<TypeParam> values_data =
-      MakeDeviceVector<TypeParam>({0, 2, 4, 6});
-
-    gdf_column to_replace = MakeGdfColumn(to_replace_data);
-    gdf_column values     = MakeGdfColumn(values_data);
-
-    const gdf_error status = gdf_replace(&column, &to_replace, &values);
-
-    EXPECT_EQ(GDF_SUCCESS, status);
-
-    thrust::device_ptr<TypeParam> results(
-      static_cast<TypeParam *>(column.data));
     EXPECT_EQ(4, results[2]);
     EXPECT_EQ(0, results[5]);
     EXPECT_EQ(6, results[6]);
