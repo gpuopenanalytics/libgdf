@@ -331,7 +331,8 @@ struct JoinTest : public testing::Test
   {
     const int num_columns = std::tuple_size<multi_column_t>::value;
 
-    gdf_join_result_type * gdf_join_result;
+    gdf_column left_result;
+    gdf_column right_result;
 
     gdf_error result_error{GDF_SUCCESS};
 
@@ -346,7 +347,7 @@ struct JoinTest : public testing::Test
             result_error = gdf_left_join(num_columns,
                                          left_gdf_columns,
                                          right_gdf_columns,
-                                         &gdf_join_result,
+                                         &left_result, &right_result,
                                          &ctxt);
             break;
           }
@@ -355,7 +356,7 @@ struct JoinTest : public testing::Test
             result_error = gdf_inner_join(num_columns,
                                          left_gdf_columns,
                                          right_gdf_columns,
-                                         &gdf_join_result,
+                                         &left_result, &right_result,
                                          &ctxt);
             break;
           }
@@ -363,7 +364,7 @@ struct JoinTest : public testing::Test
           {
             result_error = gdf_outer_join_generic(gdf_raw_left_columns[0],
                                                   gdf_raw_right_columns[0],
-                                                  &gdf_join_result);
+                                                  &left_result, &right_result);
             break;
           }
         default:
@@ -384,7 +385,7 @@ struct JoinTest : public testing::Test
             result_error = gdf_left_join(num_columns,
                                          left_gdf_columns,
                                          right_gdf_columns,
-                                         &gdf_join_result,
+                                         &left_result, &right_result,
                                          &ctxt);
             break;
           }
@@ -393,7 +394,7 @@ struct JoinTest : public testing::Test
             result_error =  gdf_inner_join(num_columns,
                                            left_gdf_columns,
                                            right_gdf_columns,
-                                           &gdf_join_result,
+                                           &left_result, &right_result,
                                            &ctxt);
             //std::cout << "Multi column *inner* joins not supported yet\n";
             //EXPECT_TRUE(false);
@@ -406,22 +407,27 @@ struct JoinTest : public testing::Test
     }
     EXPECT_EQ(GDF_SUCCESS, result_error) << "The gdf join function did not complete successfully";
 
+    EXPECT_EQ(left_result.size, right_result.size) << "Join output size mismatch";
     // The output is an array of size `n` where the first n/2 elements are the
     // left_indices and the last n/2 elements are the right indices
-    size_t output_size = gdf_join_result_size(gdf_join_result);
-    size_t total_pairs = output_size/2;
+    size_t total_pairs = left_result.size;
+    size_t output_size = total_pairs*2;
 
-    int * join_output = static_cast<int*>(gdf_join_result_data(gdf_join_result));
+    int * l_join_output = static_cast<int*>(left_result.data);
+    int * r_join_output = static_cast<int*>(right_result.data);
 
     // Host vector to hold gdf join output
     std::vector<int> host_result(output_size);
 
     // Copy result of gdf join to the host
-    cudaMemcpy(host_result.data(), join_output, output_size * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(host_result.data(),
+            l_join_output, total_pairs * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(host_result.data() + total_pairs,
+            r_join_output, total_pairs * sizeof(int), cudaMemcpyDeviceToHost);
 
     // Free the original join result
-    gdf_join_result_free(gdf_join_result);
-    join_output = nullptr;
+    gdf_column_free(&left_result);
+    gdf_column_free(&right_result);
 
     // Host vector of result_type pairs to hold final result for comparison to reference solution
     std::vector<result_type> host_pair_result(total_pairs);
@@ -453,7 +459,10 @@ struct JoinTest : public testing::Test
 // tests .Here join_operation refers to the type of join eg. INNER,
 // LEFT, OUTER and join_method refers to the underlying join algorithm
 //that performs it eg. GDF_HASH or GDF_SORT.
-template<join_op join_operation, gdf_method join_method, typename tuple_of_vectors>
+template<join_op join_operation, 
+         gdf_method join_method, 
+         typename tuple_of_vectors,
+         bool keys_are_unique = false>
 struct TestParameters
 {
   // The method to use for the join
@@ -464,6 +473,8 @@ struct TestParameters
 
   // The tuple of vectors that determines the number and types of the columns to join
   using multi_column_t = tuple_of_vectors;
+
+  const static bool unique_keys{keys_are_unique};
 };
 
 const static gdf_method HASH = gdf_method::GDF_HASH;
@@ -534,17 +545,25 @@ typedef ::testing::Types<
                           TestParameters< join_op::INNER, HASH, VTuple<int32_t , uint32_t, float  > >,
                           TestParameters< join_op::INNER, HASH, VTuple<uint64_t, uint32_t, float  > >,
                           TestParameters< join_op::INNER, HASH, VTuple<float   , double  , float  > >,
-                          TestParameters< join_op::INNER, HASH, VTuple<double  , uint32_t, int64_t> >
-                          // Four column test will fail because gdf_join is limited to 3 columns
-                          //TestParameters< join_op::LEFT, HASH, VTuple<double, kint32_t, int64_t, int32_t> >
+                          TestParameters< join_op::INNER, HASH, VTuple<double  , uint32_t, int64_t> >,
+                          // Four column test for Left Joins
+                          TestParameters< join_op::LEFT, HASH, VTuple<double, int32_t, int64_t, int32_t> >,
+                          TestParameters< join_op::LEFT, HASH, VTuple<float, uint32_t, double, int32_t> >,
+                          // Four column test for Inner Joins
+                          TestParameters< join_op::INNER, HASH, VTuple<uint32_t, float, int64_t, int32_t> >,
+                          TestParameters< join_op::INNER, HASH, VTuple<double, float, int64_t, double> >,
+                          // Five column test for Left Joins
+                          TestParameters< join_op::LEFT, HASH, VTuple<double, int32_t, int64_t, int32_t, int32_t> >,
+                          // Five column test for Inner Joins
+                          TestParameters< join_op::INNER, HASH, VTuple<uint32_t, float, int64_t, int32_t, float> >
                           > Implementations;
 
 TYPED_TEST_CASE(JoinTest, Implementations);
 
 TYPED_TEST(JoinTest, ExampleTest)
 {
-  this->create_input(10000, 100,
-                     10000, 100);
+  this->create_input(10, 2,
+                     10, 2);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
 
@@ -560,8 +579,8 @@ TYPED_TEST(JoinTest, ExampleTest)
 
 TYPED_TEST(JoinTest, EqualValues)
 {
-  this->create_input(1000,1,
-                     1000,1);
+  this->create_input(100,1,
+                     100,1);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
 
@@ -577,8 +596,8 @@ TYPED_TEST(JoinTest, EqualValues)
 
 TYPED_TEST(JoinTest, MaxRandomValues)
 {
-  this->create_input(1000,RAND_MAX,
-                     1000,RAND_MAX);
+  this->create_input(10000,RAND_MAX,
+                     10000,RAND_MAX);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
 
@@ -594,8 +613,8 @@ TYPED_TEST(JoinTest, MaxRandomValues)
 
 TYPED_TEST(JoinTest, LeftColumnsBigger)
 {
-  this->create_input(1000,100,
-                     10,100);
+  this->create_input(10000,100,
+                     100,100);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
 
@@ -611,8 +630,8 @@ TYPED_TEST(JoinTest, LeftColumnsBigger)
 
 TYPED_TEST(JoinTest, RightColumnsBigger)
 {
-  this->create_input(10,100,
-                     1000,100);
+  this->create_input(100,100,
+                     10000,100);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
 

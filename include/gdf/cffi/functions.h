@@ -9,6 +9,9 @@ gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid,
 
 gdf_error gdf_column_view_augmented(gdf_column *column, void *data, gdf_valid_type *valid,
                           gdf_size_type size, gdf_dtype dtype, gdf_size_type null_count);
+
+gdf_error gdf_column_free(gdf_column *column);
+
 /* context operations */
 
 gdf_error gdf_context_view(gdf_context *context, int flag_sorted, gdf_method flag_method,
@@ -124,25 +127,27 @@ gives the number of int pairs in the output array.
 */
 
 gdf_error gdf_inner_join(int num_cols, gdf_column **leftcol, gdf_column **rightcol,
-                                 gdf_join_result_type **out_result, gdf_context *ctxt);
+                         gdf_column *left_result, gdf_column *right_result,
+                         gdf_context *join_context);
 
 gdf_error gdf_left_join(int num_cols, gdf_column **leftcol, gdf_column **rightcol,
-                                gdf_join_result_type **out_result, gdf_context *ctxt);
+                        gdf_column *left_result, gdf_column *right_result,
+                        gdf_context *join_context);
 
 gdf_error gdf_outer_join_i8(gdf_column *leftcol, gdf_column *rightcol,
-                             gdf_join_result_type **out_result);
+                            gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_i16(gdf_column *leftcol, gdf_column *rightcol,
-                             gdf_join_result_type **out_result);
+                            gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_i32(gdf_column *leftcol, gdf_column *rightcol,
-                             gdf_join_result_type **out_result);
+                            gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_i64(gdf_column *leftcol, gdf_column *rightcol,
-                             gdf_join_result_type **out_result);
+                            gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_f32(gdf_column *leftcol, gdf_column *rightcol,
-                             gdf_join_result_type **out_result);
+                            gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_f64(gdf_column *leftcol, gdf_column *rightcol,
-                             gdf_join_result_type **out_result);
+                            gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_generic(gdf_column *leftcol, gdf_column *rightcol,
-                                 gdf_join_result_type **out_result);
+                                 gdf_column *l_result, gdf_column *r_result);
 
 gdf_error gdf_join_result_free(gdf_join_result_type *result);
 void* gdf_join_result_data(gdf_join_result_type *result);
@@ -559,6 +564,19 @@ gdf_error gdf_group_by_count(int ncols,                    // # columns
                                                          //(multi-gather based on indices, which are needed anyway)
                              gdf_column* out_col_agg,      //aggregation result
                              gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+
+gdf_error gdf_quantile_exact(	gdf_column*         col_in,       //input column;
+                                gdf_quantile_method prec,         //precision: type of quantile method calculation
+                                double              q,            //requested quantile in [0,1]
+                                void*               t_erased_res, //result; for <exact> should probably be double*; it's void* because
+                                                                  //(1) for uniformity of interface with <approx>;
+                                                                  //(2) for possible types bigger than double, in the future;
+                                gdf_context*        ctxt);        //context info
+
+gdf_error gdf_quantile_aprrox(	gdf_column*  col_in,       //input column;
+                                double       q,            //requested quantile in [0,1]
+                                void*        t_erased_res, //type-erased result of same type as column;
+                                gdf_context* ctxt);        //context info
 
 /* replace */
 
