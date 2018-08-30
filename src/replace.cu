@@ -47,15 +47,31 @@ DTYPE_FACTORY(TIMESTAMP, std::int64_t);
 #undef DTYPE_FACTORY
 
 template <class T>
+class ReplaceFunctor {
+public:
+    ReplaceFunctor(T *const data, const std::ptrdiff_t data_ptrdiff)
+      : data_begin(data), data_end(data_begin + data_ptrdiff) {}
+
+    void __device__
+    operator()(thrust::tuple<const T, const T> tuple) {
+        const T from = thrust::get<0>(tuple);
+        const T to   = thrust::get<1>(tuple);
+
+        thrust::replace(thrust::device, data_begin, data_end, from, to);
+    }
+
+private:
+    const thrust::device_ptr<T> data_begin;
+    const thrust::device_ptr<T> data_end;
+};
+
+template <class T>
 static inline void
 Replace(T *const             data,
         const std::ptrdiff_t data_ptrdiff,
         const T *const       to_replace,
         const T *const       values,
         const std::ptrdiff_t replacement_ptrdiff) {
-    const thrust::device_ptr<T> data_begin(data);
-    const thrust::device_ptr<T> data_end = data_begin + data_ptrdiff;
-
     const thrust::device_ptr<const T> from_begin(to_replace);
     const thrust::device_ptr<const T> from_end =
       from_begin + replacement_ptrdiff;
@@ -67,12 +83,7 @@ Replace(T *const             data,
       thrust::device,
       thrust::make_zip_iterator(thrust::make_tuple(from_begin, to_begin)),
       thrust::make_zip_iterator(thrust::make_tuple(from_end, to_end)),
-      [=] __device__(thrust::tuple<const T, const T> tuple) {
-          const T from = thrust::get<0>(tuple);
-          const T to   = thrust::get<1>(tuple);
-
-          thrust::replace(thrust::device, data_begin, data_end, from, to);
-      });
+      ReplaceFunctor<T>(data, data_ptrdiff));
 }
 
 static inline bool
