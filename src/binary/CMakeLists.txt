@@ -1,5 +1,5 @@
 
-option(BINARY_OPERATION_VERSION "Select binary operation version" "V2")
+set(BINARY_OPERATION_VERSION "V2" CACHE STRING "Select binary operation version")
 
 if (${BINARY_OPERATION_VERSION} STREQUAL "V1")
     message("-- Binary Operation Version: V1")
