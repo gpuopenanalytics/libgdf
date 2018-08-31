@@ -18,7 +18,7 @@
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
 set(PARQUET_FILE_PATH
-    ${CMAKE_SOURCE_DIR}/src/tests/parquet/benchmark/reader-test.parquet)
+    ${CMAKE_SOURCE_DIR}/src/tests/parquet/benchmark/huge_dataset.parquet)
 
 GDF_ADD_PARQUET_BENCHMARK(parquet-benchmark parquet-benchmark.cu
                           ../../helper/utils.cuh 
