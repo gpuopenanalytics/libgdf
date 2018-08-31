@@ -94,6 +94,47 @@ _DTypeFrom(const ::parquet::ColumnDescriptor *const column_descriptor) {
 }
 
 static inline gdf_error
+_ReadColumn(const std::shared_ptr<GdfRowGroupReader> &row_group_reader,
+            const std::vector<std::size_t> &          column_indices,
+            std::size_t                               offsets[],
+            gdf_column *const                         gdf_columns) {
+    for (std::size_t column_reader_index = 0;
+         column_reader_index < column_indices.size();
+         column_reader_index++) {
+        const gdf_column &_gdf_column = gdf_columns[column_reader_index];
+        const std::shared_ptr<::parquet::ColumnReader> column_reader =
+          row_group_reader->Column(
+            static_cast<int>(column_indices[column_reader_index]));
+
+        switch (column_reader->type()) {
+#define WHEN(TYPE)                                                            \
+    case ::parquet::Type::TYPE: {                                             \
+        std::shared_ptr<gdf::parquet::ColumnReader<                           \
+          ::parquet::DataType<::parquet::Type::TYPE>>>                        \
+          reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
+            ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader);      \
+        if (reader->HasNext()) {                                              \
+            offsets[column_reader_index] +=                                   \
+              reader->ToGdfColumn(_gdf_column, offsets[column_reader_index]); \
+        }                                                                     \
+    } break
+            WHEN(BOOLEAN);
+            WHEN(INT32);
+            WHEN(INT64);
+            WHEN(FLOAT);
+            WHEN(DOUBLE);
+        default:
+#ifdef GDF_DEBUG
+            std::cerr << "Column type error from file" << std::endl;
+#endif
+            return GDF_IO_ERROR;  //TODO: improve using exception handling
+#undef WHEN
+        }
+    }
+    return GDF_SUCCESS;
+}
+
+static inline gdf_error
 _ReadFile(const std::unique_ptr<FileReader> &file_reader,
           const std::vector<std::size_t> &   indices,
           gdf_column *const                  gdf_columns) {
@@ -112,39 +153,9 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
         const auto row_group_reader =
           file_reader->RowGroup(static_cast<int>(row_group_index));
 
-        for (std::size_t column_reader_index = 0;
-             column_reader_index < indices.size();
-             column_reader_index++) {
-            const gdf_column &_gdf_column = gdf_columns[column_reader_index];
-            const std::shared_ptr<::parquet::ColumnReader> column_reader =
-              row_group_reader->Column(
-                static_cast<int>(indices[column_reader_index]));
-
-            switch (column_reader->type()) {
-#define WHEN(TYPE)                                                            \
-    case ::parquet::Type::TYPE: {                                             \
-        std::shared_ptr<gdf::parquet::ColumnReader<                           \
-          ::parquet::DataType<::parquet::Type::TYPE>>>                        \
-          reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
-            ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader);      \
-        if (reader->HasNext()) {                                              \
-            offsets[column_reader_index] +=                                   \
-              reader->ToGdfColumn(_gdf_column, offsets[column_reader_index]); \
-        }                                                                     \
-    } break
-                WHEN(BOOLEAN);
-                WHEN(INT32);
-                WHEN(INT64);
-                WHEN(FLOAT);
-                WHEN(DOUBLE);
-            default:
-#ifdef GDF_DEBUG
-                std::cerr << "Column type error from file" << std::endl;
-#endif
-                return GDF_IO_ERROR;
-#undef WHEN
-            }
-        }
+        gdf_error status =
+          _ReadColumn(row_group_reader, indices, offsets, gdf_columns);
+        if (status != GDF_SUCCESS) { return status; }
     }
 
     return GDF_SUCCESS;
@@ -169,39 +180,9 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
         const auto row_group_reader =
           file_reader->RowGroup(static_cast<int>(row_group_index));
 
-        for (std::size_t column_reader_index = 0;
-             column_reader_index < column_indices.size();
-             column_reader_index++) {
-            const gdf_column &_gdf_column = gdf_columns[column_reader_index];
-            const std::shared_ptr<::parquet::ColumnReader> column_reader =
-              row_group_reader->Column(
-                static_cast<int>(column_indices[column_reader_index]));
-
-            switch (column_reader->type()) {
-#define WHEN(TYPE)                                                            \
-    case ::parquet::Type::TYPE: {                                             \
-        std::shared_ptr<gdf::parquet::ColumnReader<                           \
-          ::parquet::DataType<::parquet::Type::TYPE>>>                        \
-          reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
-            ::parquet::DataType<::parquet::Type::TYPE>>>(column_reader);      \
-        if (reader->HasNext()) {                                              \
-            offsets[column_reader_index] +=                                   \
-              reader->ToGdfColumn(_gdf_column, offsets[column_reader_index]); \
-        }                                                                     \
-    } break
-                WHEN(BOOLEAN);
-                WHEN(INT32);
-                WHEN(INT64);
-                WHEN(FLOAT);
-                WHEN(DOUBLE);
-            default:
-#ifdef GDF_DEBUG
-                std::cerr << "Column type error from file" << std::endl;
-#endif
-                return GDF_IO_ERROR;
-#undef WHEN
-            }
-        }
+        gdf_error status =
+          _ReadColumn(row_group_reader, column_indices, offsets, gdf_columns);
+        if (status != GDF_SUCCESS) { return status; }
     }
 
     return GDF_SUCCESS;
