@@ -1,5 +1,5 @@
 ## Test name
-set(GDF_TEST_NAME BinaryOperations)
+set(GDF_TEST_NAME BinaryOperationsTest)
 
 
 ## Set sources
@@ -10,6 +10,7 @@ set(GDF_SOURCE_FILES
 
 ## Add link directory
 link_directories(${CUDA_LIBRARY_DIR})
+link_directories(${CUDA_LIBRARY_STUBS_DIR})
 
 
 ## Add test
@@ -32,5 +33,5 @@ target_include_directories(${GDF_TEST_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/includ
 ## Link libraries
 target_link_libraries(${GDF_TEST_NAME} ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(${GDF_TEST_NAME} gdf)
-target_link_libraries(${GDF_TEST_NAME} cuda)
-target_link_libraries(${GDF_TEST_NAME} nvrtc)
+target_link_libraries(${GDF_TEST_NAME} ${CUDA_CUDA_LIB})
+target_link_libraries(${GDF_TEST_NAME} ${CUDA_NVRTC_LIB})

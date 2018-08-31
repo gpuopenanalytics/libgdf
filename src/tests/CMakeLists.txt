@@ -22,6 +22,7 @@ function(configure_test TEST_NAME Tests_SRCS)
     message(STATUS "${TEST_NAME} will link against: gdf arrow")
 
     link_directories(${CUDA_LIBRARY_DIR})
+    link_directories(${CUDA_LIBRARY_STUBS_DIR})
 
     cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
 
