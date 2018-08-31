@@ -38,45 +38,39 @@ protected:
     ParquetReaderAPITest()
       : filename(boost::filesystem::unique_path().native()) {}
 
-
-    std::int32_t genInt32(int i){
-
-    	if (i >= 100 && i < 150){
-    		return 10000;
-    	} else if (i >= 200 && i < 300){
-    		return 20000;
-    	} else if (i >= 310 && i < 350){
-    		return 30000;
-    	} else if (i >= 450 && i < 550){
-    		return 40000;
-    	} else if (i >= 800 && i < 950){
-    		return 50000;
-    	} else {
-    		return i * 100;
-    	}
+    std::int32_t
+    genInt32(int i) {
+        if (i >= 100 && i < 150) {
+            return 10000;
+        } else if (i >= 200 && i < 300) {
+            return 20000;
+        } else if (i >= 310 && i < 350) {
+            return 30000;
+        } else if (i >= 450 && i < 550) {
+            return 40000;
+        } else if (i >= 800 && i < 950) {
+            return 50000;
+        } else {
+            return i * 100;
+        }
     }
 
-
-    std::int64_t genInt64(int i){
-
-    	if (i >= 100 && i < 150){
-    		return 10000;
-    	} else if (i >= 200 && i < 300){
-    		return 20000;
-    	} else if (i >= 310 && i < 350){
-    		return 30000;
-    	} else if (i >= 450 && i < 550){
-    		return 40000;
-    	} else if (i >= 800 && i < 950){
-    		return 50000;
-    	} else {
-    		return i * 100000;
-    	}
+    std::int64_t
+    genInt64(int i) {
+        if (i >= 100 && i < 150) {
+            return 10000;
+        } else if (i >= 200 && i < 300) {
+            return 20000;
+        } else if (i >= 310 && i < 350) {
+            return 30000;
+        } else if (i >= 450 && i < 550) {
+            return 40000;
+        } else if (i >= 800 && i < 950) {
+            return 50000;
+        } else {
+            return i * 100000;
+        }
     }
-
-
-
-
 
     void
     SetUp() final {
@@ -114,15 +108,14 @@ protected:
                       1, &definition_level, &repetition_level, &bool_value);
                 }
 
-
                 ::parquet::Int32Writer *int32_writer =
-                		static_cast<::parquet::Int32Writer *>(
-                				row_group_writer->NextColumn());
+                  static_cast<::parquet::Int32Writer *>(
+                    row_group_writer->NextColumn());
                 for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                	std::int16_t definition_level = j % 2;
-                	std::int32_t int32_value      = genInt32(i * kRowsPerGroup + j);
-                	int32_writer->WriteBatch(
-                			1, &definition_level, &repetition_level, &int32_value);
+                    std::int16_t definition_level = j % 2;
+                    std::int32_t int32_value = genInt32(i * kRowsPerGroup + j);
+                    int32_writer->WriteBatch(
+                      1, &definition_level, &repetition_level, &int32_value);
                 }
 
                 ::parquet::Int64Writer *int64_writer =
@@ -130,7 +123,7 @@ protected:
                     row_group_writer->NextColumn());
                 for (std::size_t j = 0; j < kRowsPerGroup; j++) {
                     std::int16_t definition_level = j % 2;
-                    std::int64_t int64_value      = genInt64(i * kRowsPerGroup + j);
+                    std::int64_t int64_value = genInt64(i * kRowsPerGroup + j);
                     int64_writer->WriteBatch(
                       1, &definition_level, &repetition_level, &int64_value);
                 }
@@ -166,11 +159,11 @@ protected:
                 ::parquet::Repetition::OPTIONAL,
                 ::parquet::Type::BOOLEAN,
                 ::parquet::LogicalType::NONE),
-			  ::parquet::schema::PrimitiveNode::Make(
-				"int32_field",
-				::parquet::Repetition::OPTIONAL,
-				::parquet::Type::INT32,
-				::parquet::LogicalType::NONE),
+              ::parquet::schema::PrimitiveNode::Make(
+                "int32_field",
+                ::parquet::Repetition::OPTIONAL,
+                ::parquet::Type::INT32,
+                ::parquet::LogicalType::NONE),
               ::parquet::schema::PrimitiveNode::Make(
                 "int64_field",
                 ::parquet::Repetition::OPTIONAL,
@@ -219,21 +212,21 @@ protected:
     }
 
     void
-	checkInt32(/*const */ gdf_column &column) {
-    	gdf_column int32_column =
-    			convert_to_host_gdf_column<::parquet::Int32Type::c_type>(&column);
+    checkInt32(/*const */ gdf_column &column) {
+        gdf_column int32_column =
+          convert_to_host_gdf_column<::parquet::Int32Type::c_type>(&column);
 
-    	for (std::size_t i = 0; i < int32_column.size; i++) {
-    		if (i % 2) {
-    			std::int32_t expected = genInt32(i);
-    			std::int32_t value =
-    					static_cast<std::int32_t *>(int32_column.data)[i];
+        for (std::size_t i = 0; i < int32_column.size; i++) {
+            if (i % 2) {
+                std::int32_t expected = genInt32(i);
+                std::int32_t value =
+                  static_cast<std::int32_t *>(int32_column.data)[i];
 
-    			EXPECT_EQ(expected, value);
-    		}
-    	}
+                EXPECT_EQ(expected, value);
+            }
+        }
 
-    	checkNulls(int32_column);
+        checkNulls(int32_column);
     }
 
     void
@@ -311,7 +304,7 @@ TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
 
 TEST_F(ParquetReaderAPITest, ByIdsInOrder) {
     const std::vector<std::size_t> row_group_indices = {0, 1};
-    const std::vector<std::size_t> column_indices    = {0, 1, 2};
+    const std::vector<std::size_t> column_indices    = {0, 1, 2, 3};
 
     std::vector<gdf_column *> columns;
 
@@ -320,9 +313,10 @@ TEST_F(ParquetReaderAPITest, ByIdsInOrder) {
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
-    EXPECT_EQ(3, columns.size());
+    EXPECT_EQ(4, columns.size());
 
     checkBoolean(*columns[0]);
-    checkInt64(*columns[1]);
-    checkDouble(*columns[2]);
+    checkInt32(*columns[1]);
+    checkInt64(*columns[2]);
+    checkDouble(*columns[3]);
 }
