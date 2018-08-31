@@ -21,6 +21,8 @@
 
 #include <gdf/gdf.h>
 
+#include <stdlib.h>
+
 template <class U>
 struct TypeTraits {};
 
@@ -114,4 +116,61 @@ TYPED_TEST(ReplaceTest, Unordered) {
     EXPECT_EQ(0, results[5]);
     EXPECT_EQ(6, results[6]);
     EXPECT_EQ(2, results[7]);
+}
+
+
+
+
+TEST(LargeScaleReplaceTest, LargeScaleReplaceTest) {
+
+	{
+		const int DATA_SIZE = 1000000;
+		const int REPLACE_SIZE = 10000;
+
+		srand((unsigned)time(NULL));
+
+		std::vector<std::int32_t> column_data(DATA_SIZE);
+		for (int i = 0; i < DATA_SIZE; i++){
+			column_data[i] = rand() % (2*REPLACE_SIZE);
+		}
+
+		std::vector<std::int32_t> from(DATA_SIZE);
+		std::vector<std::int32_t> to(DATA_SIZE);
+		int count = 0;
+		for (int i = 0; i < 7; i++){
+			for (int j = 0; j < REPLACE_SIZE; j += 7){
+				from[i+j] = count;
+				count++;
+				to[i+j] = count;
+			}
+		}
+
+		thrust::device_vector<std::int32_t> device_data(column_data);
+		gdf_column data_gdf = MakeGdfColumn(device_data);
+		thrust::device_vector<std::int32_t> device_from(from);
+		gdf_column from_gdf = MakeGdfColumn(device_from);
+		thrust::device_vector<std::int32_t> device_to(to);
+		gdf_column to_gdf = MakeGdfColumn(device_to);
+
+		const gdf_error status = gdf_replace(&data_gdf, &from_gdf, &to_gdf);
+
+		EXPECT_EQ(GDF_SUCCESS, status);
+
+		std::vector<std::int32_t> replaced_data(DATA_SIZE);
+		thrust::copy(device_data.begin(), device_data.end(), replaced_data.begin());
+
+		count = 0;
+		for (int i = 0; i < DATA_SIZE; i++){
+			if (column_data[i] < REPLACE_SIZE){
+				EXPECT_EQ(column_data[i] + 1, replaced_data[i]);
+				if (column_data[i] + 1 != replaced_data[i]){
+					std::cout<<"failed at "<<i<<"  column_data[i]: "<<column_data[i]<<"  replaced_data[i]: "<<replaced_data[i]<<std::endl;
+							count++;
+					if (count > 20){
+						break;
+					}
+				}
+			}
+		}
+	}
 }
