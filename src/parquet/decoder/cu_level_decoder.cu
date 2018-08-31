@@ -53,7 +53,6 @@ int CUDALevelDecoder::SetData(::parquet::Encoding::type encoding,
     default:
         throw ::parquet::ParquetException("Unknown encoding type for levels.");
     }
-    return -1;
 }
 
 int CUDALevelDecoder::Decode(int batch_size, int16_t* d_levels)
@@ -66,25 +65,23 @@ int CUDALevelDecoder::Decode(int batch_size, int16_t* d_levels)
         // num_decoded = bit_packed_decoder_->GetBatch(bit_width_, d_levels, num_values);
         int literal_batch = num_values;
         int values_read = 0;
-        std::vector<uint16_t> isRleVector;
         std::vector<uint32_t> rleRuns;
         std::vector<uint64_t> rleValues;
         int numRle;
         int numBitpacked;
-        std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
-        std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
+        std::vector<int> unpack32InputOffsets, unpack32InputRunLengths, unpack32OutputOffsets;
         std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets;
 
         bit_packed_decoder_->SetGpuBatchMetadata(
-                1, d_levels, literal_batch, values_read, unpack32InputOffsets, bitpackset,
+                1, d_levels, literal_batch, values_read, unpack32InputOffsets, unpack32InputRunLengths,
                 unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                 remainderSetSize, remainderOutputOffsets);
 
         num_decoded = gdf::arrow::internal::unpack_using_gpu<int16_t> (
                 bit_packed_decoder_->get_buffer(), bit_packed_decoder_->get_buffer_len(),
                 unpack32InputOffsets,
-                bitpackset,
+				unpack32InputRunLengths,
                 unpack32OutputOffsets,
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets, bit_width_, d_levels, literal_batch);

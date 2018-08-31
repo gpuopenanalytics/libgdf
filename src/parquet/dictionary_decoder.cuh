@@ -72,6 +72,7 @@ public:
                  std::int64_t        valid_bits_offset) override {
         int decoded_values =
           idx_decoder_.GetBatchWithDictSpaced( thrust::raw_pointer_cast(dictionary_.data()),
+        		  	  	  	  	  	  	  	  num_dictionary_values_,
                                               buffer,
                                               num_values,
                                               null_count,

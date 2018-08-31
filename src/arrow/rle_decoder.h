@@ -1,6 +1,7 @@
 /*
  * Copyright 2018 BlazingDB, Inc.
  *     Copyright 2018 Alexander Ocsa <alexander@blazingdb.com>
+ *     Copyright 2018 William Malpica <william@blazingdb.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +81,7 @@ namespace arrow {
 
             /// Like GetBatchWithDict but add spacing for null entries
             template <typename T>
-            int GetBatchWithDictSpaced(const T* dictionary, T* values, int batch_size,
+            int GetBatchWithDictSpaced(const T* dictionary, int num_dictionary_values, T* values, int batch_size,
                 int null_count, const uint8_t* valid_bits,
                 int64_t valid_bits_offset);
 
@@ -112,13 +113,12 @@ namespace arrow {
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
 
-            std::vector<uint16_t> isRleVector;
             std::vector<uint32_t> rleRuns;
             std::vector<uint64_t> rleValues;
             int numRle;
             int numBitpacked;
             std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
-            std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
+            std::vector<int> unpack32InputOffsets, unpack32InputRunLengths, unpack32OutputOffsets;
             std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                     remainderOutputOffsets;
 
@@ -127,7 +127,6 @@ namespace arrow {
                     int repeat_batch = std::min(batch_size - values_read, static_cast<int>(repeat_count_));
                     // std::fill(values + values_read, values + values_read + repeat_batch, static_cast<T>(current_value_));
                     rleRuns.push_back(repeat_batch);
-                    isRleVector.push_back(1);
                     rleValues.push_back(current_value_);
 
                     repeat_count_ -= repeat_batch;
@@ -135,11 +134,10 @@ namespace arrow {
                 } else if (literal_count_ > 0) {
                     int literal_batch = std::min(batch_size - values_read, static_cast<int>(literal_count_));
                     rleRuns.push_back(literal_batch);
-                    isRleVector.push_back(0);
                     rleValues.push_back(0);
 
                     bit_reader_.SetGpuBatchMetadata(
-                        bit_width_, values + values_read, literal_batch, values_read, unpack32InputOffsets, bitpackset,
+                        bit_width_, values + values_read, literal_batch, values_read, unpack32InputOffsets, unpack32InputRunLengths,
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                         remainderSetSize, remainderOutputOffsets);
 
@@ -156,7 +154,7 @@ namespace arrow {
                     this->bit_reader_.get_buffer(), this->bit_reader_.get_buffer_len(),
                     rleRuns, rleValues, 
                     unpack32InputOffsets,
-                    bitpackset,
+					unpack32InputRunLengths,
                     unpack32OutputOffsets,
                     remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                     remainderOutputOffsets, bit_width_, values, batch_size);
@@ -171,13 +169,11 @@ namespace arrow {
             DCHECK_GE(bit_width_, 0);
             int values_read = 0;
 
-            std::vector<uint16_t> isRleVector;
             std::vector<uint32_t> rleRuns;
             std::vector<uint64_t> rleValues;
             int numRle;
             int numBitpacked;
-            std::vector< std::pair<uint32_t, uint32_t> > bitpackset;
-            std::vector<int> unpack32InputOffsets, unpack32OutputOffsets;
+            std::vector<int> unpack32InputOffsets, unpack32InputRunLengths, unpack32OutputOffsets;
             std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets;
 
@@ -185,7 +181,6 @@ namespace arrow {
                 if (repeat_count_ > 0) {
                     int repeat_batch = std::min(batch_size - values_read, static_cast<int>(repeat_count_));
                     rleRuns.push_back(repeat_batch);
-                    isRleVector.push_back(1);
                     rleValues.push_back(current_value_);
                     numRle++;
 
@@ -202,11 +197,10 @@ namespace arrow {
                     int indices[buffer_size];
                     literal_batch = std::min(literal_batch, buffer_size);
                     rleRuns.push_back(literal_batch);
-                    isRleVector.push_back(0);
                     rleValues.push_back(0);
                     numBitpacked++;
                     bit_reader_.SetGpuBatchMetadata(
-                        bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets, bitpackset,
+                        bit_width_, &indices[0], literal_batch, values_read, unpack32InputOffsets, unpack32InputRunLengths,
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                         remainderSetSize, remainderOutputOffsets);
                     literal_count_ -= literal_batch;
@@ -220,10 +214,10 @@ namespace arrow {
                 this->bit_reader_.get_buffer(), this->bit_reader_.get_buffer_len(),
                 rleRuns, rleValues, 
                 unpack32InputOffsets,
-                bitpackset,
+				unpack32InputRunLengths,
                 unpack32OutputOffsets,
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
-                remainderOutputOffsets, isRleVector, bit_width_, batch_size);
+                remainderOutputOffsets, bit_width_, batch_size);
             
             // copy values using gpu 
             // for (int i = 0; i < batch_size; ++i) {
@@ -233,83 +227,19 @@ namespace arrow {
         }
 
         template <typename T>
-        inline int RleDecoder::GetBatchWithDictSpaced(const T* dictionary, T* values,
+        inline int RleDecoder::GetBatchWithDictSpaced(const T* dictionary, int num_dictionary_values, T* values,
             int batch_size, int null_count,
             const uint8_t* valid_bits,
             int64_t valid_bits_offset)
         {
-            std::cout << "GetBatchWithDictSpaced not supported\n";
-            assert(false);
-
             DCHECK_GE(bit_width_, 0);
-            int values_read = 0;
-            int remaining_nulls = null_count;
 
-            ::arrow::internal::BitmapReader bit_reader(valid_bits, valid_bits_offset,
-                batch_size);
+            int values_read = GetBatchWithDict(dictionary, num_dictionary_values, values, batch_size);
 
-            while (values_read < batch_size) {
-                bool is_valid = bit_reader.IsSet();
-                bit_reader.Next();
-
-                if (is_valid) {
-                    if ((repeat_count_ == 0) && (literal_count_ == 0)) {
-                        if (!NextCounts<T>())
-                            return values_read;
-                    }
-                    if (repeat_count_ > 0) {
-                        T value = dictionary[current_value_];
-                        // The current index is already valid, we don't need to check that again
-                        int repeat_batch = 1;
-                        repeat_count_--;
-
-                        while (repeat_count_ > 0 && (values_read + repeat_batch) < batch_size) {
-                            if (bit_reader.IsSet()) {
-                                repeat_count_--;
-                            } else {
-                                remaining_nulls--;
-                            }
-                            repeat_batch++;
-
-                            bit_reader.Next();
-                        }
-                        std::fill(values + values_read, values + values_read + repeat_batch,
-                            value);
-                        values_read += repeat_batch;
-                    } else if (literal_count_ > 0) {
-                        int literal_batch = std::min(batch_size - values_read - remaining_nulls,
-                            static_cast<int>(literal_count_));
-
-                        // Decode the literals
-                        constexpr int kBufferSize = 1024;
-                        int indices[kBufferSize];
-                        literal_batch = std::min(literal_batch, kBufferSize);
-                        int actual_read = bit_reader_.GetBatch(bit_width_, &indices[0], literal_batch);
-                        DCHECK_EQ(actual_read, literal_batch);
-
-                        int skipped = 0;
-                        int literals_read = 1;
-                        values[values_read] = dictionary[indices[0]];
-
-                        // Read the first bitset to the end
-                        while (literals_read < literal_batch) {
-                            if (bit_reader.IsSet()) {
-                                values[values_read + literals_read + skipped] = dictionary[indices[literals_read]];
-                                literals_read++;
-                            } else {
-                                skipped++;
-                            }
-
-                            bit_reader.Next();
-                        }
-                        literal_count_ -= literal_batch;
-                        values_read += literal_batch + skipped;
-                        remaining_nulls -= skipped;
-                    }
-                } else {
-                    values_read++;
-                    remaining_nulls--;
-                }
+            thrust::device_vector<int> work_space_vector(batch_size);
+            int* work_space = thrust::raw_pointer_cast(work_space_vector.data());
+            if (null_count > 0){
+//            	gdf::arrow::internal::compact_to_sparse_for_nulls(values, valid_bits, batch_size, work_space);
             }
 
             return values_read;
