@@ -106,7 +106,7 @@ gdf_error
 gdf_replace(gdf_column *      column,
             const gdf_column *to_replace,
             const gdf_column *values) {
-    if (NotEqualReplacementSize(to_replace, values)) { return GDF_CUDA_ERROR; }
+    if (NotEqualReplacementSize(to_replace, values)) { return GDF_COLUMN_SIZE_MISMATCH; }
 
     if (NotSameDType(column, to_replace, values)) { return GDF_CUDA_ERROR; }
 
