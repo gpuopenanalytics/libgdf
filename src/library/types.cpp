@@ -1,7 +1,7 @@
 #include "library/types.h"
 
 namespace gdf {
-namespace test {
+namespace library {
 
     const char* getTypeName(gdf_dtype type) {
         switch (type) {
@@ -116,5 +116,5 @@ namespace test {
         return scalar->data.fp64;
     }
 
-}
-}
+}  // library
+}  // gdf

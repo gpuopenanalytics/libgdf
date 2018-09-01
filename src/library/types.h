@@ -1,10 +1,10 @@
-#ifndef GDF_TEST_LIBRARY_TYPES_H
-#define GDF_TEST_LIBRARY_TYPES_H
+#ifndef GDF_LIBRARY_TYPES_H
+#define GDF_LIBRARY_TYPES_H
 
 #include "gdf/gdf.h"
 
 namespace gdf {
-namespace test {
+namespace library {
 
     namespace helper {
         void setScalar(gdf_scalar& scalar, int8_t value);

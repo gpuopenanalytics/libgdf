@@ -1,8 +1,8 @@
-#ifndef GDF_TEST_LIBRARY_OPERATION_H
-#define GDF_TEST_LIBRARY_OPERATION_H
+#ifndef GDF_LIBRARY_OPERATION_H
+#define GDF_LIBRARY_OPERATION_H
 
 namespace gdf {
-namespace test {
+namespace library {
 namespace operation {
 
     template <typename TypeOut, typename TypeVax, typename TypeVay>
@@ -84,8 +84,9 @@ namespace operation {
             return (TypeOut)pow((double)vax, (double)vay);
         }
     };
-}
-}
-}
+
+}  // operation
+}  // library
+}  // gdf
 
 #endif

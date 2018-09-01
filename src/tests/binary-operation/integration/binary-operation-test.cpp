@@ -17,20 +17,20 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
     }
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
-    void assertVector(gdf::test::Vector<TypeOut>& out,
-                      gdf::test::Vector<TypeVax>& vax,
-                      gdf::test::Scalar<TypeVay>& vay,
+    void assertVector(gdf::library::Vector<TypeOut>& out,
+                      gdf::library::Vector<TypeVax>& vax,
+                      gdf::library::Scalar<TypeVay>& vay,
                       TypeOpe&& ope) {
         ASSERT_TRUE(out.dataSize() == vax.dataSize());
         for (int index = 0; index < out.dataSize(); ++index) {
-            ASSERT_TRUE(out.data(index) == (TypeOut)(ope(vax.data(index), gdf::test::getScalar(TypeVay{}, vay.scalar()))));
+            ASSERT_TRUE(out.data(index) == (TypeOut)(ope(vax.data(index), gdf::library::getScalar(TypeVay{}, vay.scalar()))));
         }
     }
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
-    void assertVector(gdf::test::Vector<TypeOut>& out,
-                      gdf::test::Vector<TypeVax>& vax,
-                      gdf::test::Vector<TypeVay>& vay,
+    void assertVector(gdf::library::Vector<TypeOut>& out,
+                      gdf::library::Vector<TypeVax>& vax,
+                      gdf::library::Vector<TypeVay>& vay,
                       TypeOpe&& ope) {
         ASSERT_TRUE(out.dataSize() == vax.dataSize());
         ASSERT_TRUE(out.dataSize() == vay.dataSize());
@@ -40,13 +40,13 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
     }
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeDef, typename TypeOpe>
-    void assertVector(gdf::test::Vector<TypeOut>& out,
-                      gdf::test::Vector<TypeVax>& vax,
-                      gdf::test::Scalar<TypeVay>& vay,
-                      gdf::test::Scalar<TypeDef>& def,
+    void assertVector(gdf::library::Vector<TypeOut>& out,
+                      gdf::library::Vector<TypeVax>& vax,
+                      gdf::library::Scalar<TypeVay>& vay,
+                      gdf::library::Scalar<TypeDef>& def,
                       TypeOpe&& ope) {
-        using ValidType = typename gdf::test::Vector<TypeOut>::ValidType;
-        int ValidSize = gdf::test::Vector<TypeOut>::ValidSize;
+        using ValidType = typename gdf::library::Vector<TypeOut>::ValidType;
+        int ValidSize = gdf::library::Vector<TypeOut>::ValidSize;
 
         ASSERT_TRUE(out.dataSize() == vax.dataSize());
         ASSERT_TRUE(out.validSize() == vax.validSize());
@@ -64,7 +64,7 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
             TypeVax vax_aux = vax.data(index);
             ValidType vax_val = vax.valid(k) & mask;
             if (vax_val == 0) {
-                vax_aux = (TypeVax) gdf::test::getScalar(TypeDef{}, def.scalar());
+                vax_aux = (TypeVax) gdf::library::getScalar(TypeDef{}, def.scalar());
             }
 
             ASSERT_TRUE((out.valid(k) & mask) == mask);
@@ -73,13 +73,13 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
     }
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeDef, typename TypeOpe>
-    void assertVector(gdf::test::Vector<TypeOut>& out,
-                      gdf::test::Vector<TypeVax>& vax,
-                      gdf::test::Vector<TypeVay>& vay,
-                      gdf::test::Scalar<TypeDef>& def,
+    void assertVector(gdf::library::Vector<TypeOut>& out,
+                      gdf::library::Vector<TypeVax>& vax,
+                      gdf::library::Vector<TypeVay>& vay,
+                      gdf::library::Scalar<TypeDef>& def,
                       TypeOpe&& ope) {
-        using ValidType = typename gdf::test::Vector<TypeOut>::ValidType;
-        int ValidSize = gdf::test::Vector<TypeOut>::ValidSize;
+        using ValidType = typename gdf::library::Vector<TypeOut>::ValidType;
+        int ValidSize = gdf::library::Vector<TypeOut>::ValidSize;
 
         ASSERT_TRUE(out.dataSize() == vax.dataSize());
         ASSERT_TRUE(out.dataSize() == vay.dataSize());
@@ -99,13 +99,13 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
             TypeVax vax_aux = vax.data(index);
             ValidType vax_val = vax.valid(k) & mask;
             if (vax_val == 0) {
-                vax_aux = (TypeVax) gdf::test::getScalar(TypeDef{}, def.scalar());
+                vax_aux = (TypeVax) gdf::library::getScalar(TypeDef{}, def.scalar());
             }
 
             TypeVay vay_aux = vay.data(index);
             ValidType vay_val = vay.valid(k) & mask;
             if (vay_val == 0) {
-                vay_aux = (TypeVay) gdf::test::getScalar(TypeDef{}, def.scalar());
+                vay_aux = (TypeVay) gdf::library::getScalar(TypeDef{}, def.scalar());
             }
 
             if ((vax_val | vay_val) == 0) {
@@ -120,14 +120,14 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
 
 
 TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_SI32_FP32_UI32) {
-    using SI32 = gdf::test::GdfEnumType<GDF_INT32>;
-    using FP32 = gdf::test::GdfEnumType<GDF_FLOAT32>;
-    using UI32 = gdf::test::GdfEnumType<GDF_UINT32>;
-    using ADD = gdf::test::operation::Add<SI32, FP32, UI32>;
+    using SI32 = gdf::library::GdfEnumType<GDF_INT32>;
+    using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
+    using UI32 = gdf::library::GdfEnumType<GDF_UINT32>;
+    using ADD = gdf::library::operation::Add<SI32, FP32, UI32>;
 
-    gdf::test::Vector<SI32> out;
-    gdf::test::Scalar<FP32> vax;
-    gdf::test::Vector<UI32> vay;
+    gdf::library::Vector<SI32> out;
+    gdf::library::Scalar<FP32> vax;
+    gdf::library::Vector<UI32> vay;
 
     vay.range(0, 32, 1);
     vax.set(100);
@@ -142,14 +142,14 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_SI32_FP32_UI32) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_SI08_UI16_SI16) {
-    using SI08 = gdf::test::GdfEnumType<GDF_INT8>;
-    using UI16 = gdf::test::GdfEnumType<GDF_UINT16>;
-    using SI16 = gdf::test::GdfEnumType<GDF_INT16>;
-    using ADD = gdf::test::operation::Add<SI08, UI16, SI16>;
+    using SI08 = gdf::library::GdfEnumType<GDF_INT8>;
+    using UI16 = gdf::library::GdfEnumType<GDF_UINT16>;
+    using SI16 = gdf::library::GdfEnumType<GDF_INT16>;
+    using ADD = gdf::library::operation::Add<SI08, UI16, SI16>;
 
-    gdf::test::Vector<SI08> out;
-    gdf::test::Vector<UI16> vax;
-    gdf::test::Scalar<SI16> vay;
+    gdf::library::Vector<SI08> out;
+    gdf::library::Vector<UI16> vax;
+    gdf::library::Scalar<SI16> vay;
 
     vax.range(0, 32, 1);
     vay.set(100);
@@ -164,14 +164,14 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_SI08_UI16_SI16) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_UI32_FP64_SI08) {
-    using UI32 = gdf::test::GdfEnumType<GDF_UINT32>;
-    using FP64 = gdf::test::GdfEnumType<GDF_FLOAT64>;
-    using SI08 = gdf::test::GdfEnumType<GDF_INT8>;
-    using ADD = gdf::test::operation::Add<UI32, FP64, SI08>;
+    using UI32 = gdf::library::GdfEnumType<GDF_UINT32>;
+    using FP64 = gdf::library::GdfEnumType<GDF_FLOAT64>;
+    using SI08 = gdf::library::GdfEnumType<GDF_INT8>;
+    using ADD = gdf::library::operation::Add<UI32, FP64, SI08>;
 
-    gdf::test::Vector<UI32> out;
-    gdf::test::Vector<FP64> vax;
-    gdf::test::Vector<SI08> vay;
+    gdf::library::Vector<UI32> out;
+    gdf::library::Vector<FP64> vax;
+    gdf::library::Vector<SI08> vay;
 
     vax.range(0, 30, 1);
     vay.range(0, 60, 2);
@@ -186,16 +186,16 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_UI32_FP64_SI08) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_Default_SI32_SI16_UI64_SI64) {
-    using SI32 = gdf::test::GdfEnumType<GDF_INT32>;
-    using SI16 = gdf::test::GdfEnumType<GDF_INT16>;
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using SI64 = gdf::test::GdfEnumType<GDF_INT64>;
-    using ADD = gdf::test::operation::Add<SI32, SI16, UI64>;
+    using SI32 = gdf::library::GdfEnumType<GDF_INT32>;
+    using SI16 = gdf::library::GdfEnumType<GDF_INT16>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using SI64 = gdf::library::GdfEnumType<GDF_INT64>;
+    using ADD = gdf::library::operation::Add<SI32, SI16, UI64>;
 
-    gdf::test::Vector<SI32> out;
-    gdf::test::Scalar<SI16> vax;
-    gdf::test::Vector<UI64> vay;
-    gdf::test::Scalar<SI64> def;
+    gdf::library::Vector<SI32> out;
+    gdf::library::Scalar<SI16> vax;
+    gdf::library::Vector<UI64> vay;
+    gdf::library::Scalar<SI64> def;
 
     vax.set(50);
     vay.range(0, 32, 1).valid(false, 0, 32, 4);
@@ -211,16 +211,16 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_Default_SI32_SI16_UI64_
 
 
 TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_Default_FP32_SI16_UI08_UI32) {
-    using FP32 = gdf::test::GdfEnumType<GDF_FLOAT32>;
-    using SI16 = gdf::test::GdfEnumType<GDF_INT16>;
-    using UI08 = gdf::test::GdfEnumType<GDF_UINT8>;
-    using UI32 = gdf::test::GdfEnumType<GDF_UINT32>;
-    using ADD = gdf::test::operation::Add<FP32, SI16, UI08>;
+    using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
+    using SI16 = gdf::library::GdfEnumType<GDF_INT16>;
+    using UI08 = gdf::library::GdfEnumType<GDF_UINT8>;
+    using UI32 = gdf::library::GdfEnumType<GDF_UINT32>;
+    using ADD = gdf::library::operation::Add<FP32, SI16, UI08>;
 
-    gdf::test::Vector<FP32> out;
-    gdf::test::Vector<SI16> vax;
-    gdf::test::Scalar<UI08> vay;
-    gdf::test::Scalar<UI32> def;
+    gdf::library::Vector<FP32> out;
+    gdf::library::Vector<SI16> vax;
+    gdf::library::Scalar<UI08> vay;
+    gdf::library::Scalar<UI32> def;
 
     vax.range(0, 96, 3).valid(false, 0, 32, 4);
     vay.set(50);
@@ -236,16 +236,16 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_Default_FP32_SI16_UI08_
 
 
 TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_Default_FP64_SI32_UI32_UI16) {
-    using FP64 = gdf::test::GdfEnumType<GDF_FLOAT64>;
-    using SI32 = gdf::test::GdfEnumType<GDF_INT32>;
-    using UI32 = gdf::test::GdfEnumType<GDF_UINT32>;
-    using UI16 = gdf::test::GdfEnumType<GDF_UINT16>;
-    using ADD = gdf::test::operation::Add<FP64, SI32, UI32>;
+    using FP64 = gdf::library::GdfEnumType<GDF_FLOAT64>;
+    using SI32 = gdf::library::GdfEnumType<GDF_INT32>;
+    using UI32 = gdf::library::GdfEnumType<GDF_UINT32>;
+    using UI16 = gdf::library::GdfEnumType<GDF_UINT16>;
+    using ADD = gdf::library::operation::Add<FP64, SI32, UI32>;
 
-    gdf::test::Vector<FP64> out;
-    gdf::test::Vector<SI32> vax;
-    gdf::test::Vector<UI32> vay;
-    gdf::test::Scalar<UI16> def;
+    gdf::library::Vector<FP64> out;
+    gdf::library::Vector<SI32> vax;
+    gdf::library::Vector<UI32> vay;
+    gdf::library::Scalar<UI16> def;
 
     vax.range(0, 32, 1).valid(false, 0, 32, 3);
     vay.range(0, 64, 2).valid(false, 0, 32, 4);
@@ -261,12 +261,12 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_Default_FP64_SI32_UI32_
 
 
 TEST_F(BinaryOperationIntegrationTest, Sub_Vector_Vector_UI64) {
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using SUB = gdf::test::operation::Sub<UI64, UI64, UI64>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using SUB = gdf::library::operation::Sub<UI64, UI64, UI64>;
 
-    gdf::test::Vector<UI64> out;
-    gdf::test::Vector<UI64> vax;
-    gdf::test::Vector<UI64> vay;
+    gdf::library::Vector<UI64> out;
+    gdf::library::Vector<UI64> vax;
+    gdf::library::Vector<UI64> vay;
 
     vax.range(100, 200, 2);
     vay.range(50, 100, 1);
@@ -281,12 +281,12 @@ TEST_F(BinaryOperationIntegrationTest, Sub_Vector_Vector_UI64) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Mul_Vector_Vector_UI64) {
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using MUL = gdf::test::operation::Mul<UI64, UI64, UI64>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using MUL = gdf::library::operation::Mul<UI64, UI64, UI64>;
 
-    gdf::test::Vector<UI64> out;
-    gdf::test::Vector<UI64> vax;
-    gdf::test::Vector<UI64> vay;
+    gdf::library::Vector<UI64> out;
+    gdf::library::Vector<UI64> vax;
+    gdf::library::Vector<UI64> vay;
 
     vax.range(100, 200, 2);
     vay.range(50, 100, 1);
@@ -301,12 +301,12 @@ TEST_F(BinaryOperationIntegrationTest, Mul_Vector_Vector_UI64) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Div_Vector_Vector_UI64) {
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using DIV = gdf::test::operation::Div<UI64, UI64, UI64>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using DIV = gdf::library::operation::Div<UI64, UI64, UI64>;
 
-    gdf::test::Vector<UI64> out;
-    gdf::test::Vector<UI64> vax;
-    gdf::test::Vector<UI64> vay;
+    gdf::library::Vector<UI64> out;
+    gdf::library::Vector<UI64> vax;
+    gdf::library::Vector<UI64> vay;
 
     vax.range(100, 200, 2);
     vay.range(50, 100, 1);
@@ -321,12 +321,12 @@ TEST_F(BinaryOperationIntegrationTest, Div_Vector_Vector_UI64) {
 
 
 TEST_F(BinaryOperationIntegrationTest, TrueDiv_Vector_Vector_UI64) {
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using TRUEDIV = gdf::test::operation::TrueDiv<UI64, UI64, UI64>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using TRUEDIV = gdf::library::operation::TrueDiv<UI64, UI64, UI64>;
 
-    gdf::test::Vector<UI64> out;
-    gdf::test::Vector<UI64> vax;
-    gdf::test::Vector<UI64> vay;
+    gdf::library::Vector<UI64> out;
+    gdf::library::Vector<UI64> vax;
+    gdf::library::Vector<UI64> vay;
 
     vax.range(100, 200, 2);
     vay.range(50, 100, 1);
@@ -341,12 +341,12 @@ TEST_F(BinaryOperationIntegrationTest, TrueDiv_Vector_Vector_UI64) {
 
 
 TEST_F(BinaryOperationIntegrationTest, FloorDiv_Vector_Vector_UI64) {
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using FLOORDIV = gdf::test::operation::FloorDiv<UI64, UI64, UI64>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using FLOORDIV = gdf::library::operation::FloorDiv<UI64, UI64, UI64>;
 
-    gdf::test::Vector<UI64> out;
-    gdf::test::Vector<UI64> vax;
-    gdf::test::Vector<UI64> vay;
+    gdf::library::Vector<UI64> out;
+    gdf::library::Vector<UI64> vax;
+    gdf::library::Vector<UI64> vay;
 
     vax.range(100, 200, 2);
     vay.range(50, 100, 1);
@@ -361,12 +361,12 @@ TEST_F(BinaryOperationIntegrationTest, FloorDiv_Vector_Vector_UI64) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_UI64) {
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using MOD = gdf::test::operation::Mod<UI64, UI64, UI64>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using MOD = gdf::library::operation::Mod<UI64, UI64, UI64>;
 
-    gdf::test::Vector<UI64> out;
-    gdf::test::Vector<UI64> vax;
-    gdf::test::Vector<UI64> vay;
+    gdf::library::Vector<UI64> out;
+    gdf::library::Vector<UI64> vax;
+    gdf::library::Vector<UI64> vay;
 
     vax.range(120, 220, 2);
     vay.range(50, 100, 1);
@@ -381,12 +381,12 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_UI64) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP32) {
-    using FP32 = gdf::test::GdfEnumType<GDF_FLOAT32>;
-    using MOD = gdf::test::operation::Mod<FP32, FP32, FP32>;
+    using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
+    using MOD = gdf::library::operation::Mod<FP32, FP32, FP32>;
 
-    gdf::test::Vector<FP32> out;
-    gdf::test::Vector<FP32> vax;
-    gdf::test::Vector<FP32> vay;
+    gdf::library::Vector<FP32> out;
+    gdf::library::Vector<FP32> vax;
+    gdf::library::Vector<FP32> vay;
 
     vax.range(120, 220, 2);
     vay.range(50, 100, 1);
@@ -401,12 +401,12 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP32) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP64) {
-    using FP64 = gdf::test::GdfEnumType<GDF_FLOAT64>;
-    using MOD = gdf::test::operation::Mod<FP64, FP64, FP64>;
+    using FP64 = gdf::library::GdfEnumType<GDF_FLOAT64>;
+    using MOD = gdf::library::operation::Mod<FP64, FP64, FP64>;
 
-    gdf::test::Vector<FP64> out;
-    gdf::test::Vector<FP64> vax;
-    gdf::test::Vector<FP64> vay;
+    gdf::library::Vector<FP64> out;
+    gdf::library::Vector<FP64> vax;
+    gdf::library::Vector<FP64> vay;
 
     vax.range(120, 220, 2);
     vay.range(50, 100, 1);
@@ -421,12 +421,12 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP64) {
 
 
 TEST_F(BinaryOperationIntegrationTest, Pow_Vector_Vector_UI64) {
-    using UI64 = gdf::test::GdfEnumType<GDF_UINT64>;
-    using POW = gdf::test::operation::Pow<UI64, UI64, UI64>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using POW = gdf::library::operation::Pow<UI64, UI64, UI64>;
 
-    gdf::test::Vector<UI64> out;
-    gdf::test::Vector<UI64> vax;
-    gdf::test::Vector<UI64> vay;
+    gdf::library::Vector<UI64> out;
+    gdf::library::Vector<UI64> vax;
+    gdf::library::Vector<UI64> vay;
 
     vax.range(0, 50, 1);
     vay.fill(50, 2);

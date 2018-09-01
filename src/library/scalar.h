@@ -1,21 +1,18 @@
-#ifndef GDF_TEST_LIBRARY_SCALAR_H
-#define GDF_TEST_LIBRARY_SCALAR_H
+#ifndef GDF_LIBRARY_SCALAR_H
+#define GDF_LIBRARY_SCALAR_H
 
-#include <vector>
-#include <algorithm>
-#include <cuda_runtime.h>
 #include "gdf/gdf.h"
 #include "library/types.h"
 
 namespace gdf {
-namespace test {
+namespace library {
 
     template <typename Type>
     class Scalar {
     public:
         void set(Type value) {
-            mScalar.dtype = gdf::test::GdfDataType<Type>::Value;
-            gdf::test::setScalar(mScalar, (Type)value);
+            mScalar.dtype = gdf::library::GdfDataType<Type>::Value;
+            gdf::library::setScalar(mScalar, (Type)value);
         }
 
         gdf_scalar* scalar() {
@@ -67,7 +64,7 @@ namespace test {
         gdf_scalar mScalar;
     };
 
-}
-}
+}  // library
+}  // gdf
 
 #endif

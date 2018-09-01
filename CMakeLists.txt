@@ -115,10 +115,14 @@ if(HT_LEGACY_ALLOCATOR)
 endif()
 
 
-## Binary Operators
+## Benchmark
+include(ConfigBenchmark RESULT_VARIABLE result)
+message("-- ConfigBenchmark: " ${result})
+
+
+## Binary Operations
 add_subdirectory(src/binary)
 get_directory_property(gdfs_source_files DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/binary DEFINITION gdfs_source_files)
-##
 
 
 cuda_add_library(gdf SHARED

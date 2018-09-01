@@ -4,7 +4,7 @@ set(GDF_TEST_NAME BinaryOperationsTest)
 
 ## Set sources
 set(GDF_SOURCE_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/library/types.cpp"
+    "${PROJECT_SOURCE_DIR}/src/library/types.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/integration/binary-operation-test.cpp")
 
 
@@ -26,8 +26,8 @@ set_target_properties(${GDF_TEST_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CM
 ## Include headers
 target_include_directories(${GDF_TEST_NAME} PUBLIC "${GTEST_INCLUDE_DIRS}")
 target_include_directories(${GDF_TEST_NAME} PUBLIC "${CUDA_INCLUDE_DIRS}")
-target_include_directories(${GDF_TEST_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(${GDF_TEST_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/include")
+target_include_directories(${GDF_TEST_NAME} PUBLIC "${PROJECT_SOURCE_DIR}/src")
 
 
 ## Link libraries
