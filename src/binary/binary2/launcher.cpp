@@ -2,7 +2,7 @@
 #include "binary/binary2/cuda.h"
 
 namespace gdf {
-    static jitify::JitCache JitCache;
+    static thread_local jitify::JitCache JitCache;
 
     std::istream* headersCode(std::string filename, std::iostream& stream) {
         if (filename == "operation.h") {

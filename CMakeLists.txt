@@ -122,7 +122,7 @@ message("-- ConfigBenchmark: " ${result})
 
 ## Binary Operations
 add_subdirectory(src/binary)
-get_directory_property(gdfs_source_files DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/src/binary DEFINITION gdfs_source_files)
+get_directory_property(binary_operation_source_files DIRECTORY src/binary DEFINITION source_files)
 
 
 cuda_add_library(gdf SHARED
@@ -147,8 +147,9 @@ cuda_add_library(gdf SHARED
     src/unaryops.cu
     #src/windowedops.cu
     src/quantiles.cu
-    ${gdfs_source_files}
+    ${binary_operation_source_files}
 )
+
 
 if (ARROW_NUMERIC_VERSION EQUAL 900)
   # arrow-0.9 requires boost_regex
