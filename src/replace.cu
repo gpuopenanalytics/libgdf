@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include <cmath>
+
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
@@ -28,10 +30,10 @@ namespace {
 template <gdf_dtype DTYPE>
 struct gdf_dtype_traits {};
 
-#define DTYPE_FACTORY(DTYPE, T)                                               \
-    template <>                                                               \
-    struct gdf_dtype_traits<GDF_##DTYPE> {                                    \
-        typedef T value_type;                                                 \
+#define DTYPE_FACTORY(DTYPE, T)                                                \
+    template <>                                                                \
+    struct gdf_dtype_traits<GDF_##DTYPE> {                                     \
+        typedef T value_type;                                                  \
     }
 
 DTYPE_FACTORY(INT8, std::int8_t);
@@ -47,23 +49,27 @@ DTYPE_FACTORY(TIMESTAMP, std::int64_t);
 #undef DTYPE_FACTORY
 
 template <class T>
-class ReplaceFunctor {
-public:
-    ReplaceFunctor(T *const data, const std::ptrdiff_t data_ptrdiff)
-      : data_begin(data), data_end(data_begin + data_ptrdiff) {}
+__global__ void
+replace_kernel(T *const             data,
+               const std::ptrdiff_t data_ptrdiff,
+               const T *const       to_replace,
+               const T *const       values,
+               const std::ptrdiff_t replacement_ptrdiff) {
+    for (std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+         i < data_ptrdiff;
+         i += blockDim.x * gridDim.x) {
+        const thrust::device_ptr<const T> begin(to_replace);
+        const thrust::device_ptr<const T> end(begin + replacement_ptrdiff);
 
-    void __device__
-    operator()(thrust::tuple<const T, const T> tuple) {
-        const T from = thrust::get<0>(tuple);
-        const T to   = thrust::get<1>(tuple);
+        const thrust::device_ptr<const T> found =  // TODO: find by map kernel
+          thrust::find(thrust::device, begin, end, data[i]);
 
-        thrust::replace(thrust::device, data_begin, data_end, from, to);
+        if (found != end) {
+            std::size_t j = thrust::distance(begin, found);
+            data[i]       = values[j];
+        }
     }
-
-private:
-    const thrust::device_ptr<T> data_begin;
-    const thrust::device_ptr<T> data_end;
-};
+}
 
 template <class T>
 static inline void
@@ -72,18 +78,19 @@ Replace(T *const             data,
         const T *const       to_replace,
         const T *const       values,
         const std::ptrdiff_t replacement_ptrdiff) {
-    const thrust::device_ptr<const T> from_begin(to_replace);
-    const thrust::device_ptr<const T> from_end =
-      from_begin + replacement_ptrdiff;
+    int multiprocessors;
+    // TODO: device selection
+    cudaDeviceGetAttribute(&multiprocessors, cudaDevAttrMultiProcessorCount, 0);
 
-    const thrust::device_ptr<const T> to_begin(values);
-    const thrust::device_ptr<const T> to_end = to_begin + replacement_ptrdiff;
+    std::size_t blocks = std::ceil(data_ptrdiff / (multiprocessors * 256.));
 
-    thrust::for_each(
-      thrust::device,
-      thrust::make_zip_iterator(thrust::make_tuple(from_begin, to_begin)),
-      thrust::make_zip_iterator(thrust::make_tuple(from_end, to_end)),
-      ReplaceFunctor<T>(data, data_ptrdiff));
+    replace_kernel<T>
+      <<<blocks * multiprocessors, 256>>>(  // TODO: calc blocks and threads
+        data,
+        data_ptrdiff,
+        to_replace,
+        values,
+        replacement_ptrdiff);
 }
 
 static inline bool
@@ -106,19 +113,21 @@ gdf_error
 gdf_replace(gdf_column *      column,
             const gdf_column *to_replace,
             const gdf_column *values) {
-    if (NotEqualReplacementSize(to_replace, values)) { return GDF_COLUMN_SIZE_MISMATCH; }
+    if (NotEqualReplacementSize(to_replace, values)) {
+        return GDF_COLUMN_SIZE_MISMATCH;
+    }
 
     if (NotSameDType(column, to_replace, values)) { return GDF_CUDA_ERROR; }
 
     switch (column->dtype) {
-#define WHEN(DTYPE)                                                           \
-    case GDF_##DTYPE: {                                                       \
-        using value_type = gdf_dtype_traits<GDF_##DTYPE>::value_type;         \
-        Replace<value_type>(static_cast<value_type *>(column->data),          \
-                            static_cast<std::ptrdiff_t>(column->size),        \
-                            static_cast<value_type *>(to_replace->data),      \
-                            static_cast<value_type *>(values->data),          \
-                            static_cast<std::ptrdiff_t>(values->size));       \
+#define WHEN(DTYPE)                                                            \
+    case GDF_##DTYPE: {                                                        \
+        using value_type = gdf_dtype_traits<GDF_##DTYPE>::value_type;          \
+        Replace<value_type>(static_cast<value_type *>(column->data),           \
+                            static_cast<std::ptrdiff_t>(column->size),         \
+                            static_cast<value_type *>(to_replace->data),       \
+                            static_cast<value_type *>(values->data),           \
+                            static_cast<std::ptrdiff_t>(values->size));        \
     } break
 
         WHEN(INT8);
@@ -134,7 +143,7 @@ gdf_replace(gdf_column *      column,
 #undef WHEN
 
     case GDF_invalid:
-    default: return GDF_CUDA_ERROR;
+    default: return GDF_UNSUPPORTED_DTYPE;
     }
 
     return GDF_SUCCESS;
