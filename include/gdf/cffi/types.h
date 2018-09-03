@@ -22,7 +22,7 @@ typedef enum {
     N_GDF_TYPES, /* additional types should go BEFORE N_GDF_TYPES */
 } gdf_dtype;
 
-union gdf_data {
+typedef union {
     void*    invd;
     int8_t   si08;
     int16_t  si16;
@@ -37,7 +37,7 @@ union gdf_data {
     int32_t  dt32;  // GDF_DATE32
     int64_t  dt64;  // GDF_DATE64
     int64_t  tmst;  // GDF_TIMESTAMP
-};
+} gdf_data;
 
 /*
  * GDF error enum type.
@@ -77,10 +77,10 @@ typedef struct {
 	// here we can also hold info for decimal datatype or any other datatype that requires additional information
 } gdf_dtype_extra_info;
 
-struct gdf_scalar {
+typedef struct {
     gdf_data  data;
     gdf_dtype dtype;
-};
+} gdf_scalar;
 
 typedef struct gdf_column_{
     void *data;
@@ -117,7 +117,7 @@ typedef enum {
 } gdf_agg_op;
 
 
-enum gdf_binary_operator {
+typedef enum {
     GDF_ADD,
     GDF_SUB,
     GDF_MUL,
@@ -137,7 +137,7 @@ enum gdf_binary_operator {
     GDF_GREATER_EQUAL,
     //GDF_PRODUCT,
     //GDF_DOT
-};
+} gdf_binary_operator;
 
 /* additonal flags */
 typedef struct gdf_context_{
