@@ -6,6 +6,8 @@
 #include "library/vector.h"
 
 namespace bench {
+    static constexpr int NUMBER_COUNTERS = 6;
+
     template <typename Type>
     struct BinaryOperation : public benchmark::Fixture {
     public:
@@ -145,39 +147,40 @@ namespace bench {
         saveSamplerData(state);
     }
 
+
     BENCHMARK_REGISTER_F(BinaryOperation, KernelInteger)
         ->UseManualTime()
-        ->Args({1, 7, 0, 10, 1})
-        ->Args({2, 7, 0, 1000, 1})
-        ->Args({3, 7, 0, 100000, 1});
+        ->Args({1, NUMBER_COUNTERS, 0, 100, 1})
+        ->Args({2, NUMBER_COUNTERS, 0, 10000, 1})
+        ->Args({3, NUMBER_COUNTERS, 0, 1000000, 1});
 
     BENCHMARK_REGISTER_F(BinaryOperation, KernelFloat)
         ->UseManualTime()
-        ->Args({1, 7, 0, 10, 1})
-        ->Args({2, 7, 0, 1000, 1})
-        ->Args({3, 7, 0, 100000, 1});
+        ->Args({1, NUMBER_COUNTERS, 0, 100, 1})
+        ->Args({2, NUMBER_COUNTERS, 0, 10000, 1})
+        ->Args({3, NUMBER_COUNTERS, 0, 1000000, 1});
 
     BENCHMARK_REGISTER_F(BinaryOperation, KernelDouble)
         ->UseManualTime()
-        ->Args({1, 7, 0, 10, 1})
-        ->Args({2, 7, 0, 1000, 1})
-        ->Args({3, 7, 0, 100000, 1});
+        ->Args({1, NUMBER_COUNTERS, 0, 100, 1})
+        ->Args({2, NUMBER_COUNTERS, 0, 10000, 1})
+        ->Args({3, NUMBER_COUNTERS, 0, 1000000, 1});
 
     BENCHMARK_REGISTER_F(BinaryOperation, KernelIntegerDefault)
         ->UseManualTime()
-        ->Args({1, 7, 0, 10, 1})
-        ->Args({2, 7, 0, 1000, 1})
-        ->Args({3, 7, 0, 100000, 1});
+        ->Args({1, NUMBER_COUNTERS, 0, 100, 1})
+        ->Args({2, NUMBER_COUNTERS, 0, 10000, 1})
+        ->Args({3, NUMBER_COUNTERS, 0, 1000000, 1});
 
     BENCHMARK_REGISTER_F(BinaryOperation, KernelFloatDefault)
         ->UseManualTime()
-        ->Args({1, 7, 0, 10, 1})
-        ->Args({2, 7, 0, 1000, 1})
-        ->Args({3, 7, 0, 100000, 1});
+        ->Args({1, NUMBER_COUNTERS, 0, 100, 1})
+        ->Args({2, NUMBER_COUNTERS, 0, 10000, 1})
+        ->Args({3, NUMBER_COUNTERS, 0, 1000000, 1});
 
     BENCHMARK_REGISTER_F(BinaryOperation, KernelDoubleDefault)
         ->UseManualTime()
-        ->Args({1, 7, 0, 10, 1})
-        ->Args({2, 7, 0, 1000, 1})
-        ->Args({3, 7, 0, 100000, 1});
+        ->Args({1, NUMBER_COUNTERS, 0, 100, 1})
+        ->Args({2, NUMBER_COUNTERS, 0, 10000, 1})
+        ->Args({3, NUMBER_COUNTERS, 0, 1000000, 1});
 }
