@@ -50,22 +50,23 @@ DTYPE_FACTORY(TIMESTAMP, std::int64_t);
 
 template <class T>
 __global__ void
-replace_kernel(T *const             data,
-               const std::size_t    data_size,
-               const T *const       to_replace,
-               const T *const       values,
-               const std::ptrdiff_t replacement_ptrdiff) {
+replace_kernel(T *const                          data,
+               const std::size_t                 data_size,
+               const T *const                    values,
+               const thrust::device_ptr<const T> to_replace_begin,
+               const thrust::device_ptr<const T> to_replace_end) {
     for (std::size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < data_size;
          i += blockDim.x * gridDim.x) {
-        const thrust::device_ptr<const T> begin(to_replace);
-        const thrust::device_ptr<const T> end(begin + replacement_ptrdiff);
+        // TODO: find by map kernel
+        const thrust::device_ptr<const T> found_ptr = thrust::find(
+          thrust::device, to_replace_begin, to_replace_end, data[i]);
 
-        const thrust::device_ptr<const T> found =  // TODO: find by map kernel
-          thrust::find(thrust::device, begin, end, data[i]);
+        if (found_ptr != to_replace_end) {
+            typename thrust::iterator_traits<
+              const thrust::device_ptr<const T>>::difference_type
+              value_found_index = thrust::distance(to_replace_begin, found_ptr);
 
-        if (found != end) {
-            std::size_t j = thrust::distance(begin, found);
-            data[i]       = values[j];
+            data[i] = values[value_found_index];
         }
     }
 }
@@ -86,13 +87,17 @@ Replace(T *const             data,
 
     const std::size_t blocks = std::ceil(data_size / (multiprocessors * 256.));
 
+    const thrust::device_ptr<const T> to_replace_begin(to_replace);
+    const thrust::device_ptr<const T> to_replace_end(to_replace_begin
+                                                     + replacement_ptrdiff);
+
     replace_kernel<T>
       <<<blocks * multiprocessors, 256>>>(  // TODO: calc blocks and threads
         data,
         data_size,
-        to_replace,
         values,
-        replacement_ptrdiff);
+        to_replace_begin,
+        to_replace_end);
 
     return GDF_SUCCESS;
 }
