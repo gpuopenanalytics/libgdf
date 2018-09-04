@@ -30,7 +30,7 @@ namespace library {
         }
 
         Vector& range(Type init, Type final, Type step) {
-            assert(0 < step);
+            assert((Type)0 < step);
             assert(init < final);
 
             int size = (final - init) / step;

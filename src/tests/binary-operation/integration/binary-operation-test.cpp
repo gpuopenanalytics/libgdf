@@ -39,6 +39,24 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
         }
     }
 
+    /**
+     * According to CUDA Programming Guide, 'E.1. Standard Functions', 'Table 7 - Double-Precision
+     * Mathematical Standard Library Functions with Maximum ULP Error'
+     * The pow function has 2 (full range) maximum ulp error.
+     */
+    template <typename TypeOut, typename TypeVax, typename TypeVay>
+    void assertVector(gdf::library::Vector<TypeOut>& out,
+                      gdf::library::Vector<TypeVax>& vax,
+                      gdf::library::Vector<TypeVay>& vay,
+                      gdf::library::operation::Pow<TypeOut, TypeVax, TypeVay>&& ope) {
+        const int ULP = 2.0;
+        ASSERT_TRUE(out.dataSize() == vax.dataSize());
+        ASSERT_TRUE(out.dataSize() == vay.dataSize());
+        for (int index = 0; index < out.dataSize(); ++index) {
+            ASSERT_TRUE(abs(out.data(index) - (TypeOut)(ope(vax.data(index), vay.data(index)))) < ULP);
+        }
+    }
+
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeDef, typename TypeOpe>
     void assertVector(gdf::library::Vector<TypeOut>& out,
                       gdf::library::Vector<TypeVax>& vax,
@@ -129,7 +147,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_SI32_FP32_UI32) {
     gdf::library::Scalar<FP32> vax;
     gdf::library::Vector<UI32> vay;
 
-    vay.range(0, 32, 1);
+    vay.range(0, 100000, 1);
     vax.set(100);
     out.emplace(vay.dataSize());
 
@@ -151,7 +169,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_SI08_UI16_SI16) {
     gdf::library::Vector<UI16> vax;
     gdf::library::Scalar<SI16> vay;
 
-    vax.range(0, 32, 1);
+    vax.range(0, 100, 1);
     vay.set(100);
     out.emplace(vax.dataSize());
 
@@ -173,8 +191,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_UI32_FP64_SI08) {
     gdf::library::Vector<FP64> vax;
     gdf::library::Vector<SI08> vay;
 
-    vax.range(0, 30, 1);
-    vay.range(0, 60, 2);
+    vax.range(0.0, 200.0, 2.0);
+    vay.range(0, 100, 1);
     out.emplace(vax.dataSize());
 
     gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_ADD);
@@ -198,8 +216,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_Default_SI32_SI16_UI64_
     gdf::library::Scalar<SI64> def;
 
     vax.set(50);
-    vay.range(0, 32, 1).valid(false, 0, 32, 4);
-    def.set(100);
+    vay.range(0, 10000, 2).valid(false, 0, 5000, 4);
+    def.set(1000);
     out.emplace(vay.dataSize());
 
     gdf_binary_operation_v_s_v_d(out.column(), vax.scalar(), vay.column(), def.scalar(), GDF_ADD);
@@ -222,7 +240,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_Default_FP32_SI16_UI08_
     gdf::library::Scalar<UI08> vay;
     gdf::library::Scalar<UI32> def;
 
-    vax.range(0, 96, 3).valid(false, 0, 32, 4);
+    vax.range(0, 30000, 3).valid(false, 0, 10000, 4);
     vay.set(50);
     def.set(150);
     out.emplace(vax.dataSize());
@@ -247,8 +265,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_Default_FP64_SI32_UI32_
     gdf::library::Vector<UI32> vay;
     gdf::library::Scalar<UI16> def;
 
-    vax.range(0, 32, 1).valid(false, 0, 32, 3);
-    vay.range(0, 64, 2).valid(false, 0, 32, 4);
+    vax.range(0, 1000000, 1).valid(false, 0, 1000000, 3);
+    vay.range(0, 2000000, 2).valid(false, 0, 1000000, 4);
     def.set(150);
     out.emplace(vax.dataSize());
 
@@ -268,8 +286,8 @@ TEST_F(BinaryOperationIntegrationTest, Sub_Vector_Vector_UI64) {
     gdf::library::Vector<UI64> vax;
     gdf::library::Vector<UI64> vay;
 
-    vax.range(100, 200, 2);
-    vay.range(50, 100, 1);
+    vax.range(100000, 200000, 2);
+    vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
     gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_SUB);
@@ -288,8 +306,8 @@ TEST_F(BinaryOperationIntegrationTest, Mul_Vector_Vector_UI64) {
     gdf::library::Vector<UI64> vax;
     gdf::library::Vector<UI64> vay;
 
-    vax.range(100, 200, 2);
-    vay.range(50, 100, 1);
+    vax.range(100000, 200000, 2);
+    vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
     gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MUL);
@@ -308,8 +326,8 @@ TEST_F(BinaryOperationIntegrationTest, Div_Vector_Vector_UI64) {
     gdf::library::Vector<UI64> vax;
     gdf::library::Vector<UI64> vay;
 
-    vax.range(100, 200, 2);
-    vay.range(50, 100, 1);
+    vax.range(100000, 200000, 2);
+    vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
     gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_DIV);
@@ -328,8 +346,8 @@ TEST_F(BinaryOperationIntegrationTest, TrueDiv_Vector_Vector_UI64) {
     gdf::library::Vector<UI64> vax;
     gdf::library::Vector<UI64> vay;
 
-    vax.range(100, 200, 2);
-    vay.range(50, 100, 1);
+    vax.range(100000, 200000, 2);
+    vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
     gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_TRUE_DIV);
@@ -348,8 +366,8 @@ TEST_F(BinaryOperationIntegrationTest, FloorDiv_Vector_Vector_UI64) {
     gdf::library::Vector<UI64> vax;
     gdf::library::Vector<UI64> vay;
 
-    vax.range(100, 200, 2);
-    vay.range(50, 100, 1);
+    vax.range(100000, 200000, 2);
+    vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
     gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_FLOOR_DIV);
@@ -428,8 +446,8 @@ TEST_F(BinaryOperationIntegrationTest, Pow_Vector_Vector_UI64) {
     gdf::library::Vector<UI64> vax;
     gdf::library::Vector<UI64> vay;
 
-    vax.range(0, 50, 1);
-    vay.fill(50, 2);
+    vax.range(0, 500, 1);
+    vay.fill(500, 2);
     out.emplace(vax.dataSize());
 
     gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_POW);
