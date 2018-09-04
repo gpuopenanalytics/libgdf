@@ -1,5 +1,6 @@
 ## Test name
 set(GDF_APP_NAME  BinaryOperationsBench)
+set(GDF_BENCH_DIR bench)
 
 ## Set sources
 set(GDF_SOURCE_FILES
@@ -20,7 +21,7 @@ set_target_properties(${GDF_APP_NAME}
                       INCLUDE_DIRECTORIES "")
 set_target_properties(${GDF_APP_NAME}
                       PROPERTIES
-                      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bench/")
+                      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${GDF_BENCH_DIR}")
 
 ## Include headers
 target_include_directories(${GDF_APP_NAME} PRIVATE "${CUDA_INCLUDE_DIRS}")
@@ -35,3 +36,7 @@ target_link_libraries(${GDF_APP_NAME} ${GOOGLE_BENCHMARK_MAIN_LIB})
 target_link_libraries(${GDF_APP_NAME} gdf)
 target_link_libraries(${GDF_APP_NAME} ${CUDA_CUDA_LIB})
 target_link_libraries(${GDF_APP_NAME} ${CUDA_NVRTC_LIB})
+
+message("-- benchmark for binary operations")
+message(" * Execute help: ${GDF_BENCH_DIR}/${GDF_APP_NAME} --help")
+message(" * Execute benchmark: ${GDF_BENCH_DIR}/${GDF_APP_NAME} --benchmark_counters_tabular=true")
