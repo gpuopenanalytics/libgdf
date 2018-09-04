@@ -125,7 +125,8 @@ add_subdirectory(src/binary)
 get_directory_property(binary_operation_source_files DIRECTORY src/binary DEFINITION source_files)
 
 
-cuda_add_library(gdf SHARED
+## Variable 'libgdf_source_files' with all source files.
+set(libgdf_source_files
     src/binaryops.cu
     src/bitmaskops.cu
     src/column.cpp
@@ -151,9 +152,28 @@ cuda_add_library(gdf SHARED
 )
 
 
+cuda_add_library(gdf SHARED ${libgdf_source_files})
+
+
+## Build static library
+## By default is disabled.
+## Add -DLIBGDF_STATIC_LIB=ON as cmake parameter to create the static library.
+option(LIBGDF_STATIC_LIB "Build static library for libgdf" OFF)
+if(LIBGDF_STATIC_LIB)
+    message("-- libgdf static library enabled")
+    cuda_add_library(gdf_static STATIC ${libgdf_source_files})
+    target_link_libraries(gdf_static arrow)
+else()
+    message("-- libgdf static library disabled")
+endif()
+
+
 if (ARROW_NUMERIC_VERSION EQUAL 900)
   # arrow-0.9 requires boost_regex
   target_link_libraries(gdf arrow boost_regex)
+  if(LIBGDF_STATIC_LIB)
+    target_link_libraries(gdf_static boost_regex)
+  endif()
 else()
   target_link_libraries(gdf arrow)
 endif()
@@ -188,6 +208,9 @@ add_custom_command(TARGET pytest POST_BUILD
 # The install target
 install(TARGETS gdf LIBRARY DESTINATION lib)
 install(DIRECTORY include/gdf DESTINATION include)
+if(LIBGDF_STATIC_LIB)
+    install(TARGETS gdf_static ARCHIVE DESTINATION lib)
+endif()
 
 # Configure the C++ tests
 find_package(GTest QUIET)
