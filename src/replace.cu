@@ -51,12 +51,11 @@ DTYPE_FACTORY(TIMESTAMP, std::int64_t);
 template <class T>
 __global__ void
 replace_kernel(T *const             data,
-               const std::ptrdiff_t data_ptrdiff,
+               const std::size_t    data_size,
                const T *const       to_replace,
                const T *const       values,
                const std::ptrdiff_t replacement_ptrdiff) {
-    for (std::size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-         i < data_ptrdiff;
+    for (std::size_t i = blockIdx.x * blockDim.x + threadIdx.x; i < data_size;
          i += blockDim.x * gridDim.x) {
         const thrust::device_ptr<const T> begin(to_replace);
         const thrust::device_ptr<const T> end(begin + replacement_ptrdiff);
@@ -72,25 +71,30 @@ replace_kernel(T *const             data,
 }
 
 template <class T>
-static inline void
+static inline gdf_error
 Replace(T *const             data,
-        const std::ptrdiff_t data_ptrdiff,
+        const std::size_t    data_size,
         const T *const       to_replace,
         const T *const       values,
         const std::ptrdiff_t replacement_ptrdiff) {
     int multiprocessors;
     // TODO: device selection
-    cudaDeviceGetAttribute(&multiprocessors, cudaDevAttrMultiProcessorCount, 0);
+    const cudaError_t status = cudaDeviceGetAttribute(
+      &multiprocessors, cudaDevAttrMultiProcessorCount, 0);
 
-    std::size_t blocks = std::ceil(data_ptrdiff / (multiprocessors * 256.));
+    if (status != cudaSuccess) { return GDF_CUDA_ERROR; }
+
+    const std::size_t blocks = std::ceil(data_size / (multiprocessors * 256.));
 
     replace_kernel<T>
       <<<blocks * multiprocessors, 256>>>(  // TODO: calc blocks and threads
         data,
-        data_ptrdiff,
+        data_size,
         to_replace,
         values,
         replacement_ptrdiff);
+
+    return GDF_SUCCESS;
 }
 
 static inline bool
@@ -123,12 +127,12 @@ gdf_replace(gdf_column *      column,
 #define WHEN(DTYPE)                                                            \
     case GDF_##DTYPE: {                                                        \
         using value_type = gdf_dtype_traits<GDF_##DTYPE>::value_type;          \
-        Replace<value_type>(static_cast<value_type *>(column->data),           \
-                            static_cast<std::ptrdiff_t>(column->size),         \
-                            static_cast<value_type *>(to_replace->data),       \
-                            static_cast<value_type *>(values->data),           \
-                            static_cast<std::ptrdiff_t>(values->size));        \
-    } break
+        return Replace(static_cast<value_type *>(column->data),                \
+                       static_cast<std::size_t>(column->size),                 \
+                       static_cast<value_type *>(to_replace->data),            \
+                       static_cast<value_type *>(values->data),                \
+                       static_cast<std::ptrdiff_t>(values->size));             \
+    }
 
         WHEN(INT8);
         WHEN(INT16);
@@ -145,6 +149,4 @@ gdf_replace(gdf_column *      column,
     case GDF_invalid:
     default: return GDF_UNSUPPORTED_DTYPE;
     }
-
-    return GDF_SUCCESS;
 }
