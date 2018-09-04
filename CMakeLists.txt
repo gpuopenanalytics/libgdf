@@ -210,6 +210,7 @@ install(TARGETS gdf LIBRARY DESTINATION lib)
 install(DIRECTORY include/gdf DESTINATION include)
 if(LIBGDF_STATIC_LIB)
     install(TARGETS gdf_static ARCHIVE DESTINATION lib)
+    set_target_properties(gdf_static PROPERTIES OUTPUT_NAME gdf)
 endif()
 
 # Configure the C++ tests
