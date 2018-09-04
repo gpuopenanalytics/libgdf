@@ -577,3 +577,14 @@ gdf_error gdf_quantile_aprrox(	gdf_column*  col_in,       //input column;
                                 double       q,            //requested quantile in [0,1]
                                 void*        t_erased_res, //type-erased result of same type as column;
                                 gdf_context* ctxt);        //context info
+/**  IO
+ *
+ *
+ */
+gdf_column ** read_csv(
+		const char 	*fileName, 			// in: the file to be loaded
+		const char 	delimiter,			// in: the delimiter
+		const int	num_cols,			// in: number of columns
+		const char 	**col_names,		// in: ordered array of column names
+		const char	**dtypes			// in: ordered array of dtypes
+		);
