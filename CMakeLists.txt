@@ -97,6 +97,8 @@ include_directories(
     "${ARROW_INCLUDEDIR}"
 )
 
+link_directories(${CUDA_LIBRARY_DIR} ${CUDA_LIBRARY_STUBS_DIR})
+
 IF(CUDA_VERSION_MAJOR GREATER 7)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_60,code=sm_60)
 ENDIF(CUDA_VERSION_MAJOR GREATER 7)
