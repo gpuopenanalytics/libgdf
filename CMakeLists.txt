@@ -168,6 +168,11 @@ set(libgdf_source_files
 cuda_add_library(gdf SHARED ${libgdf_source_files})
 
 
+## Position Independent Code for shared library
+set_target_properties(gdf PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(gdf PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+
 ## Build static library
 ## By default is disabled.
 ## Add -DLIBGDF_STATIC_LIB=ON as cmake parameter to create the static library.
