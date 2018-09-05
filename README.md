@@ -66,7 +66,7 @@ not necessary.
 
 You can install Boost C++ 1.58 from sources as well: https://www.boost.org/doc/libs/1_58_0/more/getting_started/unix-variants.html
 
-To run the python tests it is recommended to setup a conda environment for 
+To run the python tests it is recommended to setup a conda environment for
 the dependencies.
 
 ```bash
@@ -113,6 +113,12 @@ $ cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
 
 To build the C/C++ code, run `make`.  This should produce a shared library
 named `libgdf.so` or `libgdf.dylib`.
+
+To build the static library for libgdf just run cmake with:
+```bash
+$ cmake -DLIBGDF_STATIC_LIB=ON -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+```
+Note: By default the option LIBGDF_STATIC_LIB is disabled (default value OFF).
 
 If you run into compile errors about missing header files:
 

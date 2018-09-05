@@ -160,22 +160,27 @@ cuda_add_library(gdf SHARED ${libgdf_source_files})
 ## Add -DLIBGDF_STATIC_LIB=ON as cmake parameter to create the static library.
 option(LIBGDF_STATIC_LIB "Build static library for libgdf" OFF)
 if(LIBGDF_STATIC_LIB)
-    message("-- libgdf static library enabled")
+    message(STATUS "libgdf static library enabled")
     cuda_add_library(gdf_static STATIC ${libgdf_source_files})
-    target_link_libraries(gdf_static arrow)
+    set_target_properties(gdf_static PROPERTIES OUTPUT_NAME gdf)
 else()
-    message("-- libgdf static library disabled")
+    message(STATUS "libgdf static library disabled")
 endif()
 
 
 if (ARROW_NUMERIC_VERSION EQUAL 900)
   # arrow-0.9 requires boost_regex
   target_link_libraries(gdf arrow boost_regex)
+
   if(LIBGDF_STATIC_LIB)
-    target_link_libraries(gdf_static boost_regex)
+    target_link_libraries(gdf_static arrow boost_regex)
   endif()
 else()
   target_link_libraries(gdf arrow)
+
+  if(LIBGDF_STATIC_LIB)
+    target_link_libraries(gdf_static arrow)
+  endif()
 endif()
 
 # Command to symlink files into the build directory
@@ -210,7 +215,6 @@ install(TARGETS gdf LIBRARY DESTINATION lib)
 install(DIRECTORY include/gdf DESTINATION include)
 if(LIBGDF_STATIC_LIB)
     install(TARGETS gdf_static ARCHIVE DESTINATION lib)
-    set_target_properties(gdf_static PROPERTIES OUTPUT_NAME gdf)
 endif()
 
 # Configure the C++ tests
