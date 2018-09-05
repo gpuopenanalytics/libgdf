@@ -50,7 +50,7 @@ namespace library {
         }
 
         auto operator[](int index) -> Type& {
-            assert(mCpuData.size() < index);
+            assert(index < mCpuData.size());
             return mCpuData[index];
         }
 
