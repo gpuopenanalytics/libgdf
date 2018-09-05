@@ -46,10 +46,11 @@ struct Readers<kGdf> {
     typedef typename gdf::parquet::FileReader   FileReader;            
      
 
-    static inline gdf_error init_gdf_buffers(void **device_values, gdf_valid_type** device_valid, uint32_t values_malloc_size, gdf_size_type column_size){
+    static inline gdf_error init_gdf_buffers(void **device_values, gdf_valid_type** device_valid, int16_t** def_levels, uint32_t values_malloc_size, gdf_size_type column_size){
         cudaError_t cuda_error = cudaMalloc(device_values, values_malloc_size);
         auto n_bytes = get_number_of_bytes_for_valid(column_size);
         cudaMalloc(device_valid, n_bytes);
+        cudaMalloc(def_levels, column_size * sizeof(int16_t));
         return GDF_SUCCESS;
     }
      
@@ -69,10 +70,11 @@ struct Readers<kParquet> {
     typedef typename ::parquet::DoubleReader        DoubleReader;          
     typedef typename ::parquet::ParquetFileReader   FileReader;            
 
-    static inline gdf_error init_gdf_buffers(void **host_values, gdf_valid_type** host_valid, uint32_t values_malloc_size, gdf_size_type column_size){
+    static inline gdf_error init_gdf_buffers(void **host_values, gdf_valid_type** host_valid, int16_t** def_levels, uint32_t values_malloc_size, gdf_size_type column_size){
         *host_values = malloc(values_malloc_size);
          auto n_bytes = get_number_of_bytes_for_valid(column_size);
         *host_valid = (gdf_valid_type*)malloc(n_bytes);
+        *def_levels = (int16_t*)malloc(column_size * sizeof(int16_t));
         return GDF_SUCCESS;
     }
     
@@ -121,13 +123,13 @@ convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_r
 
     parquet_type* values_buffer;
     gdf_valid_type* valid_bits;
+    int16_t * definition_level;
 
     //@todo: amount_to_read check type conversion
     auto values_malloc_size = amount_to_read * sizeof(parquet_type);
-    gdf_error status = Readers<T>::init_gdf_buffers((void **)&(values_buffer), &valid_bits, values_malloc_size, amount_to_read);
+    gdf_error status = Readers<T>::init_gdf_buffers((void **)&(values_buffer), &valid_bits, &definition_level, values_malloc_size, amount_to_read);
 
-    std::vector<std::int16_t> definition_level(amount_to_read);
-    std::vector<std::int16_t> repetition_level(amount_to_read);
+    std::vector<int16_t> repetition_level(amount_to_read);
     std::int64_t levels_read;
     std::int64_t values_read = 0;
     std::int64_t nulls_count;
@@ -135,7 +137,7 @@ convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_r
     int64_t rows_read_total = 0;
     while (column_reader->HasNext() && rows_read_total < amount_to_read) {
         int64_t rows_read = column_reader->ReadBatchSpaced(batch_size,
-                                     definition_level.data(),
+        							&definition_level[rows_read_total],
                                      repetition_level.data(),
                                      &values_buffer[rows_read_total],
                                      valid_bits,
@@ -255,6 +257,8 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
                     columnIndex);
             parquet::Type::type type = column->physical_type();
 
+            if (type != parquet::Type::BYTE_ARRAY){
+
             const std::shared_ptr<parquet::ColumnReader> columnReader = groupReader->Column(columnIndex);
             int64_t numRecords = rowGroupMetadata->num_rows();
             // if (columnIndex == 0) {
@@ -262,6 +266,7 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
                 containerFrom<T>(&output, columnReader, numRecords, batch_size);
                 columns.push_back(output);
             // }
+            }
         }
     }  
     

@@ -418,8 +418,9 @@ int decode_using_gpu(const T * d_dictionary, int num_dictionary_values, T* d_out
 
     }
 
-
-    gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
+    if (remainderInputOffsets.size() > 0){
+    	gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
+    }
     
     thrust::gather(thrust::device,
                 d_indices.begin(), d_indices.end(),
@@ -454,41 +455,42 @@ int decode_def_levels(const uint8_t* buffer, const int buffer_len,
 
 	thrust::device_vector<int> d_indices(batch_size);
 
-	    {
-	    	thrust::device_vector<uint32_t> d_counts(rle_runs);
-	    	thrust::device_vector<uint64_t> d_values(rle_values);
-	    	gpu_expand(d_counts.begin(), d_counts.end(), d_values.begin(), d_indices.begin());
-	    }
+	{
+		thrust::device_vector<uint32_t> d_counts(rle_runs);
+		thrust::device_vector<uint64_t> d_values(rle_values);
+		gpu_expand(d_counts.begin(), d_counts.end(), d_values.begin(), d_indices.begin());
+	}
 
-	    thrust::device_vector<uint8_t> d_buffer(buffer_len);
-	    thrust::copy(buffer, buffer + buffer_len, d_buffer.begin());
-	    if (input_offset.size() > 0){
-	    	unpack_functor<int> func(num_bits);
-	    	thrust::device_vector<int> d_input_offsets(input_offset);
-	    	thrust::device_vector<int> d_input_runlengths(input_runlengths);
-	    	thrust::device_vector<int> d_output_offset(output_offset);
+	thrust::device_vector<uint8_t> d_buffer(buffer_len);
+	thrust::copy(buffer, buffer + buffer_len, d_buffer.begin());
+	if (input_offset.size() > 0){
+		unpack_functor<int> func(num_bits);
+		thrust::device_vector<int> d_input_offsets(input_offset);
+		thrust::device_vector<int> d_input_runlengths(input_runlengths);
+		thrust::device_vector<int> d_output_offset(output_offset);
 
-	    	int max_num_sets_in_run = thrust::reduce(thrust::device,
-	    			d_input_runlengths.begin(), d_input_runlengths.end(),
-					0,
-					thrust::maximum<int>());
-	    	max_num_sets_in_run = max_num_sets_in_run/32;
+		int max_num_sets_in_run = thrust::reduce(thrust::device,
+				d_input_runlengths.begin(), d_input_runlengths.end(),
+				0,
+				thrust::maximum<int>());
+		max_num_sets_in_run = max_num_sets_in_run/32;
 
-	    	int max_total_sets = max_num_sets_in_run * input_offset.size();
+		int max_total_sets = max_num_sets_in_run * input_offset.size();
 
-	    	int blocksize = std::min(128, max_total_sets);
-	    	int gridsize = (max_total_sets + blocksize - 1) / blocksize;
+		int blocksize = std::min(128, max_total_sets);
+		int gridsize = (max_total_sets + blocksize - 1) / blocksize;
 
-	    	int shared_memory = blocksize * (num_bits * 32/8 + 32 * 4);
+		int shared_memory = blocksize * (num_bits * 32/8 + 32 * 4);
 
-	    	decode_bitpacking_32sets<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_indices.data()),
-	    			thrust::raw_pointer_cast(d_input_offsets.data()), thrust::raw_pointer_cast(d_input_runlengths.data()), input_offset.size(),
-					thrust::raw_pointer_cast(d_output_offset.data()), num_bits, max_num_sets_in_run, func);
+		decode_bitpacking_32sets<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_indices.data()),
+				thrust::raw_pointer_cast(d_input_offsets.data()), thrust::raw_pointer_cast(d_input_runlengths.data()), input_offset.size(),
+				thrust::raw_pointer_cast(d_output_offset.data()), num_bits, max_num_sets_in_run, func);
 
-	    }
+	}
 
-
-	    gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
+	if (remainderInputOffsets.size() > 0){
+		gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_indices, num_bits);
+	}
     
     thrust::transform(thrust::device, d_indices.begin(), d_indices.end(), output, copy_functor<T>());
     return batch_size;
@@ -546,7 +548,9 @@ int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
 
     }
 
-    gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_output_int, num_bits);
+    if (remainderInputOffsets.size() > 0){
+    	gpu_bit_packing_remainder(d_buffer, remainderInputOffsets, remainderBitOffsets, remainderSetSize, remainderOutputOffsets, d_output_int, num_bits);
+    }
 
     thrust::transform(thrust::device, d_output_int.begin(), d_output_int.end(), device_output, copy_functor<T>());
     return batch_size;
