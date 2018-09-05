@@ -170,16 +170,16 @@ endif()
 
 if (ARROW_NUMERIC_VERSION EQUAL 900)
   # arrow-0.9 requires boost_regex
-  target_link_libraries(gdf arrow boost_regex)
+  target_link_libraries(gdf arrow boost_regex ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
 
   if(LIBGDF_STATIC_LIB)
-    target_link_libraries(gdf_static arrow boost_regex)
+    target_link_libraries(gdf_static arrow boost_regex ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
   endif()
 else()
-  target_link_libraries(gdf arrow)
+  target_link_libraries(gdf arrow ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
 
   if(LIBGDF_STATIC_LIB)
-    target_link_libraries(gdf_static arrow)
+    target_link_libraries(gdf_static arrow ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
   endif()
 endif()
 
@@ -207,7 +207,7 @@ add_custom_target(   # target to link the python files and trigger cffi
 # The test target
 add_custom_target(pytest DEPENDS copy_python)
 add_custom_command(TARGET pytest POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CMAKE_BINARY_DIR}:${CUDA_LIBRARY_STUBS_DIR} py.test -v
+                   COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CMAKE_BINARY_DIR}:${CUDA_LIBRARY_DIR}:${CUDA_LIBRARY_STUBS_DIR} py.test -v
                    WORKING_DIRECTORY --cache-clear tests)
 
 # The install target
