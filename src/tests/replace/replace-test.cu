@@ -17,29 +17,9 @@
 
 #include <gtest/gtest.h>
 
-#include <thrust/device_vector.h>
-
 #include <gdf/gdf.h>
 
-#include <stdlib.h>
-
-template <class U>
-struct TypeTraits {};
-
-#define TYPE_FACTORY(U, D)                                                    \
-    template <>                                                               \
-    struct TypeTraits<U> {                                                    \
-        static constexpr gdf_dtype dtype = GDF_##D;                           \
-    }
-
-TYPE_FACTORY(std::int8_t, INT8);
-TYPE_FACTORY(std::int16_t, INT16);
-TYPE_FACTORY(std::int32_t, INT32);
-TYPE_FACTORY(std::int64_t, INT64);
-TYPE_FACTORY(float, FLOAT32);
-TYPE_FACTORY(double, FLOAT64);
-
-#undef TYPE_FACTORY
+#include "utils.h"
 
 template <class T>
 static inline thrust::device_vector<T>
@@ -47,19 +27,6 @@ MakeDeviceVector(const std::initializer_list<T> list) {
     const std::vector<T>     column_data(list);
     thrust::device_vector<T> device_data(column_data);
     return device_data;
-}
-
-template <class T>
-static inline gdf_column
-MakeGdfColumn(thrust::device_vector<T> &device_vector) {
-    return gdf_column{
-      .data       = thrust::raw_pointer_cast(device_vector.data()),
-      .valid      = nullptr,
-      .size       = device_vector.size(),
-      .dtype      = TypeTraits<T>::dtype,
-      .null_count = 0,
-      .dtype_info = {},
-    };
 }
 
 template <class T>
