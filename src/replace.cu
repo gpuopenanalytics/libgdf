@@ -78,21 +78,14 @@ Replace(T *const             data,
         const T *const       to_replace,
         const T *const       values,
         const std::ptrdiff_t replacement_ptrdiff) {
-    int multiprocessors;
-    // TODO: device selection
-    const cudaError_t status = cudaDeviceGetAttribute(
-      &multiprocessors, cudaDevAttrMultiProcessorCount, 0);
-
-    if (status != cudaSuccess) { return GDF_CUDA_ERROR; }
-
-    const std::size_t blocks = std::ceil(data_size / (multiprocessors * 256.));
+    const std::size_t blocks = std::ceil(data_size /  256.);
 
     const thrust::device_ptr<const T> to_replace_begin(to_replace);
     const thrust::device_ptr<const T> to_replace_end(to_replace_begin
                                                      + replacement_ptrdiff);
 
     replace_kernel<T>
-      <<<blocks * multiprocessors, 256>>>(  // TODO: calc blocks and threads
+      <<<blocks, 256>>>(  // TODO: calc blocks and threads
         data,
         data_size,
         values,
