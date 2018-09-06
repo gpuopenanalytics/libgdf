@@ -50,44 +50,6 @@ namespace gdf {
         return *this;
     }
 
-    Launcher& Launcher::instantiate(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_binary_operator ope) {
-        arguments.clear();
-        arguments.push_back(gdf::getTypeName(out->dtype));
-        arguments.push_back(gdf::getTypeName(vax->dtype));
-        arguments.push_back(gdf::getTypeName(vay->dtype));
-        arguments.push_back(gdf::getOperatorName(ope));
-        return *this;
-    }
-
-    Launcher& Launcher::instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_binary_operator ope) {
-        arguments.clear();
-        arguments.push_back(gdf::getTypeName(out->dtype));
-        arguments.push_back(gdf::getTypeName(vax->dtype));
-        arguments.push_back(gdf::getTypeName(vay->dtype));
-        arguments.push_back(gdf::getOperatorName(ope));
-        return *this;
-    }
-
-    Launcher& Launcher::instantiate(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope) {
-        arguments.clear();
-        arguments.push_back(gdf::getTypeName(out->dtype));
-        arguments.push_back(gdf::getTypeName(vax->dtype));
-        arguments.push_back(gdf::getTypeName(vay->dtype));
-        arguments.push_back(gdf::getTypeName(def->dtype));
-        arguments.push_back(gdf::getOperatorName(ope));
-        return *this;
-    }
-
-    Launcher& Launcher::instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope) {
-        arguments.clear();
-        arguments.push_back(gdf::getTypeName(out->dtype));
-        arguments.push_back(gdf::getTypeName(vax->dtype));
-        arguments.push_back(gdf::getTypeName(vay->dtype));
-        arguments.push_back(gdf::getTypeName(def->dtype));
-        arguments.push_back(gdf::getOperatorName(ope));
-        return *this;
-    }
-
     gdf_error Launcher::launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay) {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)

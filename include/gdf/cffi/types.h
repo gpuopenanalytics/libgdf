@@ -126,15 +126,15 @@ typedef enum {
     GDF_FLOOR_DIV,
     GDF_MOD,
     GDF_POW,
-    //GDF_COMBINE,
-    //GDF_COMBINE_FIRST,
-    //GDF_ROUND,
     GDF_EQUAL,
     GDF_NOT_EQUAL,
     GDF_LESS,
     GDF_GREATER,
     GDF_LESS_EQUAL,
     GDF_GREATER_EQUAL,
+    //GDF_COMBINE,
+    //GDF_COMBINE_FIRST,
+    //GDF_ROUND,
     //GDF_PRODUCT,
     //GDF_DOT
 } gdf_binary_operator;

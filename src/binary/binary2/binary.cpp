@@ -21,7 +21,7 @@
 namespace gdf {
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_binary_operator ope) {
         gdf::Launcher::launch().kernel("kernel_v_s")
-                               .instantiate(out, vax, vay, ope)
+                               .instantiate(ope, out, vax, vay)
                                .launch(out, vax, vay);
 
         return GDF_SUCCESS;
@@ -29,7 +29,7 @@ namespace gdf {
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_binary_operator ope) {
         gdf::Launcher::launch().kernel("kernel_v_v")
-                               .instantiate(out, vax, vay, ope)
+                               .instantiate(ope, out, vax, vay)
                                .launch(out, vax, vay);
 
         return GDF_SUCCESS;
@@ -37,7 +37,7 @@ namespace gdf {
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope) {
         gdf::Launcher::launch().kernel("kernel_v_s_d")
-                               .instantiate(out, vax, vay, def, ope)
+                               .instantiate(ope, out, vax, vay, def)
                                .launch(out, vax, vay, def);
 
         return GDF_SUCCESS;
@@ -45,7 +45,7 @@ namespace gdf {
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope) {
         gdf::Launcher::launch().kernel("kernel_v_v_d")
-                               .instantiate(out, vax, vay, def, ope)
+                               .instantiate(ope, out, vax, vay, def)
                                .launch(out, vax, vay, def);
 
         return GDF_SUCCESS;

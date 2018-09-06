@@ -46,13 +46,11 @@ namespace gdf {
     public:
         Launcher& kernel(std::string&& value);
 
-        Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_binary_operator ope);
-
-        Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_binary_operator ope);
-
-        Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope);
-
-        Launcher& instantiate(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope);
+        template <typename ... Args>
+        Launcher& instantiate(gdf_binary_operator ope, Args&& ... args) {
+            arguments.assign({gdf::getTypeName(args->dtype)..., gdf::getOperatorName(ope)});
+            return *this;
+        }
 
         gdf_error launch(gdf_column* out, gdf_column* vax, gdf_scalar* vay);
 
