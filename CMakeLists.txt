@@ -69,7 +69,7 @@ if(CUDA_FOUND)
     message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 
     include(ConfigCuda RESULT_VARIABLE result)
-    message("-- ConfigCuda: " ${result})
+    message(STATUS "ConfigCuda: ${result}")
 else()
     message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()
@@ -130,7 +130,7 @@ endif()
 
 ## Benchmark
 include(ConfigBenchmark RESULT_VARIABLE result)
-message("-- ConfigBenchmark: " ${result})
+message(STATUS "ConfigBenchmark: ${result}")
 
 
 ## Binary Operations
