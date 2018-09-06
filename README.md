@@ -144,3 +144,36 @@ conda environment activated), run below to exceute test:
 ```bash
 $ make pytest   # this auto trigger target "copy_python"
 ```
+
+### Benchmark
+
+It is used [Google Benchmark](https://github.com/google/benchmark) for this purpose.
+Refer to that repository in order to get more information related to its functionality.
+
+In order to enable the benchmark functionality, which by default is disabled,
+it is required to add the option BENCHMARK in the command line when 'cmake' is executed.
+It is also recommended to use release build type.
+
+```bash
+$ cmake -DCMAKE_BUILD_TYPE=Release -DBENCHMARK=ON path/to/libgdf
+```
+
+When the build process is completed, the benchmark binary files will be located in the 'bench' folder.
+In order to get the different input arguments for a benchmark binary file,
+add the argument '--help' in the command line when the file is executed.
+
+The benchmark is applied to the following features:
+* Binary Operations (NVRTC - Jitify).
+
+###### Binary Operations
+
+Recommended input arguments when this benchmark is executed.
+```bash
+$ BinaryOperationsBench --benchmark_counters_tabular=true
+```
+
+### Benchmark - Troubleshoot
+
+When a message related to CPU scaling (`***WARNING*** CPU scaling is enabled`) appeared,
+refer to the section [Disable CPU frequency scaling](https://github.com/google/benchmark#disable-cpu-frequency-scaling)
+in the Google Benchmark documentation.

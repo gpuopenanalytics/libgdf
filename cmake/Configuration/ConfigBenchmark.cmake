@@ -1,11 +1,11 @@
 ## Build Benchmark
 ## By default is disabled.
-## Add -DBenchmark=ON as cmake parameter to create the benchmark.
+## Add -DBENCHMARK:BOOL=ON as cmake parameter to create the benchmark.
 
-option(Benchmark "Benchmark" OFF)
+option(BENCHMARK "Benchmark" OFF)
 
-if(Benchmark)
-  message("-- Benchmark Active")
-  include(GoogleBenchmark)
-  add_subdirectory(src/bench)
+if(BENCHMARK)
+    message(STATUS "Benchmark is enabled")
+    include(GoogleBenchmark)
+    add_subdirectory(src/bench)
 endif()
