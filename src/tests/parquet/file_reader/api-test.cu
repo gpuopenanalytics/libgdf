@@ -199,12 +199,22 @@ protected:
         gdf_column boolean_column =
           convert_to_host_gdf_column<::parquet::BooleanType::c_type>(&column);
 
+        int fails = 0;
+
         for (std::size_t i = 0; i < boolean_column.size; i++) {
             if (i % 2) {
                 bool expected = true;
                 bool value    = static_cast<bool *>(boolean_column.data)[i];
 
                 EXPECT_EQ(expected, value);
+
+                if (expected != value){
+                	std::cout<<"fail at checkBoolean row: "<<i<<std::endl;
+                	fails++;
+                	if (fails > 20){
+                		break;
+                	}
+                }
             }
 
             checkNulls(boolean_column);
@@ -216,6 +226,8 @@ protected:
         gdf_column int32_column =
           convert_to_host_gdf_column<::parquet::Int32Type::c_type>(&column);
 
+        int fails = 0;
+
         for (std::size_t i = 0; i < int32_column.size; i++) {
             if (i % 2) {
                 std::int32_t expected = genInt32(i);
@@ -223,6 +235,14 @@ protected:
                   static_cast<std::int32_t *>(int32_column.data)[i];
 
                 EXPECT_EQ(expected, value);
+
+                if (expected != value){
+                                	std::cout<<"fail at checkInt32 row: "<<i<<std::endl;
+                                	fails++;
+                                	if (fails > 20){
+                                		break;
+                                	}
+                                }
             }
         }
 
@@ -234,6 +254,8 @@ protected:
         gdf_column int64_column =
           convert_to_host_gdf_column<::parquet::Int64Type::c_type>(&column);
 
+        int fails = 0;
+
         for (std::size_t i = 0; i < int64_column.size; i++) {
             if (i % 2) {
                 std::int64_t expected = genInt64(i);
@@ -241,6 +263,14 @@ protected:
                   static_cast<std::int64_t *>(int64_column.data)[i];
 
                 EXPECT_EQ(expected, value);
+
+                if (expected != value){
+                                	std::cout<<"fail at checkInt64 row: "<<i<<std::endl;
+                                	fails++;
+                                	if (fails > 20){
+                                		break;
+                                	}
+                                }
             }
         }
 
@@ -252,12 +282,22 @@ protected:
         gdf_column double_column =
           convert_to_host_gdf_column<::parquet::DoubleType::c_type>(&column);
 
+        int fails = 0;
+
         for (std::size_t i = 0; i < double_column.size; i++) {
             if (i % 2) {
                 double expected = static_cast<double>(i);
                 double value    = static_cast<double *>(double_column.data)[i];
 
                 EXPECT_EQ(expected, value);
+
+                if (expected != value){
+                                	std::cout<<"fail at checkDouble row: "<<i<<std::endl;
+                                	fails++;
+                                	if (fails > 20){
+                                		break;
+                                	}
+                                }
             }
         }
 

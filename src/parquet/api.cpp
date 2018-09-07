@@ -15,10 +15,14 @@
  * limitations under the License.
  */
 
+#include <mutex>
+#include <thread>
+
 #include <arrow/util/bit-util.h>
 #include <arrow/util/logging.h>
 
 #include <parquet/column_reader.h>
+#include <parquet/file_reader.h>
 #include <parquet/metadata.h>
 
 #include <thrust/device_ptr.h>
@@ -170,8 +174,6 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
       file_reader->metadata();
     const std::size_t num_rows =
       static_cast<std::size_t>(metadata->num_rows());
-    const std::size_t num_row_groups =
-      static_cast<std::size_t>(metadata->num_row_groups());
 
     std::size_t offsets[column_indices.size()];
     for (std::size_t i = 0; i < column_indices.size(); i++) { offsets[i] = 0; }
@@ -187,6 +189,194 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
 
     return GDF_SUCCESS;
 }
+
+
+struct ParquetReaderJob {
+
+	std::size_t row_group_index;
+	std::size_t column_index;
+	std::size_t column_index_in_read_set;
+
+//	std::shared_ptr<GdfRowGroupReader> row_group_reader;
+	std::shared_ptr<::parquet::ColumnReader> column_reader;
+
+	const gdf_column & column;
+	std::size_t offset;
+
+	ParquetReaderJob(std::size_t _row_group_index,
+	std::size_t _column_index,
+	std::size_t _column_index_in_read_set,
+//	std::shared_ptr<GdfRowGroupReader> _row_group_reader,
+	std::shared_ptr<::parquet::ColumnReader> _column_reader,
+	const gdf_column & _column,
+	std::size_t _offset )
+	: row_group_index(_row_group_index),
+	  column_index(_column_index),
+	  column_index_in_read_set(_column_index_in_read_set),
+//	  row_group_reader(std::move(_row_group_reader)),
+	  column_reader(std::move(_column_reader)),
+	  column(std::move(_column)),
+	  offset(_offset)
+	{}
+};
+
+
+
+void _ProcessParquetReaderJobsThread(const std::vector<ParquetReaderJob> & jobs, std::mutex & lock,
+		int & job_index, gdf_error & gdf_error_out){
+
+	lock.lock();
+	int current_job = job_index;
+	job_index++;
+	lock.unlock();
+
+	gdf_error current_gdf_error = GDF_SUCCESS;
+
+	while (current_job < jobs.size()){
+
+		switch (jobs[current_job].column_reader->type()) {
+		#define WHEN(TYPE)                                                            \
+				case ::parquet::Type::TYPE: {                                             \
+					std::shared_ptr<gdf::parquet::ColumnReader<                           \
+					::parquet::DataType<::parquet::Type::TYPE>>>                        \
+					 reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
+					 ::parquet::DataType<::parquet::Type::TYPE>>>(jobs[current_job].column_reader);      \
+					 if (reader->HasNext()) {                                              \
+						 reader->ToGdfColumn(jobs[current_job].column, jobs[current_job].offset); \
+					 }                                                                     \
+				} break
+				WHEN(BOOLEAN);
+				WHEN(INT32);
+				WHEN(INT64);
+				WHEN(FLOAT);
+				WHEN(DOUBLE);
+				default:
+		#ifdef GDF_DEBUG
+					std::cerr << "Column type error from file" << std::endl;
+		#endif
+					current_gdf_error =  GDF_IO_ERROR;  //TODO: improve using exception handling
+		#undef WHEN
+				}
+
+
+		lock.lock();
+		if (gdf_error_out != GDF_SUCCESS){ // if error we want to exit
+			current_job = jobs.size();
+		} else if (current_gdf_error != GDF_SUCCESS) { // if error we want to exit
+			gdf_error_out = current_gdf_error;
+			current_job = jobs.size();
+		} else {
+			current_job = job_index;
+		}
+		job_index++;
+		lock.unlock();
+	}
+
+}
+
+gdf_error _ProcessParquetReaderJobs(const std::vector<ParquetReaderJob> & jobs){
+
+	std::mutex lock;
+	int job_index = 0;
+	gdf_error gdf_error_out = GDF_SUCCESS;
+
+	int num_threads = std::thread::hardware_concurrency();
+	num_threads = jobs.size() < num_threads ? jobs.size() : num_threads;
+
+	std::vector<std::thread> threads(num_threads);
+
+	for (int i = 0; i < num_threads; i++){
+		threads[i] = std::thread(_ProcessParquetReaderJobsThread,
+				std::ref(jobs), std::ref(lock), std::ref(job_index), std::ref(gdf_error_out));
+	}
+	for (int i = 0; i < num_threads; i++){
+		threads[i].join();
+	}
+	return gdf_error_out;
+}
+
+
+static inline gdf_error
+_ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
+		const std::vector<std::size_t> &   row_group_indices,
+		const std::vector<std::size_t> &   column_indices,
+		gdf_column *const                  gdf_columns) {
+	const std::shared_ptr<::parquet::FileMetaData> &metadata =
+			file_reader->metadata();
+	const std::size_t num_rows =
+			static_cast<std::size_t>(metadata->num_rows());
+
+
+	std::vector<ParquetReaderJob> jobs;
+
+	std::vector<std::size_t> offsets(row_group_indices.size(), 0);
+
+	for (std::size_t row_group_index_in_set = 0; row_group_index_in_set < row_group_indices.size();
+			row_group_index_in_set++) {
+
+		std::size_t row_group_index = row_group_indices[row_group_index_in_set];
+
+		const auto row_group_reader =
+				file_reader->RowGroup(static_cast<int>(row_group_index));
+
+		int64_t num_rows = row_group_reader->metadata()->num_rows();
+
+
+		for (std::size_t column_reader_index = 0;
+				column_reader_index < column_indices.size();
+				column_reader_index++) {
+			const gdf_column &_gdf_column = gdf_columns[column_reader_index];
+			const std::shared_ptr<::parquet::ColumnReader> column_reader =
+					row_group_reader->Column(
+							static_cast<int>(column_indices[column_reader_index]));
+
+			jobs.emplace_back(row_group_index, column_indices[column_reader_index],
+					column_reader_index, column_reader,
+					_gdf_column, offsets[row_group_index_in_set]);
+
+		}
+
+		if (row_group_index_in_set < row_group_indices.size() - 1){
+			offsets[row_group_index_in_set + 1] = offsets[row_group_index_in_set] + num_rows;
+		}
+	}
+
+
+//	for (int job_ind = 0; job_ind < jobs.size(); job_ind++){
+//
+//		switch (jobs[job_ind].column_reader->type()) {
+//#define WHEN(TYPE)                                                            \
+//		case ::parquet::Type::TYPE: {                                             \
+//			std::shared_ptr<gdf::parquet::ColumnReader<                           \
+//			::parquet::DataType<::parquet::Type::TYPE>>>                        \
+//			 reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
+//			 ::parquet::DataType<::parquet::Type::TYPE>>>(jobs[job_ind].column_reader);      \
+//			 if (reader->HasNext()) {                                              \
+//				 reader->ToGdfColumn(jobs[job_ind].column, jobs[job_ind].offset); \
+//			 }                                                                     \
+//		} break
+//		WHEN(BOOLEAN);
+//		WHEN(INT32);
+//		WHEN(INT64);
+//		WHEN(FLOAT);
+//		WHEN(DOUBLE);
+//		default:
+//#ifdef GDF_DEBUG
+//			std::cerr << "Column type error from file" << std::endl;
+//#endif
+//			return GDF_IO_ERROR;  //TODO: improve using exception handling
+//#undef WHEN
+//		}
+//
+//	}
+//	return GDF_SUCCESS;
+
+	return _ProcessParquetReaderJobs(jobs);
+}
+
+
+
+
 
 template <::parquet::Type::type TYPE>
 static inline gdf_error
@@ -408,7 +598,7 @@ read_parquet_by_ids(const std::string &             filename,
         return GDF_IO_ERROR;
     }
 
-    if (_ReadFile(file_reader, row_group_indices, column_indices, gdf_columns)
+    if (_ReadFileMultiThread(file_reader, row_group_indices, column_indices, gdf_columns)
         != GDF_SUCCESS) {
         return GDF_IO_ERROR;
     }
