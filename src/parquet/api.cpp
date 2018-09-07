@@ -203,6 +203,9 @@ struct ParquetReaderJob {
 	const gdf_column & column;
 	std::size_t offset;
 
+	uint8_t first_valid_byte;
+	uint8_t last_valid_byte;
+
 	ParquetReaderJob(std::size_t _row_group_index,
 	std::size_t _column_index,
 	std::size_t _column_index_in_read_set,
@@ -222,7 +225,7 @@ struct ParquetReaderJob {
 
 
 
-void _ProcessParquetReaderJobsThread(const std::vector<ParquetReaderJob> & jobs, std::mutex & lock,
+void _ProcessParquetReaderJobsThread(std::vector<ParquetReaderJob> & jobs, std::mutex & lock,
 		int & job_index, gdf_error & gdf_error_out){
 
 	lock.lock();
@@ -242,7 +245,7 @@ void _ProcessParquetReaderJobsThread(const std::vector<ParquetReaderJob> & jobs,
 					 reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
 					 ::parquet::DataType<::parquet::Type::TYPE>>>(jobs[current_job].column_reader);      \
 					 if (reader->HasNext()) {                                              \
-						 reader->ToGdfColumn(jobs[current_job].column, jobs[current_job].offset); \
+						 reader->ToGdfColumn(jobs[current_job].column, jobs[current_job].offset, jobs[current_job].first_valid_byte, jobs[current_job].last_valid_byte); \
 					 }                                                                     \
 				} break
 				WHEN(BOOLEAN);
@@ -274,7 +277,7 @@ void _ProcessParquetReaderJobsThread(const std::vector<ParquetReaderJob> & jobs,
 
 }
 
-gdf_error _ProcessParquetReaderJobs(const std::vector<ParquetReaderJob> & jobs){
+gdf_error _ProcessParquetReaderJobs(std::vector<ParquetReaderJob> & jobs){
 
 	std::mutex lock;
 	int job_index = 0;
@@ -292,6 +295,9 @@ gdf_error _ProcessParquetReaderJobs(const std::vector<ParquetReaderJob> & jobs){
 	for (int i = 0; i < num_threads; i++){
 		threads[i].join();
 	}
+
+
+
 	return gdf_error_out;
 }
 
@@ -341,37 +347,31 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
 		}
 	}
 
+	gdf_error gdf_error_out = _ProcessParquetReaderJobs(jobs);
 
-//	for (int job_ind = 0; job_ind < jobs.size(); job_ind++){
-//
-//		switch (jobs[job_ind].column_reader->type()) {
-//#define WHEN(TYPE)                                                            \
-//		case ::parquet::Type::TYPE: {                                             \
-//			std::shared_ptr<gdf::parquet::ColumnReader<                           \
-//			::parquet::DataType<::parquet::Type::TYPE>>>                        \
-//			 reader = std::static_pointer_cast<gdf::parquet::ColumnReader<       \
-//			 ::parquet::DataType<::parquet::Type::TYPE>>>(jobs[job_ind].column_reader);      \
-//			 if (reader->HasNext()) {                                              \
-//				 reader->ToGdfColumn(jobs[job_ind].column, jobs[job_ind].offset); \
-//			 }                                                                     \
-//		} break
-//		WHEN(BOOLEAN);
-//		WHEN(INT32);
-//		WHEN(INT64);
-//		WHEN(FLOAT);
-//		WHEN(DOUBLE);
-//		default:
-//#ifdef GDF_DEBUG
-//			std::cerr << "Column type error from file" << std::endl;
-//#endif
-//			return GDF_IO_ERROR;  //TODO: improve using exception handling
-//#undef WHEN
-//		}
-//
-//	}
-//	return GDF_SUCCESS;
+	// now lets fix all the valid bytes that were shared for a column accross rowgroups
+	if (row_group_indices.size() > 1){
+		for (std::size_t column_reader_index = 0; column_reader_index < column_indices.size();
+				column_reader_index++) {
 
-	return _ProcessParquetReaderJobs(jobs);
+			for (std::size_t row_group_index_in_set = 0; row_group_index_in_set < row_group_indices.size() - 1;
+					row_group_index_in_set++) {
+
+				int job_index1 = (row_group_index_in_set * column_indices.size()) + column_reader_index;
+				int job_index2 = ((row_group_index_in_set + 1) * column_indices.size()) + column_reader_index;
+
+				uint8_t merged = jobs[job_index1].last_valid_byte | jobs[job_index2].first_valid_byte;
+
+				std::string strmessage = " jobs[job_index1].last_valid_byte: " + std::to_string(jobs[job_index1].last_valid_byte)  + " jobs[job_index2].first_valid_byte: " + std::to_string(jobs[job_index2].first_valid_byte) + " merged: " + std::to_string(merged);
+				std::cout<<strmessage<<std::endl;
+
+
+			}
+		}
+	}
+
+
+	return gdf_error_out;
 }
 
 

@@ -58,6 +58,8 @@ public:
 
     std::size_t ToGdfColumn(const gdf_column &  column, const std::ptrdiff_t offset, std::int16_t *d_definition_levels);
 
+    std::size_t ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset, std::uint8_t & first_valid_byte, std::uint8_t & last_valid_byte);
+
 
     int64_t ReadDefinitionLevels(int64_t batch_size, int16_t* levels) {
         if (descr_->max_definition_level() == 0) {

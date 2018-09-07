@@ -368,12 +368,12 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
 				IsValidFunctor { max_definition_level });
 	} else {
         int left_bits_length = valid_bits_offset % 8;
-        int rigth_bits_length = 8 - left_bits_length;
+        int right_bits_length = 8 - left_bits_length;
         uint8_t mask;
         cudaMemcpy(&mask, d_valid_ptr + (valid_bits_offset/8), 1, cudaMemcpyDeviceToHost);
 
-        thrust::host_vector<int16_t> h_def_levels(rigth_bits_length);
-        cudaMemcpy(h_def_levels.data(), d_def_levels, rigth_bits_length * sizeof(int16_t), cudaMemcpyDeviceToHost);
+        thrust::host_vector<int16_t> h_def_levels(right_bits_length);
+        cudaMemcpy(h_def_levels.data(), d_def_levels, right_bits_length * sizeof(int16_t), cudaMemcpyDeviceToHost);
         for(size_t i = 0; i < h_def_levels.size(); i++) {
             if (h_def_levels[i] == max_definition_level) {
                 mask |= gdf::util::byte_bitmask(i + left_bits_length);
@@ -384,7 +384,7 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
             }
         }
         cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
-        transform_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, d_def_levels + rigth_bits_length, def_length, IsValidFunctor(max_definition_level));
+        transform_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, d_def_levels + right_bits_length, def_length, IsValidFunctor(max_definition_level));
     }
     int not_null_count = thrust::count(thrust::device_pointer_cast(d_def_levels), thrust::device_pointer_cast(d_def_levels) + def_length, max_definition_level);
     *null_count = def_length - not_null_count;
@@ -553,7 +553,9 @@ TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
 
 
 template <class DataType>
-std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset) {
+std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset,
+		std::uint8_t & first_valid_byte, std::uint8_t & last_valid_byte) {
+
 	   if (!HasNext()) {
 	        return 0;
 	    }
@@ -564,6 +566,50 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
 
 	   std::size_t rows_read_total = ToGdfColumn(column, offset, d_definition_levels);
 
+	   std::int16_t  max_definition_level = descr_->max_definition_level();
+
+	   if (offset > 0 && offset % 8 != 0){ // need to figure out the first_valid_byte
+		   first_valid_byte = 0;
+
+		   int left_bits_length = offset % 8;
+		   int right_bits_length = 8 - left_bits_length;
+
+		   thrust::host_vector<int16_t> h_def_levels(right_bits_length);
+		   cudaMemcpy(h_def_levels.data(), d_definition_levels, right_bits_length * sizeof(int16_t), cudaMemcpyDeviceToHost);
+		   for(size_t i = 0; i < h_def_levels.size(); i++) {
+			   if (h_def_levels[i] == max_definition_level) {
+				   first_valid_byte |= gdf::util::byte_bitmask(i + left_bits_length);
+			   } else {
+				   if (h_def_levels[i] < max_definition_level) {
+					   first_valid_byte &= gdf::util::flipped_bitmask(i + left_bits_length);
+				   }
+			   }
+		   }
+	   }
+	   if ( (offset + values_to_read) % 8 != 0 ) { // need to figure out the last_valid_byte
+		   last_valid_byte = 0;
+
+		   int left_bits_length = (offset + values_to_read) % 8;
+		   int right_bits_length = 8 - left_bits_length;
+
+		   thrust::host_vector<int16_t> h_def_levels(left_bits_length);
+		   cudaMemcpy(h_def_levels.data(), d_definition_levels + values_to_read - left_bits_length, left_bits_length * sizeof(int16_t), cudaMemcpyDeviceToHost);
+		   for(size_t i = 0; i < h_def_levels.size(); i++) {
+			   if (h_def_levels[i] == max_definition_level) {
+				   last_valid_byte |= gdf::util::byte_bitmask(i);
+			   } else {
+				   if (h_def_levels[i] < max_definition_level) {
+					   last_valid_byte &= gdf::util::flipped_bitmask(i);
+				   }
+			   }
+		   }
+	   }
+
+	   std::string strmessage = "offset: " +  std::to_string(offset) + " values_to_read: " + std::to_string(values_to_read)  + " first_valid_byte: " + std::to_string(first_valid_byte)  + " last_valid_byte: " + std::to_string(last_valid_byte);
+	   std::cout<<strmessage<<std::endl;
+
+
+	   return rows_read_total;
 
 }
 
