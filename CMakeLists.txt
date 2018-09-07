@@ -54,22 +54,6 @@ set_package_properties(
     PURPOSE "NVIDIA CUDA® parallel computing platform and programming model."
     URL "https://developer.nvidia.com/cuda-zone")
 
-if(CUDA_FOUND)
-    message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
-
-    # Suppress SHFL warnings caused by modern GPU.
-    # TODO: remove this when modern GPU is removed or fixed to use shfl_sync
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
-        -Wno-deprecated-declarations;
-        -Xptxas --disable-warnings)
-    # set warnings as errors
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Werror cross-execution-space-call;-Xcompiler -Wall,-Werror)
-
-    message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
-else()
-    message(FATAL_ERROR "CUDA not found, please check your settings.")
-endif()
-
 if (CUDA_FOUND)
 
   # Option handling for specifying target GPU Architecture
@@ -210,6 +194,22 @@ endif()
 option(HT_LEGACY_ALLOCATOR "Enable legacy allocator for hash tables" ON)
 if (HT_LEGACY_ALLOCATOR)
   message(STATUS "Legacy allocator for hash tables: ${HT_LEGACY_ALLOCATOR}")
+endif()
+
+if(CUDA_FOUND)
+    message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
+
+    # Suppress SHFL warnings caused by modern GPU.
+    # TODO: remove this when modern GPU is removed or fixed to use shfl_sync
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
+        -Wno-deprecated-declarations;
+        -Xptxas --disable-warnings)
+    # set warnings as errors
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Werror cross-execution-space-call;-Xcompiler -Wall,-Werror)
+
+    message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+else()
+    message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()
 
 # Locate the Apache Arrow package (Requires that you use ConfigureArrow module)
