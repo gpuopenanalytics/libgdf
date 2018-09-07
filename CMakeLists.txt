@@ -54,6 +54,22 @@ set_package_properties(
     PURPOSE "NVIDIA CUDA® parallel computing platform and programming model."
     URL "https://developer.nvidia.com/cuda-zone")
 
+if(CUDA_FOUND)
+    message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
+
+    # Suppress SHFL warnings caused by modern GPU.
+    # TODO: remove this when modern GPU is removed or fixed to use shfl_sync
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
+        "-Wno-deprecated-declarations ";
+        "-Xptxas --disable-warnings ")
+    # set warnings as errors
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};"-Werror cross-execution-space-call ";"-Xcompiler -Wall,-Werror ")
+
+    message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+else()
+    message(FATAL_ERROR "CUDA not found, please check your settings.")
+endif()
+
 if (CUDA_FOUND)
 
   # Option handling for specifying target GPU Architecture
@@ -65,8 +81,8 @@ if (CUDA_FOUND)
   message(STATUS "Number of target GPU Architectures specified: ${NUM_GPU_ARCH}") # Show the number of targeted architectures
 
 
-  set(PASCAL_ARCH --generate-code=arch=compute_61,code=sm_61)
-  set(VOLTA_ARCH  --generate-code=arch=compute_70,code=sm_70)
+  set(PASCAL_ARCH "--generate-code=arch=compute_61,code=sm_61 ")
+  set(VOLTA_ARCH  "--generate-code=arch=compute_70,code=sm_70 ")
   set(GPU_ARCH_LIST pascal volta) # List of supported GPU Architectures
 
   if (NUM_GPU_ARCH GREATER 1)
@@ -92,7 +108,7 @@ if (CUDA_FOUND)
       endif()
     endforeach()
 
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--expt-extended-lambda;-std=c++11)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};"--expt-extended-lambda ";"-std=c++11 ")
     message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
 
   endif()
@@ -127,7 +143,7 @@ if (CUDA_FOUND)
         message(WARNING "\n ${DETECTED_ARCH} \n")
         message(WARNING "\n Using ${GPU_ARCH_LIST} instead")
         set(GPU_ARCH ${GPU_ARCH_LIST})
-        set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};${VOLTA_ARCH};--expt-extended-lambda;-std=c++11)
+        set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};${VOLTA_ARCH};"--expt-extended-lambda ";"-std=c++11 ")
         message(WARNING "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
       endif()
 
@@ -147,7 +163,7 @@ if (CUDA_FOUND)
 
       if (${CUDA_SUCCESS})
         message(STATUS "Detected CUDA Compute Capability: ${CUDA_COMPUTE_CAPABILITY}")
-        set(CUDA_NVCC_FLAGS ${DETECTED_ARCH};--expt-extended-lambda;-std=c++11)
+        set(CUDA_NVCC_FLAGS ${DETECTED_ARCH};"--expt-extended-lambda ";"-std=c++11 ")
         message(STATUS "Using detected GPU Architecture")
         message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
 
@@ -160,13 +176,13 @@ if (CUDA_FOUND)
     elseif (${GPU_ARCH} STREQUAL pascal)
 
       message(STATUS "Setting GPU Arch: Pascal")
-      set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};--expt-extended-lambda;-std=c++11)
+      set(CUDA_NVCC_FLAGS ${PASCAL_ARCH};"--expt-extended-lambda ";"-std=c++11 ")
       message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
 
     elseif (${GPU_ARCH} STREQUAL volta)
 
       message(STATUS "Setting GPU Arch: Volta")
-      set(CUDA_NVCC_FLAGS ${VOLTA_ARCH};--expt-extended-lambda;-std=c++11)
+      set(CUDA_NVCC_FLAGS ${VOLTA_ARCH};"--expt-extended-lambda ";"-std=c++11 ")
       message(STATUS "Setting CUDA NVCC FLAGS: ${CUDA_NVCC_FLAGS}")
 
     elseif (${GPU_ARCH} STREQUAL custom)
@@ -181,7 +197,7 @@ endif()
 
 # Option handling for CUDA debugging
 if (CMAKE_BUILD_TYPE MATCHES DEBUG)
-  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G;-lineinfo CACHE STRING "Specify CUDA DEBUGGING Flags")
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};"-g ";"-G ";"-lineinfo " CACHE STRING "Specify CUDA DEBUGGING Flags")
 endif()
 
 # Option handling for joins
@@ -194,22 +210,6 @@ endif()
 option(HT_LEGACY_ALLOCATOR "Enable legacy allocator for hash tables" ON)
 if (HT_LEGACY_ALLOCATOR)
   message(STATUS "Legacy allocator for hash tables: ${HT_LEGACY_ALLOCATOR}")
-endif()
-
-if(CUDA_FOUND)
-    message(STATUS "CUDA ${CUDA_VERSION} found in ${CUDA_TOOLKIT_ROOT_DIR}")
-
-    # Suppress SHFL warnings caused by modern GPU.
-    # TODO: remove this when modern GPU is removed or fixed to use shfl_sync
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
-        -Wno-deprecated-declarations;
-        -Xptxas --disable-warnings)
-    # set warnings as errors
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Werror cross-execution-space-call;-Xcompiler -Wall,-Werror)
-
-    message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
-else()
-    message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()
 
 # Locate the Apache Arrow package (Requires that you use ConfigureArrow module)
