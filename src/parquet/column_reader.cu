@@ -619,8 +619,36 @@ TYPE_TRAITS_FACTORY(::parquet::DoubleType, GDF_FLOAT64);
 
 template <class DataType>
 std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset) {
-    if (!HasNext()) { 
-        return 0; 
+	   if (!HasNext()) {
+	        return 0;
+	    }
+	   std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
+
+	   thrust::device_vector<int16_t> d_def_levels(values_to_read);//this size is work group size
+	   std::int16_t *d_definition_levels = thrust::raw_pointer_cast(d_def_levels.data());
+
+	   std::size_t rows_read_total = ToGdfColumn(column, offset, d_definition_levels);
+
+
+}
+
+template <class DataType>
+std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset) {
+    if (!HasNext()) {
+        return 0;
+    }
+   std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
+
+   thrust::device_vector<int16_t> d_def_levels(values_to_read);//this size is work group size
+   std::int16_t *d_definition_levels = thrust::raw_pointer_cast(d_def_levels.data());
+
+   return ToGdfColumn(column, offset, d_definition_levels);
+}
+
+template <class DataType>
+std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const std::ptrdiff_t offset, std::int16_t *d_definition_levels) {
+    if (!HasNext()) {
+        return 0;
     }
     using c_type = typename DataType::c_type;
 
@@ -631,12 +659,9 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
     static std::int64_t levels_read = 0;
     static std::int64_t values_read = 0;
     static std::int64_t nulls_count = 0;
-    
+
     int64_t rows_read_total     = 0;
     std::int64_t values_to_read = num_buffered_values_ - num_decoded_values_;
-
-    thrust::device_vector<int16_t> d_def_levels(values_to_read);//this size is work group size 
-    std::int16_t *d_definition_levels = thrust::raw_pointer_cast(d_def_levels.data());
 
     do {
         values_to_read = num_buffered_values_ - num_decoded_values_;
@@ -644,13 +669,13 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
                             values_to_read,
                             d_definition_levels + rows_read_total,
                             nullptr,
-                            static_cast<T *>(values + rows_read_total),   
+                            static_cast<T *>(values + rows_read_total),
                             d_valid_bits,
                             rows_read_total + (offset % 8),
                             &levels_read,
                             &values_read,
-                            &nulls_count); 
-        
+                            &nulls_count);
+
         rows_read_total += rows_read;
     } while (this->HasNext());
     return static_cast<std::size_t>(rows_read_total);
