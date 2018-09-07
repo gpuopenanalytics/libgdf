@@ -56,7 +56,7 @@ set_package_properties(
 if (CUDA_FOUND)
 
   # Option handling for specifying target GPU Architecture
-  set(GPU_ARCH detected CACHE STRING "Specify target GPU Architecture(s)")
+  set(GPU_ARCH "pascal,volta" CACHE STRING "Specify target GPU Architecture(s)")
   string(TOLOWER "${GPU_ARCH}" GPU_ARCH)
   string(REPLACE "," ";" USER_GPU_ARCH_LIST ${GPU_ARCH}) # Make GPU_ARCH into a list
   message(STATUS "Target GPU Architectures: ${USER_GPU_ARCH_LIST}") # Show ";" seperated list of target architectures
@@ -74,7 +74,7 @@ if (CUDA_FOUND)
 
       message(STATUS "Adding GPU Architecture: ${USER_ARCH}") # Status message: display the architecture being added
       list(FIND GPU_ARCH_LIST ${USER_ARCH} OUTPUT_INDEX) # See if it exists in supported architectures list
-      message(STATUS "OUTPUT INDEX: ${OUTPUT_INDEX}") # Display index. -1 if not found
+      # message(STATUS "OUTPUT INDEX: ${OUTPUT_INDEX}") # Display index. -1 if not found
 
       if (OUTPUT_INDEX GREATER -1)
         list(GET GPU_ARCH_LIST ${OUTPUT_INDEX} _ARCH) # Get the valid GPU Architecture from supported list
