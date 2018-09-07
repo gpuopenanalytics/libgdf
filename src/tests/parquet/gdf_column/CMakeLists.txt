@@ -26,7 +26,6 @@ set(PARQUET_FILE_FOR_DECODING_PATH
 
 GDF_ADD_PARQUET_TEST(gdf_column-test
         gdf_column-test.cu
-        gdf_column_offset-test.cu
         ../../helper/utils.cuh 
         ../../helper/utils.cu
         )

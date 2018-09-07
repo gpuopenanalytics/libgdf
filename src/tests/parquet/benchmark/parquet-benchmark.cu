@@ -121,6 +121,9 @@ static inline gdf_error
 convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_read, uint32_t batch_size) {
     typedef typename parquet_traits<C>::parquet_type    parquet_type;
 
+    //@todo: amount_to_read should be computed before execute ReadBatch
+        amount_to_read = batch_size;
+
     parquet_type* values_buffer;
     gdf_valid_type* valid_bits;
     int16_t * definition_level;
@@ -171,73 +174,7 @@ static inline gdf_error containerFrom(gdf_column *column, std::shared_ptr<parque
     #undef WHEN
 
     throw std::invalid_argument("ERROR: Bad parquet column type");
-}
-
-void
-checkBoolean(const gdf_column &boolean_column) {
-    for (std::size_t i = 0; i < boolean_column.size; i++) {
-        bool expected = (i % 2) == 0;
-        bool value    = static_cast<bool *>(boolean_column.data)[i];
-
-        assert(expected == value);
-    }
-}
-
-void
-checkInt64(const gdf_column &int64_column) {
-    for (std::size_t i = 0; i < int64_column.size; i++) {
-        std::int64_t expected =
-            static_cast<std::int64_t>(i) * 1000000000000;
-        std::int64_t value =
-            static_cast<std::int64_t *>(int64_column.data)[i];
-
-        assert(expected == value);
-    }
-}
-
-void
-checkDouble(const gdf_column &double_column) {
-    for (std::size_t i = 0; i < double_column.size; i++) {
-        double expected = i * 0.001;
-        double value = static_cast<double *>(double_column.data)[i];
-        assert(expected == value);
-    }
-}
- 
-void filterops_test(gdf_column* lhs, gdf_column* rhs)
-{
-    // int column_size = lhs->size;
-    // // print_column<LeftValueType>(lhs);
-    // // print_column<RightValueType>(rhs);
-
-    // gdf_column output = gen_gdb_column<int8_t>(column_size, 0);
-    // // print_column<int8_t>(&output);
-
-    // auto gdf_operator = GDF_EQUALS;
-
-    // gdf_error error = gpu_comparison(lhs, rhs, &output, gdf_operator);
-
-
-    // #define WHEN(leftDataType, rightDataType, LeftValueType, RightValueType)                                  \
-    //     if ((leftDataType) == lhs->dtype && (rightDataType) == rhs->dtype) {                          \
-    //         check_column_for_comparison_operation<LeftValueType, RightValueType>(lhs, rhs, &output, gdf_operator); \
-    //         delete_gdf_column(&output); \
-    //         return ; \
-    //     }
-
-    //     WHEN(GDF_INT8, GDF_INT8, int8_t, int8_t);
-    //     WHEN(GDF_INT8, GDF_INT32, int8_t, int32_t)
-    //     WHEN(GDF_INT8, GDF_INT64, int8_t, int64_t)
-    //     WHEN(GDF_INT8, GDF_FLOAT32, int8_t, float)
-    //     WHEN(GDF_INT8, GDF_FLOAT64, int8_t, double)
-
-        
-        
-    // #undef WHEN
- 
-
-}
-
+} 
 template <ReaderType T>
 inline static void
 readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_reader, uint32_t batch_size) {
@@ -258,22 +195,16 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
             parquet::Type::type type = column->physical_type();
 
             if (type != parquet::Type::BYTE_ARRAY){
-
-            const std::shared_ptr<parquet::ColumnReader> columnReader = groupReader->Column(columnIndex);
-            int64_t numRecords = rowGroupMetadata->num_rows();
-            // if (columnIndex == 0) {
+                const std::shared_ptr<parquet::ColumnReader> columnReader = groupReader->Column(columnIndex);
+                int64_t numRecords = rowGroupMetadata->num_rows();
+                
                 gdf_column output;
                 containerFrom<T>(&output, columnReader, numRecords, batch_size);
                 columns.push_back(output);
-            // }
             }
         }
-    }  
-    
-    for(size_t i = 0; i < columns.size(); i++) {
-        filterops_test(&columns[0], &columns[i]);
-    }
-    
+    }   
+
     for(size_t i = 0; i < columns.size(); i++)
     {
         delete_gdf_column(&columns[i]);
@@ -289,11 +220,7 @@ BM_FileRead(benchmark::State &state) {
         
         readRowGroup<T>(reader, state.range(0));
     }
-    state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(state.range(0)));
 }
-
-// BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
-// BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(8)->Arg(64)->Arg(512)->Arg(1<<10)->Arg(8<<10)->Arg(50000);
 
 BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
 BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);

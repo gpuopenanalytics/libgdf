@@ -31,6 +31,8 @@
 #include "dictionary_decoder.cuh"
 #include "plain_decoder.cuh"
 
+#include "../util/bit_util.cuh"
+
 namespace gdf
 {
 namespace parquet
@@ -276,105 +278,51 @@ void compact_to_sparse_for_nulls(T *data_in, T *data_out, const int16_t *definit
     thrust::scatter(thrust::device, data_in, data_in + num_not_null, work_space, data_out);
 }
 
-#define WARP_BYTE 4
-#define WARP_SIZE 32
 
-__global__ void def_levels_to_valid(uint8_t* valid, const int16_t *def_levels, const  int size, const  int max_definition_level) {
-    int blksz = blockDim.x * blockDim.y * blockDim.z;
-    int blkid = gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x;
-    int blkof = blksz * blkid;
-    int thdid = blkof + blockDim.x * blockDim.y * threadIdx.z + blockDim.x * threadIdx.y + threadIdx.x;
+#define WARP_BYTE  4
+#define WARP_SIZE  32
+#define WARP_MASK  0xFFFFFFFF
 
-    uint32_t bitmask = 0;
-    if (thdid < size) {
-        bitmask = 1 << (thdid % WARP_SIZE);
-        if (def_levels[thdid] == max_definition_level) {
-            bitmask &= (1 << (thdid % WARP_SIZE));
-        } else if (def_levels[thdid] < max_definition_level) {
-            bitmask &= (0 << (thdid % WARP_SIZE));
-        }
-    }
+template<typename T, typename Functor>
+__global__ void transform_valid(uint8_t* valid, const T* values, const int size,
+		Functor is_valid) {
+	int tid = threadIdx.x;
+	int blkid = blockIdx.x;
+	int blksz = blockDim.x;
+	int gridsz = gridDim.x;
 
-    __syncwarp();
+	int start = tid + blkid * blksz;
+	int step = blksz * gridsz;
 
-    for (int offset = 16; offset > 0; offset /= 2)
-        bitmask += __shfl_down_sync(0xFFFFFFFF, bitmask, offset);
+	int i = start;
+	while (i < size) {
+		uint32_t bitmask = 0;
+		uint32_t result = is_valid(values[i]);
+		bitmask = (-result << (i % WARP_SIZE));
 
-    if ((thdid % WARP_SIZE) == 0) {
-        int index = thdid / WARP_SIZE * WARP_BYTE;
-        valid[index + 0] = 0xFF & bitmask;
-        valid[index + 1] = 0XFF & (bitmask >> 8);
-        valid[index + 2] = 0XFF & (bitmask >> 16);
-        valid[index + 3] = 0XFF & (bitmask >> 24);
-    }
+        #pragma unroll
+		for (size_t offset = 16; offset > 0; offset /= 2) {
+			bitmask += __shfl_down_sync(WARP_MASK, bitmask, offset);
+		}
+
+		if ((i % WARP_SIZE) == 0) {
+			int index = i / WARP_SIZE * WARP_BYTE;
+			valid[index + 0] = 0xFF & bitmask;
+			valid[index + 1] = 0xFF & (bitmask >> 8);
+			valid[index + 2] = 0xFF & (bitmask >> 16);
+			valid[index + 3] = 0xFF & (bitmask >> 24);
+		}
+		i += step;
+	}
 }
 
-__global__ void def_levels_to_valid(uint8_t* valid, const  int size) {
-    int blksz = blockDim.x * blockDim.y * blockDim.z;
-    int blkid = gridDim.x * gridDim.y * blockIdx.z + gridDim.x * blockIdx.y + blockIdx.x;
-    int blkof = blksz * blkid;
-    int thdid = blkof + blockDim.x * blockDim.y * threadIdx.z + blockDim.x * threadIdx.y + threadIdx.x;
-
-    uint32_t bitmask = 0;
-    if (thdid < size) {
-        bitmask = 1 << (thdid % WARP_SIZE);
-        bitmask &= (1 << (thdid % WARP_SIZE));        
-    }
-
-    __syncwarp();
-
-    for (int offset = 16; offset > 0; offset /= 2)
-        bitmask += __shfl_down_sync(0xFFFFFFFF, bitmask, offset);
-
-    if ((thdid % WARP_SIZE) == 0) {
-        int index = thdid / WARP_SIZE * WARP_BYTE;
-        valid[index + 0] = 0xFF & bitmask;
-        valid[index + 1] = 0XFF & (bitmask >> 8);
-        valid[index + 2] = 0XFF & (bitmask >> 16);
-        valid[index + 3] = 0XFF & (bitmask >> 24);
-    }
-}
-
-static inline  uint8_t _ByteWithBit(ptrdiff_t i)
-{
-    static uint8_t kBitmask[8] = {1, 2, 4, 8, 16, 32, 64, 128};
-    return kBitmask[i];
-}
-
-static inline  uint8_t _FlippedBitmask(ptrdiff_t i)
-{
-    static uint8_t kFlippedBitmask[] = {254, 253, 251, 247, 239, 223, 191, 127};
-    return kFlippedBitmask[i];
-
-}
-
-static inline  void _TurnBitOn(uint8_t *const bits, std::ptrdiff_t i)
-{
-    bits[i / 8] |= _ByteWithBit(i % 8);
-}
-
-static inline  void _TurnBitOff(uint8_t *const bits, std::ptrdiff_t i)
-{
-    bits[i / 8] &= _FlippedBitmask(i % 8);
-}
-
-static inline size_t _CeilToByteLength(size_t n) {
-    return (n + 7) & ~7;
-}
-
-static inline size_t _BytesLengthToBitmapLength(size_t n){
-    return _CeilToByteLength(n) / 8;
-}
 
 static inline void _TurnBitOnForValids(std::int64_t        def_length,
                                        std::uint8_t *      d_valid_ptr,
                                        const std::int64_t  valid_bits_offset) 
 {
-    //@todo: optimal params flor grid and blocks
-    dim3 grid(2, 2, 2); 
-    dim3 block(32, 2, 2);
     if (valid_bits_offset % 8 == 0) {
-        def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8, def_length);
+        cudaMemset(d_valid_ptr + valid_bits_offset/8, 255, def_length);
     } else {
         int left_bits_length = valid_bits_offset % 8;
         int rigth_bits_length = 8 - left_bits_length;
@@ -382,12 +330,25 @@ static inline void _TurnBitOnForValids(std::int64_t        def_length,
         cudaMemcpy(&mask, d_valid_ptr + (valid_bits_offset/8), 1, cudaMemcpyDeviceToHost);
 
         for(size_t i = 0; i < rigth_bits_length; i++) {
-            mask |= _ByteWithBit(i + left_bits_length);
+            mask |= gdf::util::byte_bitmask(i + left_bits_length);
         }
         cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
-        def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, def_length);
+        cudaMemset(d_valid_ptr + valid_bits_offset/8 + 1, 255, def_length);
     }
 }
+
+
+struct IsValidFunctor {
+    std::int16_t       max_definition_level;
+    IsValidFunctor (std::int16_t max_definition_level) : max_definition_level(max_definition_level) 
+    {
+    }
+    __host__ __device__ uint32_t operator() (const std::int16_t &value) {
+        return value == max_definition_level ? 0xFFFFFFFF : 0x00000000;
+    }
+};
+
+constexpr unsigned int THREAD_BLOCK_SIZE{256};
 
 static inline void
 _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
@@ -398,38 +359,36 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
                           std::uint8_t *      d_valid_ptr,
                           const std::int64_t  valid_bits_offset) {
 
-    if (max_definition_level > 0) {
-        //@todo: optimal params flor grid and blocks
-        dim3 grid(2, 2, 2); 
-        dim3 block(32, 2, 2);
-        if (valid_bits_offset % 8 == 0) {
-            def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8, d_def_levels, def_length, max_definition_level);
-        } else {
-            int left_bits_length = valid_bits_offset % 8;
-            int rigth_bits_length = 8 - left_bits_length;
-            uint8_t mask;
-            cudaMemcpy(&mask, d_valid_ptr + (valid_bits_offset/8), 1, cudaMemcpyDeviceToHost);
+    const dim3 grid ((def_length + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE, 1, 1);
+    const dim3 block (THREAD_BLOCK_SIZE, 1, 1);
 
-            thrust::host_vector<int16_t> h_def_levels(rigth_bits_length);
-            cudaMemcpy(h_def_levels.data(), d_def_levels, rigth_bits_length * sizeof(int16_t), cudaMemcpyDeviceToHost);
-            for(size_t i = 0; i < h_def_levels.size(); i++) {
-                if (h_def_levels[i] == max_definition_level) {
-                    mask |= _ByteWithBit(i + left_bits_length);
-                } else {
-                    if (h_def_levels[i] < max_definition_level) {
-                        mask &= _FlippedBitmask(i + left_bits_length);
-                    }
+	if (valid_bits_offset % 8 == 0) {
+		transform_valid<int16_t, IsValidFunctor> <<<grid, block>>>(
+				(d_valid_ptr + valid_bits_offset / 8), d_def_levels, def_length,
+				IsValidFunctor { max_definition_level });
+	} else {
+        int left_bits_length = valid_bits_offset % 8;
+        int rigth_bits_length = 8 - left_bits_length;
+        uint8_t mask;
+        cudaMemcpy(&mask, d_valid_ptr + (valid_bits_offset/8), 1, cudaMemcpyDeviceToHost);
+
+        thrust::host_vector<int16_t> h_def_levels(rigth_bits_length);
+        cudaMemcpy(h_def_levels.data(), d_def_levels, rigth_bits_length * sizeof(int16_t), cudaMemcpyDeviceToHost);
+        for(size_t i = 0; i < h_def_levels.size(); i++) {
+            if (h_def_levels[i] == max_definition_level) {
+                mask |= gdf::util::byte_bitmask(i + left_bits_length);
+            } else {
+                if (h_def_levels[i] < max_definition_level) {
+                    mask &= gdf::util::flipped_bitmask(i + left_bits_length);
                 }
             }
-            cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
-            def_levels_to_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, d_def_levels + rigth_bits_length, def_length, max_definition_level);
-       }
-       int result = thrust::count(thrust::device_pointer_cast(d_def_levels), thrust::device_pointer_cast(d_def_levels) + def_length, max_definition_level);
-       *null_count = result;
-       *values_read = def_length - *null_count;
-    } else {
-         _TurnBitOnForValids(def_length, d_valid_ptr, valid_bits_offset);
+        }
+        cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
+        transform_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, d_def_levels + rigth_bits_length, def_length, IsValidFunctor(max_definition_level));
     }
+    int not_null_count = thrust::count(thrust::device_pointer_cast(d_def_levels), thrust::device_pointer_cast(d_def_levels) + def_length, max_definition_level);
+    *null_count = def_length - not_null_count;
+    *values_read = not_null_count;
 }
  
 template <class DecoderType, class T>
@@ -486,9 +445,6 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
             int values_to_read = result;
 
             total_values = _ReadValues(current_decoder_, values_to_read, values);
-            // for (std::int64_t i = 0; i < total_values; i++) {
-            //     ::arrow::BitUtil::SetBit(valid_bits, valid_bits_offset + i);
-            // }
            _TurnBitOnForValids(total_values, valid_bits, valid_bits_offset);
             *values_read = total_values;
         }
@@ -496,16 +452,7 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
         {
             std::int16_t max_definition_level = descr_->max_definition_level();
             std::int16_t max_repetition_level = descr_->max_repetition_level();
-            
-            // _DefinitionLevelsToBitmap(definition_levels,
-            //                           num_def_levels,
-            //                           max_definition_level,
-            //                           max_repetition_level,
-            //                           values_read,
-            //                           &null_count,
-            //                           valid_bits,
-            //                           valid_bits_offset);
-
+          
             _DefinitionLevelsToBitmap(
                 definition_levels,
                 num_def_levels,
@@ -516,7 +463,7 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
                 valid_bits_offset);
 
             total_values = _ReadValues(current_decoder_, *values_read, values);
-            total_values = num_def_levels;//new total_values after sparse!
+            total_values = num_def_levels; 
 
             if (total_values != *values_read) {
                 thrust::device_vector<int> work_space_vector(total_values);
@@ -529,25 +476,13 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
                                             total_values,
                                             work_space);
             }
-            
-            // total_values = _ReadValuesSpaced(current_decoder_,
-            //                                  *values_read,
-            //                                  values,
-            //                                  static_cast<int>(null_count),
-            //                                  valid_bits,
-            //                                  valid_bits_offset);
         }
         *levels_read = num_def_levels;
         *nulls_count = null_count;
     }
     else {
         total_values = _ReadValues(current_decoder_, batch_size, values);
-        // for (std::int64_t i = 0; i < total_values; i++)
-        // {
-        //     ::arrow::BitUtil::SetBit(valid_bits, valid_bits_offset + i);
-        // }
         _TurnBitOnForValids(total_values, valid_bits, valid_bits_offset);
-
         *nulls_count = 0;
         *levels_read = total_values;
     }
