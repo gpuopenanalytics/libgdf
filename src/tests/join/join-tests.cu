@@ -29,13 +29,13 @@
 #include <gdf/gdf.h>
 #include <gdf/cffi/functions.h>
 
-#include "../../joining.h"
+#include "../../join/joining.h"
 
 // See this header for all of the recursive handling of tuples of vectors
 #include "tuple_vectors.h"
 
 // Selects the kind of join operation that is performed
-enum struct join_kind
+enum struct join_op
 {
   INNER,
   LEFT,
@@ -64,8 +64,10 @@ template <class test_parameters>
 struct JoinTest : public testing::Test
 {
   // The join type is passed via a member of the template argument class
-  const join_kind join_method = test_parameters::join_method;
+  const join_op op = test_parameters::op;
 
+  gdf_context ctxt = {test_parameters::join_type == gdf_method::GDF_SORT,
+      test_parameters::join_type, 0};
   // multi_column_t is a tuple of vectors. The number of vectors in the tuple
   // determines the number of columns to be joined, and the value_type of each
   // vector determiens the data type of the column
@@ -189,8 +191,8 @@ struct JoinTest : public testing::Test
                      size_t right_column_length, size_t right_column_range,
                      bool print = false)
   {
-    initialize_tuple(left_columns, left_column_length, left_column_range);
-    initialize_tuple(right_columns, right_column_length, right_column_range);
+    initialize_tuple(left_columns, left_column_length, left_column_range, ctxt.flag_sorted);
+    initialize_tuple(right_columns, right_column_length, right_column_range, ctxt.flag_sorted);
 
     gdf_left_columns = initialize_gdf_columns(left_columns);
     gdf_right_columns = initialize_gdf_columns(right_columns);
@@ -270,14 +272,14 @@ struct JoinTest : public testing::Test
 
       // For left joins, insert a NULL if no match is found
       if((false == match) &&
-              ((join_method == join_kind::LEFT) || (join_method == join_kind::OUTER))){
+              ((op == join_op::LEFT) || (op == join_op::OUTER))){
         constexpr int JoinNullValue{-1};
         reference_result.emplace_back(left_index, JoinNullValue);
       }
 
     }
 
-    if (join_method == join_kind::OUTER)
+    if (op == join_op::OUTER)
     {
         the_map.clear();
         // Build hash table that maps the first left columns' values to their row index in the column
@@ -325,95 +327,76 @@ struct JoinTest : public testing::Test
    * @Param sort Option to sort the result. This is required to compare the result against the reference solution
    */
   /* ----------------------------------------------------------------------------*/
-  std::vector<result_type> compute_gdf_result(bool print = false, bool sort = true)
+  std::vector<result_type> compute_gdf_result(bool print = false, bool sort = true, gdf_error expected_result=GDF_SUCCESS)
   {
     const int num_columns = std::tuple_size<multi_column_t>::value;
 
-    gdf_join_result_type * gdf_join_result;
+    gdf_column left_result;
+    gdf_column right_result;
+    left_result.size = 0;
+    right_result.size = 0;
 
     gdf_error result_error{GDF_SUCCESS};
 
-    // Use single column join when there's only a single column
-    if(num_columns == 1){
-      gdf_column * left_gdf_column = gdf_raw_left_columns[0];
-      gdf_column * right_gdf_column = gdf_raw_right_columns[0];
-      switch(join_method)
-      {
-        case join_kind::LEFT:
-          {
-            result_error = gdf_left_join_generic(left_gdf_column,
-                                                 right_gdf_column,
-                                                 &gdf_join_result);
-            break;
-          }
-        case join_kind::INNER:
-          {
-            result_error = gdf_inner_join_generic(left_gdf_column,
-                                                  right_gdf_column,
-                                                  &gdf_join_result);
-            break;
-          }
-        case join_kind::OUTER:
-          {
-            result_error = gdf_outer_join_generic(left_gdf_column,
-                                                  right_gdf_column,
-                                                  &gdf_join_result);
-            break;
-          }
-        default:
-          std::cout << "Invalid join method" << std::endl;
-          EXPECT_TRUE(false);
-      }
-
-    }
-    // Otherwise use the multicolumn join
-    else
+    gdf_column ** left_gdf_columns = gdf_raw_left_columns.data();
+    gdf_column ** right_gdf_columns = gdf_raw_right_columns.data();
+    switch(op)
     {
-      gdf_column ** left_gdf_columns = gdf_raw_left_columns.data();
-      gdf_column ** right_gdf_columns = gdf_raw_right_columns.data();
-      switch(join_method)
-      {
-        case join_kind::LEFT:
-          {
-            result_error = gdf_multi_left_join_generic(num_columns,
-                                                       left_gdf_columns,
-                                                       right_gdf_columns,
-                                                       &gdf_join_result);
-            break;
-          }
-        case join_kind::INNER:
-          {
-            //result_error =  gdf_multi_inner_join_generic(num_columns,
-            //                                             left_gdf_columns,
-            //                                             right_gdf_columns,
-            //                                             &gdf_join_result);
-            std::cout << "Multi column *inner* joins not supported yet\n";
-            EXPECT_TRUE(false);
-            break;
-          }
-        default:
-          std::cout << "Invalid join method" << std::endl;
-          EXPECT_TRUE(false);
-      }
+      case join_op::LEFT:
+        {
+          result_error = gdf_left_join(num_columns,
+                                       left_gdf_columns,
+                                       right_gdf_columns,
+                                       &left_result, &right_result,
+                                       &ctxt);
+          break;
+        }
+      case join_op::INNER:
+        {
+          result_error =  gdf_inner_join(num_columns,
+                                         left_gdf_columns,
+                                         right_gdf_columns,
+                                         &left_result, &right_result,
+                                         &ctxt);
+          break;
+        }
+      default:
+        std::cout << "Invalid join method" << std::endl;
+        EXPECT_TRUE(false);
     }
-    EXPECT_EQ(GDF_SUCCESS, result_error) << "The gdf join function did not complete successfully";
+   
+    EXPECT_EQ(expected_result, result_error) << "The gdf join function did not complete successfully";
 
+    // If the expected result was not GDF_SUCCESS, then this test was testing for a
+    // specific error condition, in which case we return imediately and do not do
+    // any further work on the output
+    if(GDF_SUCCESS != expected_result){
+      return std::vector<result_type>();
+    }
+
+    EXPECT_EQ(left_result.size, right_result.size) << "Join output size mismatch";
     // The output is an array of size `n` where the first n/2 elements are the
     // left_indices and the last n/2 elements are the right indices
-    size_t output_size = gdf_join_result_size(gdf_join_result);
-    size_t total_pairs = output_size/2;
+    size_t total_pairs = left_result.size;
+    size_t output_size = total_pairs*2;
 
-    int * join_output = static_cast<int*>(gdf_join_result_data(gdf_join_result));
+    int * l_join_output = static_cast<int*>(left_result.data);
+    int * r_join_output = static_cast<int*>(right_result.data);
 
     // Host vector to hold gdf join output
     std::vector<int> host_result(output_size);
 
     // Copy result of gdf join to the host
-    cudaMemcpy(host_result.data(), join_output, output_size * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(host_result.data(),
+               l_join_output, total_pairs * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(host_result.data() + total_pairs,
+               r_join_output, total_pairs * sizeof(int), cudaMemcpyDeviceToHost);
 
     // Free the original join result
-    gdf_join_result_free(gdf_join_result);
-    join_output = nullptr;
+    if(output_size > 0){
+      gdf_column_free(&left_result);
+      gdf_column_free(&right_result);
+    }
 
     // Host vector of result_type pairs to hold final result for comparison to reference solution
     std::vector<result_type> host_pair_result(total_pairs);
@@ -440,18 +423,34 @@ struct JoinTest : public testing::Test
   }
 };
 
-// This structure is used to nest the join method and number/types of columns
-// for use with Google Test type-parameterized tests
-template<join_kind join_type, typename tuple_of_vectors>
+// This structure is used to nest the join operations, join method and
+// number/types of columns for use with Google Test type-parameterized
+// tests .Here join_operation refers to the type of join eg. INNER,
+// LEFT, OUTER and join_method refers to the underlying join algorithm
+//that performs it eg. GDF_HASH or GDF_SORT.
+template<join_op join_operation, 
+         gdf_method join_method, 
+         typename tuple_of_vectors,
+         bool keys_are_unique = false>
 struct TestParameters
 {
   // The method to use for the join
-  const static join_kind join_method{join_type};
+  const static join_op op{join_operation};
+
+  // The method to use for the join
+  const static gdf_method join_type{join_method};
 
   // The tuple of vectors that determines the number and types of the columns to join
   using multi_column_t = tuple_of_vectors;
+
+  const static bool unique_keys{keys_are_unique};
 };
 
+const static gdf_method HASH = gdf_method::GDF_HASH;
+const static gdf_method SORT = gdf_method::GDF_SORT;
+
+template <typename... T>
+using VTuple = std::tuple<std::vector<T>...>;
 
 // Using Google Tests "Type Parameterized Tests"
 // Every test defined as TYPED_TEST(JoinTest, *) will be run once for every instance of
@@ -462,51 +461,85 @@ struct TestParameters
 // template argument to TestParameters
 typedef ::testing::Types<
                           // Single column inner join tests for all types
-                          TestParameters< join_kind::INNER, std::tuple<std::vector<int32_t>> >,
-                          TestParameters< join_kind::INNER, std::tuple<std::vector<int64_t>> >,
-                          TestParameters< join_kind::INNER, std::tuple<std::vector<float>> >,
-                          TestParameters< join_kind::INNER, std::tuple<std::vector<double>> >,
-                          TestParameters< join_kind::INNER, std::tuple<std::vector<uint32_t>> >,
-                          TestParameters< join_kind::INNER, std::tuple<std::vector<uint64_t>> >,
+                          TestParameters< join_op::INNER, HASH, VTuple<int32_t > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<int64_t > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<float   > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<double  > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<uint32_t> >,
+                          TestParameters< join_op::INNER, HASH, VTuple<uint64_t> >,
+                          TestParameters< join_op::INNER, SORT, VTuple<int32_t > >,
+                          TestParameters< join_op::INNER, SORT, VTuple<int64_t > >,
+                          TestParameters< join_op::INNER, SORT, VTuple<float   > >,
+                          TestParameters< join_op::INNER, SORT, VTuple<double  > >,
+                          TestParameters< join_op::INNER, SORT, VTuple<uint32_t> >,
+                          TestParameters< join_op::INNER, SORT, VTuple<uint64_t> >,
                           // Single column left join tests for all types
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<int32_t>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<int64_t>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<float>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<double>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<uint32_t>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<uint64_t>> >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<int32_t > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<int64_t > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<float   > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<double  > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<uint32_t> >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<uint64_t> >,
+                          TestParameters< join_op::LEFT,  SORT, VTuple<int32_t > >,
+                          TestParameters< join_op::LEFT,  SORT, VTuple<int64_t > >,
+                          TestParameters< join_op::LEFT,  SORT, VTuple<float   > >,
+                          TestParameters< join_op::LEFT,  SORT, VTuple<double  > >,
+                          TestParameters< join_op::LEFT,  SORT, VTuple<uint32_t> >,
+                          TestParameters< join_op::LEFT,  SORT, VTuple<uint64_t> >,
                           // Single column outer join tests for all types
-                          //TestParameters< join_kind::OUTER, std::tuple<std::vector<int32_t>> >,
-                          //TestParameters< join_kind::OUTER, std::tuple<std::vector<int64_t>> >,
-                          //TestParameters< join_kind::OUTER, std::tuple<std::vector<float>> >,
-                          //TestParameters< join_kind::OUTER, std::tuple<std::vector<double>> >,
-                          //TestParameters< join_kind::OUTER, std::tuple<std::vector<uint32_t>> >,
-                          //TestParameters< join_kind::OUTER, std::tuple<std::vector<uint64_t>> >,
+                          //TestParameters< join_op::OUTER, SORT, VTuple<int32_t > >,
+                          //TestParameters< join_op::OUTER, SORT, VTuple<int64_t > >,
+                          //TestParameters< join_op::OUTER, SORT, VTuple<float   > >,
+                          //TestParameters< join_op::OUTER, SORT, VTuple<double  > >,
+                          //TestParameters< join_op::OUTER, SORT, VTuple<uint32_t> >,
+                          //TestParameters< join_op::OUTER, SORT, VTuple<uint64_t> >,
                           // Two Column Left Join tests for some combination of types
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<int32_t>, std::vector<int32_t>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<int64_t>, std::vector<int32_t>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<float>, std::vector<double>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<double>, std::vector<int64_t>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<uint32_t>, std::vector<int32_t>> >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<int32_t , int32_t> >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<int64_t , int32_t> >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<float   , double > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<double  , int64_t> >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<uint32_t, int32_t> >,
                           // Three Column Left Join tests for some combination of types
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<int32_t>, std::vector<uint32_t>, std::vector<float>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<uint64_t>, std::vector<uint32_t>, std::vector<float>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<float>, std::vector<double>, std::vector<float>> >,
-                          TestParameters< join_kind::LEFT, std::tuple<std::vector<double>, std::vector<uint32_t>, std::vector<int64_t>> >
-                          // Four column test will fail because gdf_join is limited to 3 columns
-                          //TestParameters< join_kind::LEFT, std::tuple<std::vector<double>, std::vector<uint32_t>, std::vector<int64_t>, std::vector<int32_t>> >
+                          TestParameters< join_op::LEFT,  HASH, VTuple<int32_t , uint32_t, float  > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<uint64_t, uint32_t, float  > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<float   , double  , float  > >,
+                          TestParameters< join_op::LEFT,  HASH, VTuple<double  , uint32_t, int64_t> >,
+                          // Two Column Inner Join tests for some combination of types
+                          TestParameters< join_op::INNER, HASH, VTuple<int32_t , int32_t> >,
+                          TestParameters< join_op::INNER, HASH, VTuple<int64_t , int32_t> >,
+                          TestParameters< join_op::INNER, HASH, VTuple<float   , double > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<double  , int64_t> >,
+                          TestParameters< join_op::INNER, HASH, VTuple<uint32_t, int32_t> >,
+                          // Three Column Inner Join tests for some combination of types
+                          TestParameters< join_op::INNER, HASH, VTuple<int32_t , uint32_t, float  > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<uint64_t, uint32_t, float  > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<float   , double  , float  > >,
+                          TestParameters< join_op::INNER, HASH, VTuple<double  , uint32_t, int64_t> >,
+                          // Four column test for Left Joins
+                          TestParameters< join_op::LEFT, HASH, VTuple<double, int32_t, int64_t, int32_t> >,
+                          TestParameters< join_op::LEFT, HASH, VTuple<float, uint32_t, double, int32_t> >,
+                          // Four column test for Inner Joins
+                          TestParameters< join_op::INNER, HASH, VTuple<uint32_t, float, int64_t, int32_t> >,
+                          TestParameters< join_op::INNER, HASH, VTuple<double, float, int64_t, double> >,
+                          // Five column test for Left Joins
+                          TestParameters< join_op::LEFT, HASH, VTuple<double, int32_t, int64_t, int32_t, int32_t> >,
+                          // Five column test for Inner Joins
+                          TestParameters< join_op::INNER, HASH, VTuple<uint32_t, float, int64_t, int32_t, float> >
                           > Implementations;
 
 TYPED_TEST_CASE(JoinTest, Implementations);
 
-TYPED_TEST(JoinTest, ExampleTest)
+// This test is used for debugging purposes and is disabled by default.
+// The input sizes are small and has a large amount of debug printing enabled.
+TYPED_TEST(JoinTest, DISABLED_DebugTest)
 {
-  this->create_input(10000, 100,
-                     10000, 100);
+  this->create_input(5, 2,
+                     5, 2,
+                     true);
 
-  std::vector<result_type> reference_result = this->compute_reference_solution();
+  std::vector<result_type> reference_result = this->compute_reference_solution(true);
 
-  std::vector<result_type> gdf_result = this->compute_gdf_result();
+  std::vector<result_type> gdf_result = this->compute_gdf_result(true);
 
   ASSERT_EQ(reference_result.size(), gdf_result.size()) << "Size of gdf result does not match reference result\n";
 
@@ -516,9 +549,10 @@ TYPED_TEST(JoinTest, ExampleTest)
   }
 }
 
+
 TYPED_TEST(JoinTest, EqualValues)
 {
-  this->create_input(1000,1,
+  this->create_input(100,1,
                      1000,1);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
@@ -535,8 +569,8 @@ TYPED_TEST(JoinTest, EqualValues)
 
 TYPED_TEST(JoinTest, MaxRandomValues)
 {
-  this->create_input(1000,RAND_MAX,
-                     1000,RAND_MAX);
+  this->create_input(10000,RAND_MAX,
+                     10000,RAND_MAX);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
 
@@ -552,8 +586,8 @@ TYPED_TEST(JoinTest, MaxRandomValues)
 
 TYPED_TEST(JoinTest, LeftColumnsBigger)
 {
-  this->create_input(1000,100,
-                     10,100);
+  this->create_input(10000,100,
+                     100,100);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
 
@@ -569,7 +603,24 @@ TYPED_TEST(JoinTest, LeftColumnsBigger)
 
 TYPED_TEST(JoinTest, RightColumnsBigger)
 {
-  this->create_input(10,100,
+  this->create_input(100,100,
+                     10000,100);
+
+  std::vector<result_type> reference_result = this->compute_reference_solution();
+
+  std::vector<result_type> gdf_result = this->compute_gdf_result();
+
+  ASSERT_EQ(reference_result.size(), gdf_result.size()) << "Size of gdf result does not match reference result\n";
+
+  // Compare the GDF and reference solutions
+  for(size_t i = 0; i < reference_result.size(); ++i){
+    EXPECT_EQ(reference_result[i], gdf_result[i]);
+  }
+}
+
+TYPED_TEST(JoinTest, EmptyLeftFrame)
+{
+  this->create_input(0,100,
                      1000,100);
 
   std::vector<result_type> reference_result = this->compute_reference_solution();
@@ -582,4 +633,84 @@ TYPED_TEST(JoinTest, RightColumnsBigger)
   for(size_t i = 0; i < reference_result.size(); ++i){
     EXPECT_EQ(reference_result[i], gdf_result[i]);
   }
+}
+
+TYPED_TEST(JoinTest, EmptyRightFrame)
+{
+  this->create_input(1000,100,
+                     0,100);
+
+  std::vector<result_type> reference_result = this->compute_reference_solution();
+
+  std::vector<result_type> gdf_result = this->compute_gdf_result();
+
+  ASSERT_EQ(reference_result.size(), gdf_result.size()) << "Size of gdf result does not match reference result\n";
+
+  // Compare the GDF and reference solutions
+  for(size_t i = 0; i < reference_result.size(); ++i){
+    EXPECT_EQ(reference_result[i], gdf_result[i]);
+  }
+}
+
+TYPED_TEST(JoinTest, BothFramesEmpty)
+{
+  this->create_input(0,100,
+                     0,100);
+
+  std::vector<result_type> reference_result = this->compute_reference_solution();
+
+  std::vector<result_type> gdf_result = this->compute_gdf_result();
+
+  ASSERT_EQ(reference_result.size(), gdf_result.size()) << "Size of gdf result does not match reference result\n";
+
+  // Compare the GDF and reference solutions
+  for(size_t i = 0; i < reference_result.size(); ++i){
+    EXPECT_EQ(reference_result[i], gdf_result[i]);
+  }
+}
+
+
+
+// The below tests are for testing inputs that are at or above the maximum input size possible
+
+
+// Create a new derived class from JoinTest so we can do a new Typed Test set of tests
+template <class test_parameters>
+struct MaxJoinTest : public JoinTest<test_parameters>
+{ };
+
+// Only test for single column inputs for Inner and Left joins because these tests take a long time
+using MaxImplementations = testing::Types< TestParameters< join_op::INNER, HASH, VTuple<int32_t >>,
+                                           TestParameters< join_op::LEFT, HASH, VTuple<int32_t >> >;
+
+TYPED_TEST_CASE(MaxJoinTest, MaxImplementations);
+
+TYPED_TEST(MaxJoinTest, HugeJoinSize)
+{
+  // FIXME The maximum input join size should be std::numeric_limits<int>::max() - 1, 
+  // however, this will currently cause OOM on a GV100 as it will attempt to allocate 
+  // a 34GB hash table. Therefore, use a 2^29 input to make sure we can handle big 
+  // inputs until we can better handle OOM errors
+  // The CI Server only has a 16GB GPU, therefore need to use 2^29 input size
+  const size_t right_table_size = 1<<29;
+  this->create_input(100, RAND_MAX,
+                     right_table_size, RAND_MAX);
+  std::vector<result_type> gdf_result = this->compute_gdf_result();
+}
+
+TYPED_TEST(MaxJoinTest, InputTooLarge)
+{
+    const size_t right_table_size = static_cast<size_t>(std::numeric_limits<int>::max());
+    this->create_input(100, RAND_MAX,
+                       right_table_size, RAND_MAX);
+
+    const bool print_result{false};
+    const bool sort_result{false};
+
+    // We expect the function to fail when the input is this large
+    const gdf_error expected_error{GDF_COLUMN_SIZE_TOO_BIG};
+
+    std::vector<result_type> gdf_result = this->compute_gdf_result(print_result, 
+                                                                   sort_result, 
+                                                                   expected_error);
 }

@@ -21,7 +21,6 @@
 #    $ cmake ..          # configure build system
 #    $ make              # make libgdf
 #    $ make pytest       # trigger test
-#    $ make pytest-ci    # trigger test with jUnit.xml output
 #    $ make install      # install libgdf
 
 PROJECT(libgdf)
@@ -33,6 +32,10 @@ message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
+
+IF(CMAKE_COMPILER_IS_GNUCXX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 # Include CMake modules
 include(FeatureSummary)
@@ -50,8 +53,6 @@ set_package_properties(
     CUDA PROPERTIES TYPE REQUIRED
     PURPOSE "NVIDIA CUDA® parallel computing platform and programming model."
     URL "https://developer.nvidia.com/cuda-zone")
-
-
 
 if (CUDA_FOUND)
 
@@ -180,7 +181,7 @@ endif()
 
 # Option handling for CUDA debugging
 if (CMAKE_BUILD_TYPE MATCHES DEBUG)
-  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G CACHE STRING "Specify CUDA NVCC Flags")
+  set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G;-lineinfo CACHE STRING "Specify CUDA DEBUGGING Flags")
 endif()
 
 # Option handling for joins
@@ -193,6 +194,18 @@ endif()
 option(HT_LEGACY_ALLOCATOR "Enable legacy allocator for hash tables" ON)
 if (HT_LEGACY_ALLOCATOR)
   message(STATUS "Legacy allocator for hash tables: ${HT_LEGACY_ALLOCATOR}")
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
+    # Suppress SHFL warnings caused by modern GPU.
+    # TODO: remove this when modern GPU is removed or fixed to use shfl_sync
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
+        -Wno-deprecated-declarations;
+        -Xptxas --disable-warnings)
+    # set warnings as errors
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Werror cross-execution-space-call;-Xcompiler -Wall,-Werror)
+
+    message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+else()
+    message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()
 
 # Locate the Apache Arrow package (Requires that you use ConfigureArrow module)
@@ -220,15 +233,16 @@ cuda_add_library(gdf SHARED
     src/binaryops.cu
     src/bitmaskops.cu
     src/column.cpp
+    src/context.cpp
     src/cudautils.cu
     src/datetimeops.cu
     src/errorhandling.cpp
     src/filterops.cu
-    src/hashing.cu
     src/hashops.cu
     src/ipc.cu
-    src/joining.cu
     src/reductions.cu
+    src/join/joining.cu
+    src/hashing.cu
     src/scan.cu
     src/segmented_sorting.cu
     src/sorting.cu
@@ -236,6 +250,7 @@ cuda_add_library(gdf SHARED
     src/streamcompactionops.cu
     src/unaryops.cu
     #src/windowedops.cu
+    src/quantiles.cu
 )
 
 if (ARROW_NUMERIC_VERSION EQUAL 900)
@@ -272,12 +287,6 @@ add_custom_command(TARGET pytest POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CMAKE_BINARY_DIR} py.test -v
                    WORKING_DIRECTORY --cache-clear tests)
 
-# The test CI target with junit.xml output
-add_custom_target(pytest-ci DEPENDS copy_python)
-add_custom_command(TARGET pytest POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CMAKE_BINARY_DIR} py.test -v
-                   WORKING_DIRECTORY --cache-clear --junitxml=junit.xml tests)
-
 # The install target
 install(TARGETS gdf LIBRARY DESTINATION lib)
 install(DIRECTORY include/gdf DESTINATION include)
@@ -295,6 +304,5 @@ if(GTEST_FOUND)
 else()
     message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
 endif()
-
 # Print the project summary
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
