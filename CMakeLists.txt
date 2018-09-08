@@ -61,7 +61,7 @@ if(CUDA_FOUND)
     # TODO: remove this when modern GPU is removed or fixed to use shfl_sync
     set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -Wno-deprecated-declarations -Xptxas --disable-warnings")
     # set warnings as errors
-    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -Werror cross-execution-space-call -Xcompiler -Wall -Werror")
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -Werror cross-execution-space-call -Xcompiler -Wall,-Werror")
 
     message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
 else()
