@@ -64,7 +64,7 @@ if(CUDA_FOUND)
     set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -Werror cross-execution-space-call -Xcompiler -Wall -Werror")
 
     message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
-else(
+else()
     message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()
 
