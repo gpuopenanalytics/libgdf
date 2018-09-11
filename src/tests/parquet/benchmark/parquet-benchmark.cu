@@ -120,10 +120,6 @@ template <ReaderType T, class ColumnReaderType, parquet::Type::type C>
 static inline gdf_error 
 convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_read, uint32_t batch_size) {
     typedef typename parquet_traits<C>::parquet_type    parquet_type;
-
-    //@todo: amount_to_read should be computed before execute ReadBatch
-        amount_to_read = batch_size;
-
     parquet_type* values_buffer;
     gdf_valid_type* valid_bits;
     int16_t * definition_level;
