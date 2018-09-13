@@ -1,44 +1,38 @@
 #pragma once
 
-/* --------------------------------------------------------------------------*/
+
 /** 
- * @Synopsis  Start a NVTX range with predefined color.
+ * @brief   Start a NVTX range with predefined color.
  *
  * This function is useful only for profiling with nvvp or Nsight Systems. It
  * demarcates the begining of a user-defined range with a specified name and
  * color that will show up in the timeline view of nvvp/Nsight Systems. Can be
  * nested within other ranges.
  * 
- * @Param name The name of the NVTX range
- * @Param color The predefined gdf_color enum to use to color this range
+ * @Param[in] name The name of the NVTX range
+ * @Param[in] color The predefined gdf_color enum to use to color this range
  * 
  * @Returns   
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_nvtx_range_push(char const * const name, gdf_color color );
 
 
-
-
-/* --------------------------------------------------------------------------*/
 /** 
- * @Synopsis  Start a NVTX range with a custom ARGB color code.
+ * @brief   Start a NVTX range with a custom ARGB color code.
  *
  * This function is useful only for profiling with nvvp or Nsight Systems. It
  * demarcates the begining of a user-defined range with a specified name and
  * color that will show up in the timeline view of nvvp/Nsight Systems. Can be
  * nested within other ranges.
  * 
- * @Param name The name of the NVTX range
- * @Param color The ARGB hex color code to use to color this range (e.g., 0xFF00FF00)
+ * @Param[in] name The name of the NVTX range
+ * @Param[in] color The ARGB hex color code to use to color this range (e.g., 0xFF00FF00)
  * 
  * @Returns   
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_nvtx_range_push_hex(char const * const name, unsigned int color );
 
 
-/* --------------------------------------------------------------------------*/
 /** 
  * @Synopsis Ends the inner-most NVTX range.
  *
@@ -48,12 +42,11 @@ gdf_error gdf_nvtx_range_push_hex(char const * const name, unsigned int color );
  * 
  * @Returns   
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_nvtx_range_pop();
 
-/* --------------------------------------------------------------------------*/
+
 /** 
- * @Synopsis  Counts the number of valid bits in the mask that corresponds to
+ * @brief   Counts the number of valid bits in the mask that corresponds to
  * the specified number of rows.
  * 
  * @Param[in] masks Array of gdf_valid_types with enough bits to represent
@@ -63,23 +56,60 @@ gdf_error gdf_nvtx_range_pop();
  * 
  * @Returns  GDF_SUCCESS upon successful completion. 
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_count_nonzero_mask(gdf_valid_type const * masks, int num_rows, int * count);
 
 /* column operations */
 
+/**
+ * @brief Size of the @ref gdf_column itself (as opposed to the data of any specific column)
+ */
 gdf_size_type gdf_column_sizeof();
 
-gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid,
-                          gdf_size_type size, gdf_dtype dtype);
-
+/**
+ * @brief  Construct (in-place) a GDF column structure from pre-existing column data
+ *
+ *
+ * @note One cannot currently pass in a name for the column
+ *
+ * @param[out] column  location for the constructed @ref gdf_column
+ * @param[in]  data    see the `data` field under @ref gdf_column
+ * @param[in]  valid   see the `valid` field under @ref gdf_column
+ * @param[in]  size    see the `size` field under @ref gdf_column
+ * @param[in]  dtype   see the `dtype` field under @ref gdf_column
+ */
 gdf_error gdf_column_view_augmented(gdf_column *column, void *data, gdf_valid_type *valid,
                           gdf_size_type size, gdf_dtype dtype, gdf_size_type null_count);
 
+
+/**
+ * @brief  A variant of @ref gdf_column_view_augmented for the case of a column
+ * having no null elements
+ */
+gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid,
+                          gdf_size_type size, gdf_dtype dtype);
+
+/**
+ * @brief  Free the resources associated with a @ref gdf_column created entirely
+ * by libgdf 
+ * 
+ * @note This is not to be called on columns created using @ref gdf_column_view, 
+ * @ref gdf_column_view_augmented or manually outside libgdf)
+ *
+ * @param[in] column The column whose resources are to be freed
+ *
+ */
 gdf_error gdf_column_free(gdf_column *column);
 
 /* context operations */
 
+/**
+ * @brief Constructs a @ref gdf_context struct from its component fields
+ *
+ * @param[out] context        location for the constructed @ref gdf_context
+ * @param[in]  flag_sorted    see the `flag_sorted` field under @ref gdf_context
+ * @param[in]  flag_method    see the `flag_method` field under @ref gdf_context
+ * @param[in]  flag_distinct  see the `flag_distrinct` field under @ref gdf_context
+ */
 gdf_error gdf_context_view(gdf_context *context, int flag_sorted, gdf_method flag_method,
                            int flag_distinct);
 
@@ -182,30 +212,26 @@ gdf_error gdf_segmented_radixsort_generic(gdf_segmented_radixsort_plan_type *hdl
 // joins
 
 
-/* --------------------------------------------------------------------------*/
 /** 
- * @Synopsis  Joins two dataframes (left, right) together on the specified columns
+ * @brief   Joins two dataframes (left, right) together on the specified columns
  * 
- * @Param[in] left_cols[] The columns of the left dataframe
+ * @Param[in] left_cols The columns of the left dataframe
  * @Param[in] num_left_cols The number of columns in the left dataframe
- * @Param[in] left_join_cols[] The column indices of columns from the left dataframe
+ * @Param[in] left_join_cols The column indices of columns from the left dataframe
  * to join on
- * @Param[in] right_cols[] The columns of the right dataframe
+ * @Param[in] right_cols The columns of the right dataframe
  * @Param[in] num_right_cols The number of columns in the right dataframe
- * @Param[in] right_join_cols[] The column indices of columns from the right dataframe
+ * @Param[in] right_join_cols The column indices of columns from the right dataframe
  * to join on
  * @Param[in] num_cols_to_join The total number of columns to join on
  * @Param[in] result_num_cols The number of columns in the resulting dataframe
- * @Param[out] gdf_column *result_cols[] If not nullptr, the dataframe that results from joining
+ * @Param[out] result_cols If not nullptr, the dataframe that results from joining
  * the left and right tables on the specified columns
- * @Param[out] gdf_column * left_indices If not nullptr, indices of rows from the left table that match rows in the right table
- * @Param[out] gdf_column * right_indices If not nullptr, indices of rows from the right table that match rows in the left table
- * @Param[in] join_context The context to use to control how the join is performed,e.g.,
+ * @Param[out] left_indices If not nullptr, indices of rows from the left table that match rows in the right table
+ * @Param[out] right_indices If not nullptr, indices of rows from the right table that match rows in the left table
+ * @Param[in] join_context The context to use to control how the join is performed, e.g.
  * sort vs hash based implementation
- * 
- * @Returns   
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_inner_join(
                          gdf_column **left_cols, 
                          int num_left_cols,
@@ -220,30 +246,26 @@ gdf_error gdf_inner_join(
                          gdf_column * right_indices,
                          gdf_context *join_context);
 
-/* --------------------------------------------------------------------------*/
 /** 
- * @Synopsis  Joins two dataframes (left, right) together on the specified columns
+ * @brief   Joins two dataframes (left, right) together on the specified columns
  * 
- * @Param[in] left_cols[] The columns of the left dataframe
+ * @Param[in] left_cols The columns of the left dataframe
  * @Param[in] num_left_cols The number of columns in the left dataframe
- * @Param[in] left_join_cols[] The column indices of columns from the left dataframe
+ * @Param[in] left_join_cols The column indices of columns from the left dataframe
  * to join on
- * @Param[in] right_cols[] The columns of the right dataframe
+ * @Param[in] right_cols The columns of the right dataframe
  * @Param[in] num_right_cols The number of columns in the right dataframe
- * @Param[in] right_join_cols[] The column indices of columns from the right dataframe
+ * @Param[in] right_join_cols The column indices of columns from the right dataframe
  * to join on
  * @Param[in] num_cols_to_join The total number of columns to join on
  * @Param[in] result_num_cols The number of columns in the resulting dataframe
- * @Param[out] gdf_column *result_cols[] If not nullptr, the dataframe that results from joining
+ * @Param[out] result_cols If not nullptr, the dataframe that results from joining
  * the left and right tables on the specified columns
- * @Param[out] gdf_column * left_indices If not nullptr, indices of rows from the left table that match rows in the right table
- * @Param[out] gdf_column * right_indices If not nullptr, indices of rows from the right table that match rows in the left table
+ * @Param[out] left_indices If not nullptr, indices of rows from the left table that match rows in the right table
+ * @Param[out] right_indices If not nullptr, indices of rows from the right table that match rows in the left table
  * @Param[in] join_context The context to use to control how the join is performed,e.g.,
  * sort vs hash based implementation
- * 
- * @Returns   
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_left_join(
                          gdf_column **left_cols, 
                          int num_left_cols,
@@ -276,7 +298,6 @@ gdf_error gdf_outer_join_generic(gdf_column *leftcol, gdf_column *rightcol,
 
 /* partioning */
 
-/* --------------------------------------------------------------------------*/
 /** 
  * @brief Computes the hash values of the rows in the specified columns of the 
  * input columns and bins the hash values into the desired number of partitions. 
@@ -284,20 +305,17 @@ gdf_error gdf_outer_join_generic(gdf_column *leftcol, gdf_column *rightcol,
  * are contiguous.
  * 
  * @Param[in] num_input_cols The number of columns in the input columns
- * @Param[in] input[] The input set of columns
- * @Param[in] columns_to_hash[] Indices of the columns in the input set to hash
+ * @Param[in] input The input set of columns
+ * @Param[in] columns_to_hash Indices of the columns in the input set to hash
  * @Param[in] num_cols_to_hash The number of columns to hash
  * @Param[in] num_partitions The number of partitions to rearrange the input rows into
- * @Param[out] partitioned_output Preallocated gdf_columns to hold the rearrangement 
+ * @Param[out] partitioned_output Preallocated gdf_columns to hold the rearrangement
  * of the input columns into the desired number of partitions
  * @Param[out] partition_offsets Preallocated array the size of the number of
  * partitions. Where partition_offsets[i] indicates the starting position
  * of partition 'i'
  * @Param[in] hash The hash function to use
- * 
- * @Returns  If the operation was successful, returns GDF_SUCCESS
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_hash_partition(int num_input_cols, 
                              gdf_column * input[], 
                              int columns_to_hash[],
@@ -319,19 +337,14 @@ gdf_error gdf_prefixsum_i64(gdf_column *inp, gdf_column *out, int inclusive);
 
 /* hashing */
 
-/* --------------------------------------------------------------------------*/
 /** 
- * @Synopsis  Computes the hash value of each row in the input set of columns.
+ * @brief   Computes the hash value of each row in the input set of columns.
  * 
- * @Param num_cols The number of columns in the input set
- * @Param input The list of columns whose rows will be hashed
- * @Param hash The hash function to use
- * @Param output The hash value of each row of the input
- * 
- * @Returns   GDF_SUCCESS if the operation was successful, otherwise an appropriate
- * error code
+ * @Param[in] num_cols The number of columns in the input set
+ * @Param[in] input The list of columns whose rows will be hashed
+ * @Param[in] hash The hash function to use
+ * @Param[out] output The hash value of each row of the input
  */
-/* ----------------------------------------------------------------------------*/
 gdf_error gdf_hash(int num_cols, gdf_column **input, gdf_hash_func hash, gdf_column *output);
 
 /* trig */
