@@ -18,6 +18,8 @@
 #ifndef VALID_VECTORS_H
 #define VALID_VECTORS_H
 
+
+#include <gdf/utils.h>
 #include <functional>
 #include <memory>
 #include <string>
@@ -31,7 +33,7 @@ using host_valid_pointer = typename std::unique_ptr<gdf_valid_type, std::functio
 host_valid_pointer create_and_init_valid(size_t length, bool all_bits_on = false)
 {
   auto deleter = [](gdf_valid_type* valid) { delete[] valid; };
-  auto n_bytes = gdf::util::valid_size(length);
+  auto n_bytes = gdf_get_num_chars_bitmask(length);
   auto valid_bits = new gdf_valid_type[n_bytes];
 
   for (size_t i = 0; i < length; ++i) {

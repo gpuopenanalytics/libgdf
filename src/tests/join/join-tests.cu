@@ -144,7 +144,7 @@ struct JoinTest : public testing::Test
     cudaMemcpy(the_column->data, host_vector.data(), host_vector.size() * sizeof(col_type), cudaMemcpyHostToDevice);
 
     // Allocate device storage for gdf_column.valid
-    int valid_size = gdf::util::valid_size(host_vector.size());
+    int valid_size = gdf_get_num_chars_bitmask(host_vector.size());
     cudaMalloc(&(the_column->valid), valid_size);
     cudaMemcpy(the_column->valid, host_valid, valid_size, cudaMemcpyHostToDevice);
  
