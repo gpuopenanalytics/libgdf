@@ -168,7 +168,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_SI32_FP32_UI32) {
     vax.set(100);
     out.emplace(vay.dataSize());
 
-    gdf_binary_operation_v_s_v(out.column(), vax.scalar(), vay.column(), GDF_ADD);
+    auto result = gdf_binary_operation_v_s_v(out.column(), vax.scalar(), vay.column(), GDF_ADD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -190,7 +191,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_SI08_UI16_SI16) {
     vay.set(100);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_s(out.column(), vax.column(), vay.scalar(), GDF_ADD);
+    auto result = gdf_binary_operation_v_v_s(out.column(), vax.column(), vay.scalar(), GDF_ADD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -212,7 +214,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_UI32_FP64_SI08) {
     vay.range(0, 100, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_ADD);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_ADD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -237,7 +240,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_Default_SI32_SI16_UI64_
     def.set(1000);
     out.emplace(vay.dataSize());
 
-    gdf_binary_operation_v_s_v_d(out.column(), vax.scalar(), vay.column(), def.scalar(), GDF_ADD);
+    auto result = gdf_binary_operation_v_s_v_d(out.column(), vax.scalar(), vay.column(), def.scalar(), GDF_ADD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -262,7 +266,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_Default_FP32_SI16_UI08_
     def.set(150);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_s_d(out.column(), vax.column(), vay.scalar(), def.scalar(), GDF_ADD);
+    auto result = gdf_binary_operation_v_v_s_d(out.column(), vax.column(), vay.scalar(), def.scalar(), GDF_ADD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -287,7 +292,8 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_Default_FP64_SI32_UI32_
     def.set(150);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v_d(out.column(), vax.column(), vay.column(), def.scalar(), GDF_ADD);
+    auto result = gdf_binary_operation_v_v_v_d(out.column(), vax.column(), vay.column(), def.scalar(), GDF_ADD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -307,7 +313,8 @@ TEST_F(BinaryOperationIntegrationTest, Sub_Vector_Vector_UI64) {
     vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_SUB);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_SUB);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -327,7 +334,8 @@ TEST_F(BinaryOperationIntegrationTest, Mul_Vector_Vector_UI64) {
     vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MUL);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MUL);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -347,7 +355,8 @@ TEST_F(BinaryOperationIntegrationTest, Div_Vector_Vector_UI64) {
     vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_DIV);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_DIV);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -367,7 +376,8 @@ TEST_F(BinaryOperationIntegrationTest, TrueDiv_Vector_Vector_UI64) {
     vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_TRUE_DIV);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_TRUE_DIV);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -387,7 +397,8 @@ TEST_F(BinaryOperationIntegrationTest, FloorDiv_Vector_Vector_UI64) {
     vay.range(50000, 100000, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_FLOOR_DIV);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_FLOOR_DIV);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -407,7 +418,8 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_UI64) {
     vay.range(50, 100, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -427,7 +439,8 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP32) {
     vay.range(50, 100, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -447,7 +460,8 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP64) {
     vay.range(50, 100, 1);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_MOD);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 
@@ -467,7 +481,8 @@ TEST_F(BinaryOperationIntegrationTest, Pow_Vector_Vector_UI64) {
     vay.fill(500, 2);
     out.emplace(vax.dataSize());
 
-    gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_POW);
+    auto result = gdf_binary_operation_v_v_v(out.column(), vax.column(), vay.column(), GDF_POW);
+    ASSERT_TRUE(result == GDF_SUCCESS);
 
     out.read();
 

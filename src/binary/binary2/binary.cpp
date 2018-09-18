@@ -19,7 +19,94 @@
 #include "binary/binary2/launcher.h"
 
 namespace gdf {
+    struct Option {
+        Option(bool state, gdf_error value)
+         : is_correct{state}, gdf_error_value{value}
+        { }
+
+        operator bool() {
+            return is_correct;
+        }
+
+        gdf_error get_gdf_error() {
+            return gdf_error_value;
+        }
+
+    private:
+        bool is_correct;
+        gdf_error gdf_error_value;
+    };
+
+    Option verify_scalar(gdf_scalar* scalar) {
+        if (scalar == nullptr) {
+            return Option(false, GDF_DATASET_EMPTY);
+        }
+        if ((scalar->dtype <= GDF_invalid) || (N_GDF_TYPES <= scalar->dtype)) {
+            return Option(false, GDF_UNSUPPORTED_DTYPE);
+        }
+        Option(true, GDF_SUCCESS);
+    }
+
+    Option verify_column(gdf_column* vector) {
+        if (vector == nullptr) {
+            return Option(false, GDF_DATASET_EMPTY);
+        }
+        if (vector->size == 0) {
+            return Option(false, GDF_SUCCESS);
+        }
+        if (vector->data == nullptr) {
+            return Option(false, GDF_DATASET_EMPTY);
+        }
+        if ((vector->dtype <= GDF_invalid) || (N_GDF_TYPES <= vector->dtype)) {
+            return Option(false, GDF_UNSUPPORTED_DTYPE);
+        }
+        return Option(true, GDF_SUCCESS);
+    }
+
+    Option verify_column(gdf_column* out, gdf_column* vax) {
+        auto result = verify_column(out);
+        if (!result) {
+            return result;
+        }
+        result = verify_column(vax);
+        if (!result) {
+            return result;
+        }
+        if (out->size != vax->size) {
+            return Option(false, GDF_COLUMN_SIZE_MISMATCH);
+        }
+        return Option(true, GDF_SUCCESS);
+    }
+
+    Option verify_column(gdf_column* out, gdf_column* vax, gdf_column* vay) {
+        auto result = verify_column(out);
+        if (!result) {
+            return result;
+        }
+        result = verify_column(vax);
+        if (!result) {
+            return result;
+        }
+        result = verify_column(vay);
+        if (!result) {
+            return result;
+        }
+        if ((out->size != vax->size) || (out->size != vay->size)) {
+            return Option(false, GDF_COLUMN_SIZE_MISMATCH);
+        }
+        return Option(true, GDF_SUCCESS);
+    }
+
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_binary_operator ope) {
+        auto option_scalar = verify_scalar(vay);
+        if (!option_scalar) {
+            return option_scalar.get_gdf_error();
+        }
+        auto option_column = verify_column(out, vax);
+        if (!option_column) {
+            return option_column.get_gdf_error();
+        }
+
         gdf::Launcher::launch().kernel("kernel_v_s")
                                .instantiate(ope, out, vax, vay)
                                .launch(out, vax, vay);
@@ -28,6 +115,11 @@ namespace gdf {
     }
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_binary_operator ope) {
+        auto option_column = verify_column(out, vax, vay);
+        if (!option_column) {
+            return option_column.get_gdf_error();
+        }
+
         gdf::Launcher::launch().kernel("kernel_v_v")
                                .instantiate(ope, out, vax, vay)
                                .launch(out, vax, vay);
@@ -36,18 +128,44 @@ namespace gdf {
     }
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope) {
-        gdf::Launcher::launch().kernel("kernel_v_s_d")
-                               .instantiate(ope, out, vax, vay, def)
-                               .launch(out, vax, vay, def);
-
+        auto option_column = verify_column(out, vax);
+        if (!option_column) {
+            return option_column.get_gdf_error();
+        }
+        auto option_scalar_vax = verify_scalar(vay);
+        if (!option_scalar_vax) {
+            return option_scalar_vax.get_gdf_error();
+        }
+        auto option_scalar_def = verify_scalar(def);
+        if (!option_scalar_def) {
+            gdf::Launcher::launch().kernel("kernel_v_s")
+                                   .instantiate(ope, out, vax, vay)
+                                   .launch(out, vax, vay);
+        }
+        else {
+            gdf::Launcher::launch().kernel("kernel_v_s_d")
+                                   .instantiate(ope, out, vax, vay, def)
+                                   .launch(out, vax, vay, def);
+        }
         return GDF_SUCCESS;
     }
 
     gdf_error binary_operation(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope) {
-        gdf::Launcher::launch().kernel("kernel_v_v_d")
-                               .instantiate(ope, out, vax, vay, def)
-                               .launch(out, vax, vay, def);
-
+        auto option_column = verify_column(out, vax, vay);
+        if (!option_column) {
+            return option_column.get_gdf_error();
+        }
+        auto option_scalar = verify_scalar(def);
+        if (!option_scalar) {
+            gdf::Launcher::launch().kernel("kernel_v_v")
+                                   .instantiate(ope, out, vax, vay)
+                                   .launch(out, vax, vay);
+        }
+        else {
+            gdf::Launcher::launch().kernel("kernel_v_v_d")
+                                   .instantiate(ope, out, vax, vay, def)
+                                   .launch(out, vax, vay, def);
+        }
         return GDF_SUCCESS;
     }
 }
