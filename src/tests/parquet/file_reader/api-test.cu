@@ -75,8 +75,11 @@ protected:
     void
     SetUp() final {
         static constexpr std::size_t kGroups       = 2;
-        static constexpr std::size_t kRowsPerGroup = 500;
+        static constexpr std::size_t kRowsPerGroup = 499;
         try {
+
+        	std::cout<<"at SetUp"<<std::endl;
+
             std::shared_ptr<::arrow::io::FileOutputStream> stream;
             PARQUET_THROW_NOT_OK(
               ::arrow::io::FileOutputStream::Open(filename, &stream));
@@ -102,7 +105,7 @@ protected:
                   static_cast<::parquet::BoolWriter *>(
                     row_group_writer->NextColumn());
                 for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    std::int16_t definition_level = j % 2;
+                    std::int16_t definition_level = j % 3;
                     bool         bool_value       = true;
                     bool_writer->WriteBatch(
                       1, &definition_level, &repetition_level, &bool_value);
@@ -112,7 +115,7 @@ protected:
                   static_cast<::parquet::Int32Writer *>(
                     row_group_writer->NextColumn());
                 for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    std::int16_t definition_level = j % 2;
+                    std::int16_t definition_level = j % 3;
                     std::int32_t int32_value = genInt32(i * kRowsPerGroup + j);
                     int32_writer->WriteBatch(
                       1, &definition_level, &repetition_level, &int32_value);
@@ -122,7 +125,7 @@ protected:
                   static_cast<::parquet::Int64Writer *>(
                     row_group_writer->NextColumn());
                 for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    std::int16_t definition_level = j % 2;
+                    std::int16_t definition_level = j % 3;
                     std::int64_t int64_value = genInt64(i * kRowsPerGroup + j);
                     int64_writer->WriteBatch(
                       1, &definition_level, &repetition_level, &int64_value);
@@ -132,7 +135,7 @@ protected:
                   static_cast<::parquet::DoubleWriter *>(
                     row_group_writer->NextColumn());
                 for (std::size_t j = 0; j < kRowsPerGroup; j++) {
-                    std::int16_t definition_level = j % 2;
+                    std::int16_t definition_level = j % 3;
                     double       double_value     = i * kRowsPerGroup + j;
                     double_writer->WriteBatch(
                       1, &definition_level, &repetition_level, &double_value);
@@ -140,6 +143,8 @@ protected:
             }
 
             file_writer->Close();
+
+            std::cout<<"finish SetUp"<<std::endl;
 
             DCHECK(stream->Close().ok());
         } catch (const std::exception &e) {
@@ -184,25 +189,57 @@ protected:
 
     void
     checkNulls(/*const */ gdf_column &column) {
+
+    	std::cout<<"at checkNulls"<<std::endl;
+
         const std::size_t valid_size =
           arrow::BitUtil::BytesForBits(column.size);
         const std::size_t valid_last = valid_size - 1;
-//        for (std::size_t i = 0; i < valid_last; i++) {
-//            std::uint8_t valid = column.valid[i];
-//            EXPECT_EQ(0b10101010, valid);
-//        }
+        for (std::size_t i = 0; i < valid_last; i++) {
+
+        	if (i % 3 == 0){
+        		std::uint8_t valid = column.valid[i];
+        		std::uint8_t expected = 0b00100100;
+        		EXPECT_EQ(expected, valid);
+        		if (expected != valid){
+        			std::cout<<"fail at checkNulls i: "<<i<<std::endl;
+        			break;
+        		}
+        	} else if (i % 3 == 1){
+        		std::uint8_t valid = column.valid[i];
+        		std::uint8_t expected = 0b01001001;
+        		EXPECT_EQ(expected, valid);
+        		if (expected != valid){
+        			std::cout<<"fail at checkNulls i: "<<i<<std::endl;
+        			break;
+        		}
+        	} else {
+        		std::uint8_t valid = column.valid[i];
+        		std::uint8_t expected = 0b10010010;
+        		EXPECT_EQ(expected, valid);
+        		if (expected != valid){
+        			std::cout<<"fail at checkNulls i: "<<i<<std::endl;
+        			break;
+        		}
+        	}
+
+
+        }
 //        EXPECT_EQ(0b00001010, 0b00001010 & column.valid[valid_last]);
     }
 
     void
     checkBoolean(/*const */ gdf_column &column) {
+
+    	std::cout<<"at checkBoolean"<<std::endl;
+
         gdf_column boolean_column =
           convert_to_host_gdf_column<::parquet::BooleanType::c_type>(&column);
 
         int fails = 0;
 
         for (std::size_t i = 0; i < boolean_column.size; i++) {
-            if (i % 2) {
+            if (i % 3) {
                 bool expected = true;
                 bool value    = static_cast<bool *>(boolean_column.data)[i];
 
@@ -216,20 +253,22 @@ protected:
                 	}
                 }
             }
-
-            checkNulls(boolean_column);
         }
+        checkNulls(boolean_column);
     }
 
     void
     checkInt32(/*const */ gdf_column &column) {
+
+    	std::cout<<"at checkInt32"<<std::endl;
+
         gdf_column int32_column =
           convert_to_host_gdf_column<::parquet::Int32Type::c_type>(&column);
 
         int fails = 0;
 
         for (std::size_t i = 0; i < int32_column.size; i++) {
-            if (i % 2) {
+            if (i % 3) {
                 std::int32_t expected = genInt32(i);
                 std::int32_t value =
                   static_cast<std::int32_t *>(int32_column.data)[i];
@@ -257,7 +296,7 @@ protected:
         int fails = 0;
 
         for (std::size_t i = 0; i < int64_column.size; i++) {
-            if (i % 2) {
+            if (i % 3) {
                 std::int64_t expected = genInt64(i);
                 std::int64_t value =
                   static_cast<std::int64_t *>(int64_column.data)[i];
@@ -285,7 +324,7 @@ protected:
         int fails = 0;
 
         for (std::size_t i = 0; i < double_column.size; i++) {
-            if (i % 2) {
+            if (i % 3) {
                 double expected = static_cast<double>(i);
                 double value    = static_cast<double *>(double_column.data)[i];
 
@@ -311,8 +350,13 @@ protected:
 };
 
 TEST_F(ParquetReaderAPITest, ReadAll) {
+
+	std::cout<<"at ReadAll"<<std::endl;
+
     gdf_error error_code = gdf::parquet::read_parquet(
       filename.c_str(), nullptr, &columns, &columns_length);
+
+    std::cout<<"at ReadAll read_parquet"<<std::endl;
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 

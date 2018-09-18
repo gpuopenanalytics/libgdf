@@ -203,8 +203,8 @@ struct ParquetReaderJob {
 	const gdf_column & column;
 	std::size_t offset;
 
-	uint8_t first_valid_byte;
-	uint8_t last_valid_byte;
+	gdf_valid_type first_valid_byte;
+	gdf_valid_type last_valid_byte;
 
 	ParquetReaderJob(std::size_t _row_group_index,
 	std::size_t _column_index,
@@ -291,9 +291,11 @@ gdf_error _ProcessParquetReaderJobs(std::vector<ParquetReaderJob> & jobs){
 	for (int i = 0; i < num_threads; i++){
 		threads[i] = std::thread(_ProcessParquetReaderJobsThread,
 				std::ref(jobs), std::ref(lock), std::ref(job_index), std::ref(gdf_error_out));
+
+		threads[i].join();
 	}
 	for (int i = 0; i < num_threads; i++){
-		threads[i].join();
+//		threads[i].join();
 	}
 
 
@@ -360,11 +362,36 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
 				int job_index1 = (row_group_index_in_set * column_indices.size()) + column_reader_index;
 				int job_index2 = ((row_group_index_in_set + 1) * column_indices.size()) + column_reader_index;
 
-				uint8_t merged = jobs[job_index1].last_valid_byte | jobs[job_index2].first_valid_byte;
+				gdf_valid_type merged = jobs[job_index1].last_valid_byte | jobs[job_index2].first_valid_byte;
+
+				// determine location of where the merged byte goes
+				// copy merged into valid
+				std::size_t merged_byte_offset = (offsets[row_group_index_in_set + 1]/8);
+
+
+				std::vector<gdf_valid_type> merged_region(6);
+				std::cout<<"before"<<std::endl;
+				cudaMemcpy(&merged_region[0], gdf_columns[column_reader_index].valid + (merged_byte_offset - merged_region.size()/2), sizeof(merged_region.size()), cudaMemcpyDeviceToHost);
+				for (gdf_valid_type val : merged_region){
+					std::cout<<((int)val)<<std::endl;
+				}
+
+
+
+				cudaMemcpy(gdf_columns[column_reader_index].valid + merged_byte_offset, &merged, sizeof(gdf_valid_type), cudaMemcpyHostToDevice);
 
 				std::string strmessage = " jobs[job_index1].last_valid_byte: " + std::to_string(jobs[job_index1].last_valid_byte)  + " jobs[job_index2].first_valid_byte: " + std::to_string(jobs[job_index2].first_valid_byte) + " merged: " + std::to_string(merged);
 				std::cout<<strmessage<<std::endl;
 
+				strmessage = " merged_byte_offset: " + std::to_string(merged_byte_offset)  + " offsets[row_group_index_in_set]: " + std::to_string(offsets[row_group_index_in_set]);
+				std::cout<<strmessage<<std::endl;
+
+
+				std::cout<<"after"<<std::endl;
+				cudaMemcpy(&merged_region[0], gdf_columns[column_reader_index].valid + (merged_byte_offset - merged_region.size()/2), sizeof(merged_region.size()), cudaMemcpyDeviceToHost);
+				for (gdf_valid_type val : merged_region){
+					std::cout<<((int)val)<<std::endl;
+				}
 
 			}
 		}

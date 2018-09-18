@@ -605,10 +605,6 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
 		   }
 	   }
 
-	   std::string strmessage = "offset: " +  std::to_string(offset) + " values_to_read: " + std::to_string(values_to_read)  + " first_valid_byte: " + std::to_string(first_valid_byte)  + " last_valid_byte: " + std::to_string(last_valid_byte);
-	   std::cout<<strmessage<<std::endl;
-
-
 	   return rows_read_total;
 
 }
