@@ -521,7 +521,6 @@ ColumnReader<DataType>::ReadBatch(std::int64_t batch_size,
     batch_size = std::min(batch_size, num_buffered_values_ - num_decoded_values_);
 
     std::int64_t num_def_levels = 0;
-    std::int64_t num_rep_levels = 0;
 
     std::int64_t values_to_read = 0;
 
@@ -573,7 +572,7 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
 
     c_type *const values = static_cast<c_type *const>(column.data) + offset;
     std::uint8_t *const d_valid_bits =
-      static_cast<std::uint8_t *>(column.valid) + (offset / 8);
+      static_cast<std::uint8_t *const>(column.valid) + (offset / 8);
 
     static std::int64_t levels_read = 0;
     static std::int64_t values_read = 0;

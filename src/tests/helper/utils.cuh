@@ -158,12 +158,11 @@ auto print_column(gdf_column * column) -> void {
     auto host_out = get_gdf_data_from_device<ValueType>(column);
     auto bitmap = get_gdf_valid_from_device(column);
     std::cout<<"Printing Column\t null_count:" << column->null_count << "\t type " << column->dtype <<  std::endl;
-    int  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
-    for(int i = 0; i < column->size; i++) {
-        int col_position =  i / 8;
-        int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
-        int bit_offset =  (length_col - 1) - (i % 8);
-
+    size_t  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
+    for(size_t i = 0; i < column->size; i++) {
+        size_t col_position =  i / 8;
+        size_t length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
+        
         ValueType value    = static_cast<ValueType *>(host_out)[i];
 
         if ( bitmap[i / 8] & (1 << (i % 8)) ) {
@@ -172,8 +171,8 @@ auto print_column(gdf_column * column) -> void {
              std::cout << "host_out[" << i << "] = " << '\0' <<"\t\tvalid="<< 0 <<std::endl;
          }
     }
-    for (int i = 0; i < n_bytes; i++) {
-        int length = n_bytes != i+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
+    for (size_t i = 0; i < n_bytes; i++) {
+        size_t length = n_bytes != i+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
         print_binary(bitmap[i], length);
     }
     delete[] host_out;
