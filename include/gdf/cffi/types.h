@@ -58,6 +58,8 @@ typedef enum {
     GDF_GROUPBY_TOO_MANY_COLUMNS,
     GDF_UNSUPPORTED_METHOD,
     GDF_INVALID_AGGREGATOR,
+    GDF_HASH_TABLE_INSERT_FAILURE,
+    GDF_UNSUPPORTED_JOIN_TYPE,
 } gdf_error;
 
 typedef enum {
@@ -160,8 +162,6 @@ struct _OpaqueSegmentedRadixsortPlan;
 typedef struct _OpaqueSegmentedRadixsortPlan gdf_segmented_radixsort_plan_type;
 
 
-struct _OpaqueJoinResult;
-typedef struct _OpaqueJoinResult gdf_join_result_type;
 
 
 typedef enum{
