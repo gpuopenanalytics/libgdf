@@ -124,11 +124,9 @@ convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_r
     gdf_valid_type* valid_bits;
     int16_t * definition_level;
 
-    //@todo: amount_to_read check type conversion
     auto values_malloc_size = amount_to_read * sizeof(parquet_type);
     gdf_error status = Readers<T>::init_gdf_buffers((void **)&(values_buffer), &valid_bits, &definition_level, values_malloc_size, amount_to_read);
 
-    std::vector<int16_t> repetition_level(amount_to_read);
     std::int64_t levels_read;
     std::int64_t values_read = 0;
     std::int64_t nulls_count;
@@ -136,8 +134,8 @@ convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_r
     int64_t rows_read_total = 0;
     while (column_reader->HasNext() && rows_read_total < amount_to_read) {
         int64_t rows_read = column_reader->ReadBatchSpaced(batch_size,
-        							&definition_level[rows_read_total],
-                                     repetition_level.data(),
+        							 &definition_level[rows_read_total],
+                                     nullptr,
                                      &values_buffer[rows_read_total],
                                      valid_bits,
                                      0,
@@ -220,3 +218,4 @@ BM_FileRead(benchmark::State &state) {
 
 BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
 BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
+ 

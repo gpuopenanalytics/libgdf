@@ -204,51 +204,6 @@ TYPED_TEST(MapTest, CheckUnusedValues){
   EXPECT_EQ(begin->second, this->unused_value);
 }
 
-TYPED_TEST(MapTest, AggregationTestHost)
-{
-
-  using key_type = typename TypeParam::key_type;
-  using value_type = typename TypeParam::value_type;
-
-  thrust::pair<key_type, value_type> first_pair{0,0};
-  thrust::pair<key_type, value_type> second_pair{0,10};
-  thrust::pair<key_type, value_type> third_pair{0,5};
-
-  auto max = [](value_type a, value_type b) { return (a >= b ? a : b); };
-
-  this->the_map->insert(first_pair, max);
-  auto found = this->the_map->find(0);
-  EXPECT_EQ(0, found->second);
-
-  this->the_map->insert(second_pair, max);
-  found = this->the_map->find(0);
-  EXPECT_EQ(10, found->second);
-
-  this->the_map->insert(third_pair, max);
-  found = this->the_map->find(0);
-  EXPECT_EQ(10, found->second);
-
-  this->the_map->insert(thrust::make_pair(0,11), max);
-  found = this->the_map->find(0);
-  EXPECT_EQ(11, found->second);
-
-  this->the_map->insert(thrust::make_pair(7, 42), max);
-  found = this->the_map->find(7);
-  EXPECT_EQ(42, found->second);
-
-  this->the_map->insert(thrust::make_pair(7, 62), max);
-  found = this->the_map->find(7);
-  EXPECT_EQ(62, found->second);
-
-  this->the_map->insert(thrust::make_pair(7, 42), max);
-  found = this->the_map->find(7);
-  EXPECT_EQ(62, found->second);
-
-  found = this->the_map->find(0);
-  EXPECT_EQ(11, found->second);
-
-}
-
 
 template<typename map_type, typename Aggregation_Operator>
 __global__ void build_table(map_type * const the_map,

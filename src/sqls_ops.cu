@@ -25,7 +25,7 @@ namespace{ //annonymus
   {
     std::vector<void*> v_cols(ncols,nullptr);
     std::vector<int>   v_types(ncols, 0);
-    for(int i=0;i<ncols;++i)
+    for(size_t i=0;i<ncols;++i)
       {
         v_cols[i] = cols[i].data;
         v_types[i] = cols[i].dtype;
@@ -136,7 +136,7 @@ namespace{ //annonymus
   //
   void multi_gather_host(size_t ncols,  gdf_column** h_cols_in, gdf_column** h_cols_out, IndexT* d_indices, size_t nrows_new)
   {
-    for(int col_index = 0; col_index<ncols; ++col_index)
+    for(size_t col_index = 0; col_index<ncols; ++col_index)
       {
         gdf_dtype col_type = h_cols_in[col_index]->dtype;
         type_dispatcher(col_type,
@@ -980,8 +980,36 @@ gdf_error gdf_group_by_single(int ncols,                    // # columns
                               gdf_context* ctxt,            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
                               gdf_agg_op op)                //aggregation operation
 {
-  if( ncols == 0 )
+  if((0 == ncols)
+     || (nullptr == cols)
+     || (nullptr == col_agg)
+     || (nullptr == out_col_agg)
+     || (nullptr == ctxt))
+  {
     return GDF_DATASET_EMPTY;
+  }
+
+  // If there are no rows in the input, set the output rows to 0 
+  // and return immediately with success
+  if( (0 == cols[0]->size )
+      || (0 == col_agg->size))
+  {
+    if( (nullptr != out_col_agg) ){
+      out_col_agg->size = 0;
+    }
+    if(nullptr != out_col_indices ) {
+        out_col_indices->size = 0;
+    }
+
+    for(int col = 0; col < ncols; ++col){
+      if(nullptr != out_col_values){
+        if( nullptr != out_col_values[col] ){
+          out_col_values[col]->size = 0;
+        }
+      }
+    }
+    return GDF_SUCCESS;
+  }
   
   if( ctxt->flag_method == GDF_SORT )
     {
@@ -994,9 +1022,6 @@ gdf_error gdf_group_by_single(int ncols,                    // # columns
       gdf_column* h_columns = &v_cols[0];
       size_t nrows = h_columns[0].size;
 
-      if( nrows == 0 )
-        return GDF_DATASET_EMPTY;
-      
       size_t n_group = 0;
 
       Vector<IndexT> d_indx;//allocate only if necessary (see below)
@@ -1132,6 +1157,8 @@ gdf_error gdf_group_by_single(int ncols,                    // # columns
                                &n_group);
           }
           break;
+        default: // To eliminate error for unhandled enumerant N_GDF_AGG_OPS
+          return GDF_INVALID_API_CALL;
         }
 
       if( out_col_values )
