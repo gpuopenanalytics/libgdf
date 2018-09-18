@@ -282,22 +282,23 @@ void compact_to_sparse_for_nulls(T *data_in, T *data_out, const int16_t *definit
 #define WARP_BYTE  4
 #define WARP_SIZE  32
 #define WARP_MASK  0xFFFFFFFF
+constexpr unsigned int THREAD_BLOCK_SIZE{256};
 
 template<typename T, typename Functor>
-__global__ void transform_valid(uint8_t* valid, const T* values, const int size,
+__global__ void transform_valid(uint8_t* valid, const int64_t size,
 		Functor is_valid) {
-	int tid = threadIdx.x;
-	int blkid = blockIdx.x;
-	int blksz = blockDim.x;
-	int gridsz = gridDim.x;
+	size_t tid = threadIdx.x;
+	size_t blkid = blockIdx.x;
+	size_t blksz = blockDim.x;
+	size_t gridsz = gridDim.x;
 
-	int start = tid + blkid * blksz;
-	int step = blksz * gridsz;
+	size_t start = tid + blkid * blksz;
+	size_t step = blksz * gridsz;
 
-	int i = start;
+	size_t i = start;
 	while (i < size) {
 		uint32_t bitmask = 0;
-		uint32_t result = is_valid(values[i]);
+		uint32_t result = is_valid(i);
 		bitmask = (-result << (i % WARP_SIZE));
 
         #pragma unroll
@@ -316,16 +317,26 @@ __global__ void transform_valid(uint8_t* valid, const T* values, const int size,
 	}
 }
 
-
+struct TurnOnFunctor {
+    __host__ __device__ uint32_t operator() (size_t index) {
+        return 0xFFFFFFFF;
+    }
+};
 static inline void _TurnBitOnForValids(std::int64_t        def_length,
                                        std::uint8_t *      d_valid_ptr,
                                        const std::int64_t  valid_bits_offset) 
 {
+    const dim3 grid ((def_length + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE, 1, 1);
+    const dim3 block (THREAD_BLOCK_SIZE, 1, 1);
+
     if (valid_bits_offset % 8 == 0) {
-        cudaMemset(d_valid_ptr + valid_bits_offset/8, 255, def_length);
+        transform_valid<int16_t, TurnOnFunctor> <<<grid, block>>>(
+                (d_valid_ptr + valid_bits_offset / 8), def_length,
+                        TurnOnFunctor { });
+
     } else {
-        int left_bits_length = valid_bits_offset % 8;
-        int rigth_bits_length = 8 - left_bits_length;
+        size_t left_bits_length = valid_bits_offset % 8;
+        size_t rigth_bits_length = 8 - left_bits_length;
         uint8_t mask;
         cudaMemcpy(&mask, d_valid_ptr + (valid_bits_offset/8), 1, cudaMemcpyDeviceToHost);
 
@@ -333,22 +344,22 @@ static inline void _TurnBitOnForValids(std::int64_t        def_length,
             mask |= gdf::util::byte_bitmask(i + left_bits_length);
         }
         cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
-        cudaMemset(d_valid_ptr + valid_bits_offset/8 + 1, 255, def_length);
+        transform_valid<int16_t, TurnOnFunctor> <<<grid, block>>>(
+                (d_valid_ptr + valid_bits_offset / 8 + 1), def_length,
+                        TurnOnFunctor { });
     }
 }
 
-
 struct IsValidFunctor {
+    const std::int16_t *d_def_levels;
     std::int16_t       max_definition_level;
-    IsValidFunctor (std::int16_t max_definition_level) : max_definition_level(max_definition_level) 
+    IsValidFunctor (const std::int16_t *d_def_levels, std::int16_t max_definition_level) :  d_def_levels {d_def_levels}, max_definition_level{max_definition_level} 
     {
     }
-    __host__ __device__ uint32_t operator() (const std::int16_t &value) {
-        return value == max_definition_level ? 0xFFFFFFFF : 0x00000000;
+    __host__ __device__ uint32_t operator() (size_t index) {
+        return d_def_levels[index] == max_definition_level ? 0xFFFFFFFF : 0x00000000;
     }
 };
-
-constexpr unsigned int THREAD_BLOCK_SIZE{256};
 
 static inline void
 _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
@@ -364,8 +375,8 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
 
 	if (valid_bits_offset % 8 == 0) {
 		transform_valid<int16_t, IsValidFunctor> <<<grid, block>>>(
-				(d_valid_ptr + valid_bits_offset / 8), d_def_levels, def_length,
-				IsValidFunctor { max_definition_level });
+				(d_valid_ptr + valid_bits_offset / 8), def_length,
+				IsValidFunctor { d_def_levels, max_definition_level });
 	} else {
         int left_bits_length = valid_bits_offset % 8;
         int right_bits_length = 8 - left_bits_length;
@@ -384,7 +395,8 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
             }
         }
         cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
-        transform_valid<<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, d_def_levels + right_bits_length, def_length, IsValidFunctor(max_definition_level));
+        transform_valid<int16_t, IsValidFunctor>
+            <<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, def_length, IsValidFunctor{d_def_levels + right_bits_length, max_definition_level});
     }
     int not_null_count = thrust::count(thrust::device_pointer_cast(d_def_levels), thrust::device_pointer_cast(d_def_levels) + def_length, max_definition_level);
     *null_count = def_length - not_null_count;

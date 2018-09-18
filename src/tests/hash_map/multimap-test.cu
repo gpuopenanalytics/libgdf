@@ -104,32 +104,3 @@ TYPED_TEST(MultimapTest, CheckUnusedValues){
   EXPECT_EQ(begin->first, this->unused_key);
   EXPECT_EQ(begin->second, this->unused_value);
 }
-
-TYPED_TEST(MultimapTest, Insert)
-{
-  using key_type = typename TypeParam::key_type;
-  using value_type = typename TypeParam::value_type;
-
-  const int NUM_PAIRS{this->size};
-
-  // Generate a list of pairs (key, value) to insert into map
-  std::vector<thrust::pair<key_type, value_type>> pairs(NUM_PAIRS);
-  std::generate(pairs.begin(), pairs.end(), 
-                [] () {static int i = 0; return thrust::make_pair(i,(i++)*10);});
-
-  // Insert every pair into the map
-  for(const auto& it : pairs){
-    this->the_map.insert(it);
-  }
-
-  // Make sure all the pairs are in the map
-  for(const auto& it : pairs){
-    auto found = this->the_map.find(it.first);
-    EXPECT_NE(found, this->the_map.end());
-    EXPECT_EQ(found->first, it.first);
-    EXPECT_EQ(found->second, it.second);
-  }
-
-}
-
-
