@@ -37,8 +37,8 @@
  #include <thrust/functional.h>
  #include <thrust/device_ptr.h>
 
- #include "column_reader.h"
- #include "file_reader.h"
+ #include "../../../parquet/column_reader.h"
+ #include "../../../parquet/file_reader.h"
 
  #include "../../helper/utils.cuh"
 
