@@ -247,7 +247,7 @@ template<typename Func>
     		int intput_index = input_offsets[set_index] + INPUT_BLOCK_BYTES * (index % max_num_sets_in_run);
     		int output_index = output_offsets[set_index] + BLOCK_SIZE * (index % max_num_sets_in_run);
 
-    		if ((INPUT_BLOCK_BYTES * (index % max_num_sets_in_run)) < input_run_lengths[set_index]) { // if we want to actually process
+    		if (((index % max_num_sets_in_run)) < input_run_lengths[set_index]) { // if we want to actually process
 
     			uint8_t * temp_in = &temp[IO_BLOCK * threadIdx.x];
     			int *temp_out = (int*)&temp[IO_BLOCK * threadIdx.x + INPUT_BLOCK_BYTES];
