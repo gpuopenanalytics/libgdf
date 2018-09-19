@@ -286,17 +286,17 @@ gdf_error _ProcessParquetReaderJobs(std::vector<ParquetReaderJob> & jobs){
 	int num_threads = std::thread::hardware_concurrency();
 	num_threads = jobs.size() < num_threads ? jobs.size() : num_threads;
 
-	_ProcessParquetReaderJobsThread(jobs, lock, job_index, gdf_error_out);
+//	_ProcessParquetReaderJobsThread(jobs, lock, job_index, gdf_error_out);
 
-//	std::vector<std::thread> threads(num_threads);
-//
-//	for (int i = 0; i < num_threads; i++){
-//		threads[i] = std::thread(_ProcessParquetReaderJobsThread,
-//				std::ref(jobs), std::ref(lock), std::ref(job_index), std::ref(gdf_error_out));
-//	}
-//	for (int i = 0; i < num_threads; i++){
-//		threads[i].join();
-//	}
+	std::vector<std::thread> threads(num_threads);
+
+	for (int i = 0; i < num_threads; i++){
+		threads[i] = std::thread(_ProcessParquetReaderJobsThread,
+				std::ref(jobs), std::ref(lock), std::ref(job_index), std::ref(gdf_error_out));
+	}
+	for (int i = 0; i < num_threads; i++){
+		threads[i].join();
+	}
 
 
 

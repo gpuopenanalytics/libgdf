@@ -337,7 +337,7 @@ protected:
                 if (expected != value){
                                 	std::cout<<"fail at checkDouble row: "<<i<<std::endl;
                                 	fails++;
-                                	if (fails > 50){
+                                	if (fails > 5){
                                 		break;
                                 	}
                                 }
