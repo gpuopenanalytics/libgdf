@@ -85,12 +85,15 @@ else()
     message(FATAL_ERROR "Apache Arrow not found, please check your settings.")
 endif()
 
+get_property(PARQUETCPP_INCLUDE_DIRS TARGET Apache::ParquetCpp PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cub"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/moderngpu/src"
     "${CUDA_INCLUDE_DIRS}"
     "${ARROW_INCLUDEDIR}"
+    "${PARQUETCPP_INCLUDE_DIRS}"
 )
 
 IF(CUDA_VERSION_MAJOR GREATER 7)

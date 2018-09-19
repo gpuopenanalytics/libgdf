@@ -30,8 +30,8 @@
 
 #include <gtest/gtest.h>
 
-#include "column_reader.h"
-#include "file_reader.h"
+#include "../../../parquet/column_reader.h"
+#include "../../../parquet/file_reader.h"
 
 #include <gdf/gdf.h>
 
@@ -115,9 +115,7 @@ NullTest<DataType>::GenerateFile() {
         file_writer->Close();
 
         DCHECK(stream->Close().ok());
-    } catch (const std::exception &e) {
-        FAIL() << "Generate file" << e.what();
-    }
+    } catch (const std::exception &e) { FAIL() << "Generate file" << e.what(); }
 }
 
 template <class DataType>

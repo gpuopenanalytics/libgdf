@@ -364,8 +364,7 @@ TEST_F(ParquetReaderAPITest, ReadAll) {
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
-    std::size_t expected_columns_length = 4;
-    EXPECT_EQ(expected_columns_length, columns_length);
+    EXPECT_EQ(4U, columns_length);
 
     EXPECT_EQ(columns[0].size, columns[1].size);
     EXPECT_EQ(columns[1].size, columns[2].size);
@@ -377,16 +376,14 @@ TEST_F(ParquetReaderAPITest, ReadAll) {
 }
 
 TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
-    const char *const column_names[] = {
-      "double_field", "int64_field", nullptr};
+    const char *const column_names[] = {"double_field", "int64_field", nullptr};
 
     gdf_error error_code = gdf::parquet::read_parquet(
       filename.c_str(), column_names, &columns, &columns_length);
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
-    std::size_t expected_columns_length = 2;
-    EXPECT_EQ(expected_columns_length, columns_length);
+    EXPECT_EQ(2U, columns_length);
 
     checkDouble(columns[0]);
     checkInt64(columns[1]);
@@ -403,8 +400,7 @@ TEST_F(ParquetReaderAPITest, ByIdsInOrder) {
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
-    std::size_t expected_columns_length = 4;
-    EXPECT_EQ(expected_columns_length, columns.size());
+    EXPECT_EQ(4U, columns.size());
 
     checkBoolean(*columns[0]);
     checkInt32(*columns[1]);
