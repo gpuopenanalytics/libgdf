@@ -110,7 +110,7 @@ template <typename ValueType = int8_t>
 std::string gdf_data_to_str(void *data, size_t column_size)
 {
     std::string response;
-    for (int i = 0; i < column_size; i++)
+    for (size_t i = 0; i < column_size; i++)
     {
         auto result = std::to_string(*((ValueType*)(data) + i));
         response += std::string(result);
@@ -158,7 +158,7 @@ auto print_column(gdf_column * column) -> void {
     auto host_out = get_gdf_data_from_device<ValueType>(column);
     auto bitmap = get_gdf_valid_from_device(column);
     std::cout<<"Printing Column\t null_count:" << column->null_count << "\t type " << column->dtype <<  std::endl;
-    int  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
+    size_t  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
     for(std::size_t i = 0; i < column->size; i++) {
         int col_position =  i / 8;
         int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
