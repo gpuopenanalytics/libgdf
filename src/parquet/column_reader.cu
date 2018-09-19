@@ -31,6 +31,7 @@
 #include "dictionary_decoder.cuh"
 #include "plain_decoder.cuh"
 
+#include <gdf/utils.h>
 #include "../util/bit_util.cuh"
 
 namespace gdf
@@ -284,18 +285,16 @@ void compact_to_sparse_for_nulls(T *data_in, T *data_out, const int16_t *definit
 #define WARP_MASK  0xFFFFFFFF
 constexpr unsigned int THREAD_BLOCK_SIZE{256};
 
-template<typename T, typename Functor>
-__global__ void transform_valid(uint8_t* valid, const int64_t size,
-		Functor is_valid) {
-	size_t tid = threadIdx.x;
+template<typename Functor>
+__global__ void transform_valid_kernel(uint8_t* valid, const int64_t size, Functor is_valid) {
+    size_t tid = threadIdx.x;
 	size_t blkid = blockIdx.x;
 	size_t blksz = blockDim.x;
 	size_t gridsz = gridDim.x;
 
-	size_t start = tid + blkid * blksz;
 	size_t step = blksz * gridsz;
+	size_t i = tid + blkid * blksz;
 
-	size_t i = start;
 	while (i < size) {
 		uint32_t bitmask = 0;
 		uint32_t result = is_valid(i);
@@ -308,13 +307,61 @@ __global__ void transform_valid(uint8_t* valid, const int64_t size,
 
 		if ((i % WARP_SIZE) == 0) {
 			int index = i / WARP_SIZE * WARP_BYTE;
-			valid[index + 0] = 0xFF & bitmask;
-			valid[index + 1] = 0xFF & (bitmask >> 8);
-			valid[index + 2] = 0xFF & (bitmask >> 16);
-			valid[index + 3] = 0xFF & (bitmask >> 24);
+            valid[index + 0] = 0xFF & bitmask;
+            valid[index + 1] = 0xFF & (bitmask >> 8);
+            valid[index + 2] = 0xFF & (bitmask >> 16);
+            valid[index + 3] = 0xFF & (bitmask >> 24);
 		}
 		i += step;
 	}
+}
+
+template<typename Functor>
+__global__ void transform_valid_kernel(uint8_t* valid, const int64_t size, size_t num_chars, Functor is_valid) {
+    size_t tid = threadIdx.x;
+	size_t blkid = blockIdx.x;
+	size_t blksz = blockDim.x;
+	size_t gridsz = gridDim.x;
+
+	size_t step = blksz * gridsz;
+	size_t i = tid + blkid * blksz;
+
+	while (i < size) {
+		uint32_t bitmask = 0;
+		uint32_t result = is_valid(i);
+		bitmask = (-result << (i % WARP_SIZE));
+
+        #pragma unroll
+		for (size_t offset = 16; offset > 0; offset /= 2) {
+			bitmask += __shfl_down_sync(WARP_MASK, bitmask, offset);
+		}
+
+		if ((i % WARP_SIZE) == 0) {
+			int index = i / WARP_SIZE * WARP_BYTE;
+            if (index + 0 < num_chars)
+                valid[index + 0] = 0xFF & bitmask;
+            if (index + 1 < num_chars)
+                valid[index + 1] = 0xFF & (bitmask >> 8);
+            if (index + 2 < num_chars)
+                valid[index + 2] = 0xFF & (bitmask >> 16);
+            if (index + 3 < num_chars)
+                valid[index + 3] = 0xFF & (bitmask >> 24);
+		}
+		i += step;
+	}
+}
+
+template<typename Functor>
+void transform_valid(uint8_t* valid, const int64_t size, Functor is_valid) {
+    const dim3 grid ((size + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE, 1, 1);
+    const dim3 block (THREAD_BLOCK_SIZE, 1, 1);
+    if (size % 32 == 0) {
+        transform_valid_kernel<Functor> <<<grid, block>>>(valid, size, is_valid);
+    }
+    else {
+        size_t num_chars = gdf_get_num_chars_bitmask(size);
+        transform_valid_kernel<Functor> <<<grid, block>>>(valid, size, num_chars, is_valid);
+    }
 }
 
 struct TurnOnFunctor {
@@ -322,18 +369,13 @@ struct TurnOnFunctor {
         return 0xFFFFFFFF;
     }
 };
+
 static inline void _TurnBitOnForValids(std::int64_t        def_length,
                                        std::uint8_t *      d_valid_ptr,
                                        const std::int64_t  valid_bits_offset) 
 {
-    const dim3 grid ((def_length + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE, 1, 1);
-    const dim3 block (THREAD_BLOCK_SIZE, 1, 1);
-
     if (valid_bits_offset % 8 == 0) {
-        transform_valid<int16_t, TurnOnFunctor> <<<grid, block>>>(
-                (d_valid_ptr + valid_bits_offset / 8), def_length,
-                        TurnOnFunctor { });
-
+        transform_valid(d_valid_ptr + valid_bits_offset / 8, def_length, TurnOnFunctor{});
     } else {
         size_t left_bits_length = valid_bits_offset % 8;
         size_t rigth_bits_length = 8 - left_bits_length;
@@ -344,9 +386,7 @@ static inline void _TurnBitOnForValids(std::int64_t        def_length,
             mask |= gdf::util::byte_bitmask(i + left_bits_length);
         }
         cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
-        transform_valid<int16_t, TurnOnFunctor> <<<grid, block>>>(
-                (d_valid_ptr + valid_bits_offset / 8 + 1), def_length,
-                        TurnOnFunctor { });
+        transform_valid((d_valid_ptr + valid_bits_offset / 8 + 1), def_length, TurnOnFunctor{});
     }
 }
 
@@ -370,13 +410,11 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
                           std::uint8_t *      d_valid_ptr,
                           const std::int64_t  valid_bits_offset) {
 
-    const dim3 grid ((def_length + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE, 1, 1);
-    const dim3 block (THREAD_BLOCK_SIZE, 1, 1);
-
 	if (valid_bits_offset % 8 == 0) {
-		transform_valid<int16_t, IsValidFunctor> <<<grid, block>>>(
-				(d_valid_ptr + valid_bits_offset / 8), def_length,
-				IsValidFunctor { d_def_levels, max_definition_level });
+		transform_valid(
+				(d_valid_ptr + valid_bits_offset / 8), 
+                def_length,
+				IsValidFunctor{ d_def_levels, max_definition_level });
 	} else {
         int left_bits_length = valid_bits_offset % 8;
         int right_bits_length = 8 - left_bits_length;
@@ -395,8 +433,9 @@ _DefinitionLevelsToBitmap(const std::int16_t *d_def_levels,
             }
         }
         cudaMemcpy(d_valid_ptr + valid_bits_offset / 8, &mask, sizeof(uint8_t), cudaMemcpyHostToDevice);
-        transform_valid<int16_t, IsValidFunctor>
-            <<<grid, block>>>(d_valid_ptr + valid_bits_offset/8 + 1, def_length, IsValidFunctor{d_def_levels + right_bits_length, max_definition_level});
+        transform_valid (d_valid_ptr + valid_bits_offset/8 + 1,
+                          def_length - right_bits_length, 
+                          IsValidFunctor{d_def_levels + right_bits_length, max_definition_level});
     }
     int not_null_count = thrust::count(thrust::device_pointer_cast(d_def_levels), thrust::device_pointer_cast(d_def_levels) + def_length, max_definition_level);
     *null_count = def_length - not_null_count;
@@ -521,7 +560,6 @@ ColumnReader<DataType>::ReadBatch(std::int64_t batch_size,
     batch_size = std::min(batch_size, num_buffered_values_ - num_decoded_values_);
 
     std::int64_t num_def_levels = 0;
-    std::int64_t num_rep_levels = 0;
 
     std::int64_t values_to_read = 0;
 
@@ -643,7 +681,7 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
 
     c_type *const values = static_cast<c_type *const>(column.data) + offset;
     std::uint8_t *const d_valid_bits =
-      static_cast<std::uint8_t *>(column.valid) + (offset / 8);
+      static_cast<std::uint8_t *const>(column.valid) + (offset / 8);
 
     static std::int64_t levels_read = 0;
     static std::int64_t values_read = 0;
@@ -664,7 +702,7 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
                             &levels_read,
                             &values_read,
                             &nulls_count);
-
+        
         rows_read_total += rows_read;
     } while (this->HasNext());
     return static_cast<std::size_t>(rows_read_total);

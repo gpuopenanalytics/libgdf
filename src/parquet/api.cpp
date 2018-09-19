@@ -17,6 +17,7 @@
 
 #include <mutex>
 #include <thread>
+#include <numeric>
 
 #include <arrow/util/bit-util.h>
 #include <arrow/util/logging.h>
@@ -368,31 +369,7 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
 				// copy merged into valid
 				std::size_t merged_byte_offset = (offsets[row_group_index_in_set + 1]/8);
 
-
-				std::vector<gdf_valid_type> merged_region(6);
-				std::cout<<"before"<<std::endl;
-				cudaMemcpy(&merged_region[0], gdf_columns[column_reader_index].valid + (merged_byte_offset - merged_region.size()/2), sizeof(merged_region.size()), cudaMemcpyDeviceToHost);
-				for (gdf_valid_type val : merged_region){
-					std::cout<<((int)val)<<std::endl;
-				}
-
-
-
 				cudaMemcpy(gdf_columns[column_reader_index].valid + merged_byte_offset, &merged, sizeof(gdf_valid_type), cudaMemcpyHostToDevice);
-
-				std::string strmessage = " jobs[job_index1].last_valid_byte: " + std::to_string(jobs[job_index1].last_valid_byte)  + " jobs[job_index2].first_valid_byte: " + std::to_string(jobs[job_index2].first_valid_byte) + " merged: " + std::to_string(merged);
-				std::cout<<strmessage<<std::endl;
-
-				strmessage = " merged_byte_offset: " + std::to_string(merged_byte_offset)  + " offsets[row_group_index_in_set]: " + std::to_string(offsets[row_group_index_in_set]);
-				std::cout<<strmessage<<std::endl;
-
-
-				std::cout<<"after"<<std::endl;
-				cudaMemcpy(&merged_region[0], gdf_columns[column_reader_index].valid + (merged_byte_offset - merged_region.size()/2), sizeof(merged_region.size()), cudaMemcpyDeviceToHost);
-				for (gdf_valid_type val : merged_region){
-					std::cout<<((int)val)<<std::endl;
-				}
-
 			}
 		}
 	}
@@ -402,6 +379,22 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
 }
 
 
+static inline gdf_error
+_ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
+		const std::vector<std::size_t> &   column_indices,
+		gdf_column *const                  gdf_columns) {
+
+	const std::shared_ptr<::parquet::FileMetaData> &metadata =
+	      file_reader->metadata();
+	const std::size_t num_row_groups =
+	      static_cast<std::size_t>(metadata->num_row_groups());
+
+	std::vector<std::size_t> row_group_indices(num_row_groups);
+	std::iota( row_group_indices.begin(), row_group_indices.end(), 0);
+
+	_ReadFileMultiThread(file_reader, row_group_indices,
+			column_indices, gdf_columns);
+}
 
 
 
@@ -664,7 +657,7 @@ read_parquet(const char *const        filename,
         != GDF_SUCCESS) {
         return GDF_IO_ERROR;
     }
-    if (_ReadFile(file_reader, indices, gdf_columns) != GDF_SUCCESS) {
+    if (_ReadFileMultiThread(file_reader, indices, gdf_columns) != GDF_SUCCESS) {
         return GDF_IO_ERROR;
     }
 

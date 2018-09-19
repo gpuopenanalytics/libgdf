@@ -24,14 +24,13 @@ find_package(Boost REQUIRED COMPONENTS filesystem)
 set(PARQUET_FILE_FOR_DECODING_PATH
         ${CMAKE_SOURCE_DIR}/src/tests/parquet/gdf_column/reader-test.parquet)
 
+add_definitions(-DPARQUET_FILE_FOR_DECODING_PATH="${PARQUET_FILE_FOR_DECODING_PATH}")
+
 GDF_ADD_PARQUET_TEST(gdf_column-test
         gdf_column-test.cu
-        ../../helper/utils.cuh 
+        ../../helper/utils.cuh
         ../../helper/utils.cu
         )
-
-target_compile_definitions(gdf_column-test
-        PUBLIC -DPARQUET_FILE_FOR_DECODING_PATH="${PARQUET_FILE_FOR_DECODING_PATH}")
 
 target_link_libraries(gdf_column-test Boost::filesystem)
 

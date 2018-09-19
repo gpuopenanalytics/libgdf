@@ -78,8 +78,6 @@ protected:
         static constexpr std::size_t kRowsPerGroup = 499;
         try {
 
-        	std::cout<<"at SetUp"<<std::endl;
-
             std::shared_ptr<::arrow::io::FileOutputStream> stream;
             PARQUET_THROW_NOT_OK(
               ::arrow::io::FileOutputStream::Open(filename, &stream));
@@ -148,8 +146,6 @@ protected:
 
             file_writer->Close();
 
-            std::cout<<"finish SetUp"<<std::endl;
-
             DCHECK(stream->Close().ok());
         } catch (const std::exception &e) {
             FAIL() << "Generate file" << e.what();
@@ -194,8 +190,6 @@ protected:
     void
     checkNulls(/*const */ gdf_column &column) {
 
-    	std::cout<<"at checkNulls"<<std::endl;
-
         const std::size_t valid_size =
           arrow::BitUtil::BytesForBits(column.size);
         const std::size_t valid_last = valid_size - 1;
@@ -229,13 +223,11 @@ protected:
 
 
         }
-//        EXPECT_EQ(0b00001010, 0b00001010 & column.valid[valid_last]);
+        EXPECT_EQ(0b00101101, 0b00101101 & column.valid[valid_last]);
     }
 
     void
     checkBoolean(/*const */ gdf_column &column) {
-
-    	std::cout<<"at checkBoolean"<<std::endl;
 
         gdf_column boolean_column =
           convert_to_host_gdf_column<::parquet::BooleanType::c_type>(&column);
@@ -264,10 +256,8 @@ protected:
     void
     checkInt32(/*const */ gdf_column &column) {
 
-    	std::cout<<"at checkInt32"<<std::endl;
-
         gdf_column int32_column =
-          convert_to_host_gdf_column<::parquet::Int32Type::c_type>(&column);
+        convert_to_host_gdf_column<::parquet::Int32Type::c_type>(&column);
 
         int fails = 0;
 
@@ -280,12 +270,12 @@ protected:
                 EXPECT_EQ(expected, value);
 
                 if (expected != value){
-                                	std::cout<<"fail at checkInt32 row: "<<i<<std::endl;
-                                	fails++;
-                                	if (fails > 5){
-                                		break;
-                                	}
-                                }
+                	std::cout<<"fail at checkInt32 row: "<<i<<std::endl;
+                	fails++;
+                	if (fails > 5){
+                		break;
+                	}
+                }
             }
         }
 
@@ -308,12 +298,12 @@ protected:
                 EXPECT_EQ(expected, value);
 
                 if (expected != value){
-                                	std::cout<<"fail at checkInt64 row: "<<i<<std::endl;
-                                	fails++;
-                                	if (fails > 5){
-                                		break;
-                                	}
-                                }
+                	std::cout<<"fail at checkInt64 row: "<<i<<std::endl;
+                	fails++;
+                	if (fails > 5){
+                		break;
+                	}
+                }
             }
         }
 
@@ -335,12 +325,12 @@ protected:
                 EXPECT_EQ(expected, value);
 
                 if (expected != value){
-                                	std::cout<<"fail at checkDouble row: "<<i<<std::endl;
-                                	fails++;
-                                	if (fails > 5){
-                                		break;
-                                	}
-                                }
+                	std::cout<<"fail at checkDouble row: "<<i<<std::endl;
+                	fails++;
+                	if (fails > 5){
+                		break;
+                	}
+                }
             }
         }
 
@@ -355,17 +345,12 @@ protected:
 
 TEST_F(ParquetReaderAPITest, ReadAll) {
 
-	std::cout<<"at ReadAll"<<std::endl;
-
-    gdf_error error_code = gdf::parquet::read_parquet(
+	gdf_error error_code = gdf::parquet::read_parquet(
       filename.c_str(), nullptr, &columns, &columns_length);
-
-    std::cout<<"at ReadAll read_parquet"<<std::endl;
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
-    std::size_t expected_columns_length = 4;
-    EXPECT_EQ(expected_columns_length, columns_length);
+    EXPECT_EQ(4U, columns_length);
 
     EXPECT_EQ(columns[0].size, columns[1].size);
     EXPECT_EQ(columns[1].size, columns[2].size);
@@ -377,16 +362,14 @@ TEST_F(ParquetReaderAPITest, ReadAll) {
 }
 
 TEST_F(ParquetReaderAPITest, ReadSomeColumns) {
-    const char *const column_names[] = {
-      "double_field", "int64_field", nullptr};
+    const char *const column_names[] = {"double_field", "int64_field", nullptr};
 
     gdf_error error_code = gdf::parquet::read_parquet(
       filename.c_str(), column_names, &columns, &columns_length);
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
-    std::size_t expected_columns_length = 2;
-    EXPECT_EQ(expected_columns_length, columns_length);
+    EXPECT_EQ(2U, columns_length);
 
     checkDouble(columns[0]);
     checkInt64(columns[1]);
@@ -403,8 +386,7 @@ TEST_F(ParquetReaderAPITest, ByIdsInOrder) {
 
     EXPECT_EQ(GDF_SUCCESS, error_code);
 
-    std::size_t expected_columns_length = 4;
-    EXPECT_EQ(expected_columns_length, columns.size());
+    EXPECT_EQ(4U, columns.size());
 
     checkBoolean(*columns[0]);
     checkInt32(*columns[1]);

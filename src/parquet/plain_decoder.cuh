@@ -167,8 +167,6 @@ public:
         int values_read = 0;
         std::vector<uint32_t> rleRuns;
         std::vector<uint64_t> rleValues;
-        int numRle;
-        int numBitpacked;
         std::vector<int> unpack32InputOffsets, unpack32InputRunLengths, unpack32OutputOffsets;
         std::vector<int> remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets;

@@ -193,7 +193,6 @@ namespace arrow {
                     int byte_offset = byte_offset_;
                     uint64_t buffered_values = buffered_values_;
                     int max_bytes = max_bytes_;
-                    const uint8_t* buffer = buffer_;
 
                     uint64_t needed_bits = num_bits * batch_size;
                     uint64_t remaining_bits = (max_bytes - byte_offset) * 8 - bit_offset;
