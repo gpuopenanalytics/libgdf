@@ -36,7 +36,6 @@ typedef enum {
  */
 /* ----------------------------------------------------------------------------*/
 typedef union {
-    void*    invd;  // GDF_invalid
     int8_t   si08;  // GDF_INT8
     int16_t  si16;  // GDF_INT16
     int32_t  si32;  // GDF_INT32
