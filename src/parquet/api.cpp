@@ -379,24 +379,6 @@ _ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
 }
 
 
-static inline gdf_error
-_ReadFileMultiThread(const std::unique_ptr<FileReader> &file_reader,
-		const std::vector<std::size_t> &   column_indices,
-		gdf_column *const                  gdf_columns) {
-
-	const std::shared_ptr<::parquet::FileMetaData> &metadata =
-	      file_reader->metadata();
-	const std::size_t num_row_groups =
-	      static_cast<std::size_t>(metadata->num_row_groups());
-
-	std::vector<std::size_t> row_group_indices(num_row_groups);
-	std::iota( row_group_indices.begin(), row_group_indices.end(), 0);
-
-	_ReadFileMultiThread(file_reader, row_group_indices,
-			column_indices, gdf_columns);
-}
-
-
 
 template <::parquet::Type::type TYPE>
 static inline gdf_error
@@ -447,13 +429,27 @@ _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
 
 static inline gdf_error
 _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
-                    const std::vector<std::size_t> &   indices,
-                    gdf_column *const                  gdf_columns) {
+		const std::vector<std::size_t> &   row_group_indices,
+		const std::vector<std::size_t> &   column_indices,
+		gdf_column *const                  gdf_columns) {
     const std::vector<const ::parquet::ColumnDescriptor *> column_descriptors =
-      _ColumnDescriptorsFrom(file_reader, indices);
+      _ColumnDescriptorsFrom(file_reader, column_indices);
 
-    const std::size_t num_columns = indices.size();
-    const std::size_t num_rows    = file_reader->metadata()->num_rows();
+    int64_t num_rows = 0;
+    for (std::size_t row_group_index_in_set = 0; row_group_index_in_set < row_group_indices.size();
+    		row_group_index_in_set++) {
+
+    	std::size_t row_group_index = row_group_indices[row_group_index_in_set];
+
+    	const auto row_group_reader =
+    			file_reader->RowGroup(static_cast<int>(row_group_index));
+
+    	num_rows += row_group_reader->metadata()->num_rows();
+    }
+
+
+    const std::size_t num_columns = column_indices.size();
+
 
 #define WHEN(TYPE)                                                            \
     case ::parquet::Type::TYPE:                                               \
@@ -613,7 +609,7 @@ read_parquet_by_ids(const std::string &             filename,
 
     if (gdf_columns == nullptr) { return GDF_IO_ERROR; }
 
-    if (_AllocateGdfColumns(file_reader, column_indices, gdf_columns)
+    if (_AllocateGdfColumns(file_reader, row_group_indices, column_indices, gdf_columns)
         != GDF_SUCCESS) {
         return GDF_IO_ERROR;
     }
@@ -646,23 +642,31 @@ read_parquet(const char *const        filename,
     const ColumnNames  column_names(file_reader);
     const ColumnFilter column_filter(columns);
 
-    const std::vector<std::size_t> indices =
+    const std::vector<std::size_t> column_indices =
       column_filter.IndicesFrom(column_names);
 
-    gdf_column *const gdf_columns = _CreateGdfColumns(indices.size());
+    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
 
     if (gdf_columns == nullptr) { return GDF_IO_ERROR; }
 
-    if (_AllocateGdfColumns(file_reader, indices, gdf_columns)
+    const std::shared_ptr<::parquet::FileMetaData> &metadata =
+    		file_reader->metadata();
+    const std::size_t num_row_groups =
+    		static_cast<std::size_t>(metadata->num_row_groups());
+
+    std::vector<std::size_t> row_group_indices(num_row_groups);
+    std::iota( row_group_indices.begin(), row_group_indices.end(), 0);
+
+    if (_AllocateGdfColumns(file_reader, row_group_indices, column_indices, gdf_columns)
         != GDF_SUCCESS) {
         return GDF_IO_ERROR;
     }
-    if (_ReadFileMultiThread(file_reader, indices, gdf_columns) != GDF_SUCCESS) {
+    if (_ReadFileMultiThread(file_reader, row_group_indices, column_indices, gdf_columns) != GDF_SUCCESS) {
         return GDF_IO_ERROR;
     }
 
     *out_gdf_columns        = gdf_columns;
-    *out_gdf_columns_length = indices.size();
+    *out_gdf_columns_length = column_indices.size();
 
     return GDF_SUCCESS;
 }
