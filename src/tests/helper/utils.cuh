@@ -160,8 +160,8 @@ auto print_column(gdf_column * column) -> void {
     std::cout<<"Printing Column\t null_count:" << column->null_count << "\t type " << column->dtype <<  std::endl;
     size_t  n_bytes =  sizeof(int8_t) * (column->size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
     for(std::size_t i = 0; i < column->size; i++) {
-        int col_position =  i / 8;
-        int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
+        size_t col_position =  i / 8;
+        size_t length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
         int bit_offset =  (length_col - 1) - (i % 8);
 
         ValueType value    = static_cast<ValueType *>(host_out)[i];
@@ -230,7 +230,7 @@ void check_column_for_stencil_operation(gdf_column *column, gdf_column *stencil,
     std::vector<int> indexes;
     for(size_t i = 0; i < host_stencil.size; i++) {
         int col_position =  i / 8;
-        int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
+        size_t length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column->size - GDF_VALID_BITSIZE * (n_bytes - 1);
         int bit_offset =  (length_col - 1) - (i % 8);
         bool valid = ((host_stencil.valid[col_position] >> bit_offset ) & 1) != 0;
          if ( (int)( ((int8_t *)host_stencil.data)[i] ) == 1 && valid ) {
@@ -246,7 +246,7 @@ void check_column_for_stencil_operation(gdf_column *column, gdf_column *stencil,
         assert( ((RightValueType*)host_output_op.data)[i] == value);
 
         int col_position =  i / 8;
-        int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : output_op->size - GDF_VALID_BITSIZE * (n_bytes - 1);
+        size_t length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : output_op->size - GDF_VALID_BITSIZE * (n_bytes - 1);
         int bit_offset =  (length_col - 1) - (i % 8);
         bool valid = ((host_output_op.valid[col_position] >> bit_offset ) & 1) != 0;
         assert(valid == true);
@@ -267,7 +267,7 @@ void check_column_for_comparison_operation(gdf_column *lhs, gdf_column *rhs, gdf
 
         for(int i = 0; i < output->size; i++) {
             int col_position =  i / 8;
-            int length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : output->size - GDF_VALID_BITSIZE * (n_bytes - 1);
+            size_t length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : output->size - GDF_VALID_BITSIZE * (n_bytes - 1);
             int bit_offset =  (length_col - 1) - (i % 8);
 
             assert( ((lhs_valid[col_position] >> bit_offset ) & 1) & ((rhs_valid[col_position] >> bit_offset ) & 1) ==

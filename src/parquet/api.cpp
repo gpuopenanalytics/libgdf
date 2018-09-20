@@ -27,6 +27,7 @@
 #include "file_reader.h"
 
 #include <gdf/parquet/api.h>
+#include <gdf/utils.h>
 
 BEGIN_NAMESPACE_GDF_PARQUET
 
@@ -206,7 +207,7 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     }
 
     status = cudaMalloc(reinterpret_cast<void **>(&_gdf_column.valid),
-                        ::arrow::BitUtil::BytesForBits(num_rows));
+                        gdf_get_num_chars_bitmask(num_rows));
     if (status != cudaSuccess) {
 #ifdef GDF_DEBUG
         std::cerr << "Allocation error for valid\n" << e.what() << std::endl;

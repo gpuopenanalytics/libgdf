@@ -516,6 +516,17 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
             total_values = _ReadValues(current_decoder_, *values_read, values);
             total_values = num_def_levels; 
 
+            if ( typeid(T)  == typeid(double)  ) {
+                std::cout << "double type\n";
+                
+                std::cout << "values:\n";
+                thrust::host_vector<T> h_values(*values_read);
+                cudaMemcpy(h_values.data(), values, sizeof(T) * (*values_read), cudaMemcpyDeviceToHost);
+                std::copy(h_values.data() , h_values.data() + (*values_read), std::ostream_iterator<T>(std::cout, ", "));
+                std::cout << "\n\n";
+
+            }
+                
             if (total_values != *values_read) {
                 thrust::device_vector<int> work_space_vector(total_values);
                 int* work_space = thrust::raw_pointer_cast(work_space_vector.data());
@@ -638,6 +649,24 @@ std::size_t ColumnReader<DataType>::ToGdfColumn(const gdf_column & column, const
        
         rows_read_total += rows_read;
     } while (this->HasNext());
+    if ( typeid(c_type)  == typeid(double)  ) {
+        std::cout << "double type\n";
+        
+        std::cout << "definition levels:\n";
+        thrust::host_vector<int16_t> h_def_levels = d_def_levels;
+        std::copy(h_def_levels.data() , h_def_levels.data() + rows_read_total, std::ostream_iterator<int16_t>(std::cout, ", "));
+        std::cout << "\n\n";
+
+    }
+    
+    auto n_bytes = gdf::util::last_byte_index(rows_read_total);
+
+    thrust::host_vector<uint8_t>  h_valid_bits(n_bytes);
+    cudaMemcpy(h_valid_bits.data(), d_valid_bits, n_bytes, cudaMemcpyDeviceToHost);
+
+    std::cout << "valid bits:\n";
+    std::cout << gdf::util::gdf_valid_to_str(h_valid_bits.data(), rows_read_total) << std::endl;
+    std::cout << "\n\n";
     return static_cast<std::size_t>(rows_read_total);
 }
 
