@@ -89,8 +89,6 @@ private:
 
     thrust::device_vector<T> dictionary_;
 
-    // std::shared_ptr<::parquet::PoolBuffer> byte_array_data_;
-
     RleDecoder idx_decoder_;
 
     int num_dictionary_values_;
@@ -113,54 +111,6 @@ DictionaryDecoder<::parquet::BooleanType, ::arrow::RleDecoder>::SetDict(
     ::parquet::ParquetException::NYI(
       "Dictionary encoding is not implemented for boolean values");
 }
-
-// template <>
-// inline void
-// DictionaryDecoder<::parquet::ByteArrayType, ::arrow::RleDecoder>::SetDict(
-//   ::parquet::Decoder<::parquet::ByteArrayType> *dictionary) {
-//     int num_dictionary_values = dictionary->values_left();
-//     num_dictionary_values_ = num_dictionary_values;
-//     dictionary_.Resize(num_dictionary_values);
-//     dictionary->Decode(&dictionary_[0], num_dictionary_values);
-
-//     int total_size = 0;
-//     for (int i = 0; i < num_dictionary_values; ++i) {
-//         total_size += dictionary_[i].len;
-//     }
-//     if (total_size > 0) {
-//         PARQUET_THROW_NOT_OK(byte_array_data_->Resize(total_size, false));
-//     }
-
-//     int           offset     = 0;
-//     std::uint8_t *bytes_data = byte_array_data_->mutable_data();
-//     for (int i = 0; i < num_dictionary_values; ++i) {
-//         std::memcpy(
-//           bytes_data + offset, dictionary_[i].ptr, dictionary_[i].len);
-//         dictionary_[i].ptr = bytes_data + offset;
-//         offset += dictionary_[i].len;
-//     }
-// }
-
-// template <>
-// inline void
-// DictionaryDecoder<::parquet::FLBAType, ::arrow::RleDecoder>::SetDict(
-//   ::parquet::Decoder<::parquet::FLBAType> *dictionary) {
-//     int num_dictionary_values = dictionary->values_left();
-//     num_dictionary_values_ = num_dictionary_values;
-//     dictionary_.Resize(num_dictionary_values);
-//     dictionary->Decode(&dictionary_[0], num_dictionary_values);
-
-//     int fixed_len  = descr_->type_length();
-//     int total_size = num_dictionary_values * fixed_len;
-
-//     PARQUET_THROW_NOT_OK(byte_array_data_->Resize(total_size, false));
-//     std::uint8_t *bytes_data = byte_array_data_->mutable_data();
-//     for (std::int32_t i = 0, offset = 0; i < num_dictionary_values;
-//          ++i, offset += fixed_len) {
-//         std::memcpy(bytes_data + offset, dictionary_[i].ptr, fixed_len);
-//         dictionary_[i].ptr = bytes_data + offset;
-//     }
-// }
 
 }  // namespace internal
 }  // namespace parquet

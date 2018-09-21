@@ -470,7 +470,6 @@ ColumnReader<DataType>::ReadBatchSpaced(std::int64_t batch_size,
                                         std::int64_t *values_read,
                                         std::int64_t *nulls_count)
 {
-    // assert(repetition_levels == nullptr);
     if (!HasNext())
     {
         *levels_read = 0;

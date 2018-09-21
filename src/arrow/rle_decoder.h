@@ -125,7 +125,6 @@ namespace arrow {
             while (values_read < batch_size) {
                 if (repeat_count_ > 0) {
                     int repeat_batch = std::min(batch_size - values_read, static_cast<int>(repeat_count_));
-                    // std::fill(values + values_read, values + values_read + repeat_batch, static_cast<T>(current_value_));
                     rleRuns.push_back(repeat_batch);
                     rleValues.push_back(current_value_);
 
@@ -141,8 +140,6 @@ namespace arrow {
                         unpack32OutputOffsets, remainderInputOffsets, remainderBitOffsets,
                         remainderSetSize, remainderOutputOffsets);
 
-                    // int actual_read = bit_reader_.GetBatch(bit_width_, values + values_read, literal_batch);
-                    // DCHECK_EQ(actual_read, literal_batch);
                     literal_count_ -= literal_batch;
                     values_read += literal_batch;
                 } else {
@@ -184,10 +181,6 @@ namespace arrow {
                     rleValues.push_back(current_value_);
                     numRle++;
 
-                    // not to do fill!
-                    //std::fill(values + values_read, values + values_read + repeat_batch, dictionary[current_value_]);
-                    // thrust::fill(thrust::device, values + values_read, values + values_read + repeat_batch, dictionary[current_value_]);
-
                     repeat_count_ -= repeat_batch;
                     values_read += repeat_batch;
                 } else if (literal_count_ > 0) {
@@ -219,10 +212,6 @@ namespace arrow {
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets, bit_width_, batch_size);
             
-            // copy values using gpu 
-            // for (int i = 0; i < batch_size; ++i) {
-            //     values[i] = dictionary[indices[i]];
-            // }
             return values_read;
         }
 
@@ -235,12 +224,6 @@ namespace arrow {
             DCHECK_GE(bit_width_, 0);
 
             int values_read = GetBatchWithDict(dictionary, num_dictionary_values, values, batch_size);
-
-            thrust::device_vector<int> work_space_vector(batch_size);
-            int* work_space = thrust::raw_pointer_cast(work_space_vector.data());
-            if (null_count > 0){
-//            	gdf::arrow::internal::compact_to_sparse_for_nulls(values, valid_bits, batch_size, work_space);
-            }
 
             return values_read;
         }

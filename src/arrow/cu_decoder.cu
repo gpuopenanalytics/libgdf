@@ -533,15 +533,6 @@ int unpack_using_gpu(const uint8_t* buffer, const int buffer_len,
 
     	int shared_memory = blocksize * (num_bits * 32/8 + 32 * 4);
 
-    	//    std::cout<<"max_total_sets: "<<max_total_sets<<std::endl;
-    	//    std::cout<<"blocksize: "<<blocksize<<std::endl;
-    	//    std::cout<<"gridsize: "<<gridsize<<std::endl;
-    	//    std::cout<<"shared_memory: "<<shared_memory<<std::endl;
-    	//    std::cout<<"num_bits: "<<num_bits<<std::endl;
-    	//    std::cout<<"max_num_sets_in_run: "<<max_num_sets_in_run<<std::endl;
-    	//    std::cout<<"input_offset.size(): "<<input_offset.size()<<std::endl;
-
-
     	decode_bitpacking_32sets<<<gridsize, blocksize, shared_memory>>>(thrust::raw_pointer_cast(d_buffer.data()), thrust::raw_pointer_cast(d_output_int.data()),
     			thrust::raw_pointer_cast(d_input_offsets.data()), thrust::raw_pointer_cast(d_input_runlengths.data()), input_offset.size(),
 				thrust::raw_pointer_cast(d_output_offset.data()), num_bits, max_num_sets_in_run, func);

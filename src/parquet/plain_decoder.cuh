@@ -72,51 +72,9 @@ DecodePlain(const std::uint8_t *data,
     if (data_size < bytes_to_decode) {
         ::parquet::ParquetException::EofException();
     }
-    // std::memcpy(out, data, bytes_to_decode);
     cudaMemcpy(out, data, bytes_to_decode, cudaMemcpyHostToDevice);
     return bytes_to_decode;
 }
-
-// template <>
-// inline int
-// DecodePlain<::parquet::ByteArray>(const std::uint8_t *data,
-//                                   std::int64_t        data_size,
-//                                   int                 num_values,
-//                                   int,
-//                                   ::parquet::ByteArray *out) {
-//     int bytes_decoded = 0;
-//     int increment;
-//     for (int i = 0; i < num_values; ++i) {
-//         std::uint32_t len = out[i].len =
-//           *reinterpret_cast<const std::uint32_t *>(data);
-//         increment = static_cast<int>(sizeof(std::uint32_t) + len);
-//         if (data_size < increment) ::parquet::ParquetException::EofException();
-//         out[i].ptr = data + sizeof(std::uint32_t);
-//         data += increment;
-//         data_size -= increment;
-//         bytes_decoded += increment;
-//     }
-//     return bytes_decoded;
-// }
-
-// template <>
-// inline int
-// DecodePlain<::parquet::FixedLenByteArray>(const std::uint8_t *data,
-//                                           std::int64_t        data_size,
-//                                           int                 num_values,
-//                                           int                 type_length,
-//                                           ::parquet::FixedLenByteArray *out) {
-//     int bytes_to_decode = type_length * num_values;
-//     if (data_size < bytes_to_decode) {
-//         ::parquet::ParquetException::EofException();
-//     }
-//     for (int i = 0; i < num_values; ++i) {
-//         out[i].ptr = data;
-//         data += type_length;
-//         data_size -= type_length;
-//     }
-//     return bytes_to_decode;
-// }
 
 template <typename DataType>
 inline int
@@ -184,9 +142,6 @@ public:
                 remainderInputOffsets, remainderBitOffsets, remainderSetSize,
                 remainderOutputOffsets, 1, buffer, literal_batch);
 
-        // if (bit_reader_.GetBatch(1, buffer, max_values) != max_values) {
-        //     ::parquet::ParquetException::EofException();
-        // }
         num_values_ -= max_values;
         return max_values;
     }
