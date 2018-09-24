@@ -44,7 +44,7 @@ namespace gdf {
         if ((scalar->dtype <= GDF_invalid) || (N_GDF_TYPES <= scalar->dtype)) {
             return Option(false, GDF_UNSUPPORTED_DTYPE);
         }
-        Option(true, GDF_SUCCESS);
+        return Option(true, GDF_SUCCESS);
     }
 
     Option verify_column(gdf_column* vector) {
