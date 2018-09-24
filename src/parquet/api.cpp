@@ -287,6 +287,7 @@ gdf_error _ProcessParquetReaderJobs(std::vector<ParquetReaderJob> & jobs){
 	int num_threads = std::thread::hardware_concurrency();
 	num_threads = jobs.size() < num_threads ? jobs.size() : num_threads;
 
+
 //	_ProcessParquetReaderJobsThread(jobs, lock, job_index, gdf_error_out);
 
 	std::vector<std::thread> threads(num_threads);
@@ -489,86 +490,57 @@ _CreateGdfColumns(const std::size_t num_columns) try {
     return nullptr;
 }
 
-class ColumnNames {
-public:
-    explicit ColumnNames(const std::unique_ptr<FileReader> &file_reader) {
-        const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
-          file_reader->metadata();
 
-        const std::size_t num_columns =
-          static_cast<std::size_t>(metadata->num_columns());
+static inline std::vector<std::size_t>
+_GetColumnIndices(const std::unique_ptr<FileReader> &file_reader,
+		const char *const *const raw_names){
 
-        column_names.reserve(num_columns);
+	 std::vector<std::size_t> indices;
 
-        auto row_group_reader = file_reader->RowGroup(0);
-        for (std::size_t i = 0; i < num_columns; i++) {
-            column_names.emplace_back(
-              row_group_reader->Column(i)->descr()->name());
-        }
-    }
+	const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
+			file_reader->metadata();
 
-    bool
-    Contains(std::size_t index) const {
-        return index < Size();
-    }
+	const std::size_t num_columns =
+			static_cast<std::size_t>(metadata->num_columns());
 
-    std::size_t
-    IndexOf(const std::string &name) const {
-        return std::find(column_names.cbegin(), column_names.cend(), name)
-               - column_names.cbegin();
-    }
+	 auto schema = file_reader->RowGroup(0)->metadata()->schema();
 
-    std::size_t
-    Size() const {
-        return column_names.size();
-    }
+	 std::vector<std::pair<std::string, std::size_t>> parquet_columns;
+	 parquet_columns.reserve(num_columns);
 
-private:
-    std::vector<std::string> column_names;
-};
+	 for (std::size_t i = 0; i < num_columns; i++) {
+		 if (schema->Column(i)->physical_type() != ::parquet::Type::BYTE_ARRAY &&
+				 schema->Column(i)->physical_type() != ::parquet::Type::FIXED_LEN_BYTE_ARRAY){
 
-class ColumnFilter {
-public:
-    explicit ColumnFilter(const char *const *const raw_names) {
-        if (raw_names != nullptr) {
-            for (const char *const *name_ptr = raw_names; *name_ptr != nullptr;
-                 name_ptr++) {
-                filter_names.emplace_back(*name_ptr);
-            }
-        }
-    }
+			 parquet_columns.push_back(std::make_pair(schema->Column(i)->name(), i));
 
-    std::vector<std::size_t>
-    IndicesFrom(const ColumnNames &column_names) const {
-        std::vector<std::size_t> indices;
+			 std::cout<<"parquet_columns: "<<parquet_columns[parquet_columns.size() -1].first<<"  "<<parquet_columns[parquet_columns.size() -1].second<<std::endl;
+		 } else {
+			 std::cout<<"skipped one: "<<schema->Column(i)->name()<<std::endl;
+		 }
 
-        if (filter_names.empty()) {
-            const std::size_t size = column_names.Size();
+	 }
 
-            indices.reserve(size);
+	if (raw_names != nullptr) {
+		for (const char *const *name_ptr = raw_names; *name_ptr != nullptr;
+				name_ptr++) {
 
-            for (std::size_t i = 0; i < size; i++) { indices.emplace_back(i); }
-        } else {
-            const std::size_t size = filter_names.size();
+			std::string filter_name = *name_ptr;
+			for (std::size_t i = 0; i < parquet_columns.size(); i++) {
+				if (filter_name == parquet_columns[i].first){
+					indices.push_back(parquet_columns[i].second);
+					break;
+				}
+			}
+		}
+	} else {
+		for (std::size_t i = 0; i < parquet_columns.size(); i++) {
+			indices.push_back(parquet_columns[i].second);
+		}
+	}
+	return indices;
+}
 
-            indices.reserve(size);
-
-            for (std::size_t i = 0; i < size; i++) {
-                const std::size_t index =
-                  column_names.IndexOf(filter_names[i]);
-
-                if (column_names.Contains(index)) {
-                    indices.emplace_back(index);
-                }
-            }
-        }
-
-        return indices;
-    }
-
-private:
-    std::vector<std::string> filter_names;
-};
 
 static inline gdf_error
 _CheckMinimalData(const std::unique_ptr<FileReader> &file_reader) {
@@ -639,11 +611,8 @@ read_parquet(const char *const        filename,
 
     if (_CheckMinimalData(file_reader) != GDF_SUCCESS) { return GDF_IO_ERROR; }
 
-    const ColumnNames  column_names(file_reader);
-    const ColumnFilter column_filter(columns);
-
     const std::vector<std::size_t> column_indices =
-      column_filter.IndicesFrom(column_names);
+    		_GetColumnIndices(file_reader, columns);
 
     gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
 

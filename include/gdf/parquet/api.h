@@ -51,6 +51,11 @@ END_NAMESPACE_GDF_PARQUET
 namespace gdf {
 namespace parquet {
 
+/// \brief Read parquet file into array of gdf columns
+/// \param[in] filename path to parquet file
+/// \param[in] indices of the rowgroups that will be read from the file
+/// \param[in] indices of the columns that will be read from the file
+/// \param[out] out_gdf_columns vector of gdf_column pointers. The data read.
 gdf_error
 read_parquet_by_ids(const std::string &             filename,
                     const std::vector<std::size_t> &row_group_indices,
