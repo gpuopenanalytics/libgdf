@@ -231,7 +231,7 @@ R"***(
     using CommonNumber = typename HelperCommonNumber<Vax, Vay>::Type;
 )***";
 
-} // code
-} // jit
-} // binops
-} // gdf
+} // namespace code
+} // namespace jit
+} // namespace binops
+} // namespace gdf

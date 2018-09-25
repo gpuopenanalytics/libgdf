@@ -95,6 +95,6 @@ namespace jit {
         return GDF_SUCCESS;
     }
 
-} // jit
-} // binops
-} // gdf
+} // namespace jit
+} // namespace binops
+} // namespace gdf

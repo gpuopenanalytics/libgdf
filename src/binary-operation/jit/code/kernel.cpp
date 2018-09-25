@@ -149,7 +149,7 @@ R"***(
     }
 )***";
 
-} // code
-} // jit
-} // binops
-} // gdf
+} // namespace code
+} // namespace jit
+} // namespace binops
+} // namespace gdf

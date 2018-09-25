@@ -91,6 +91,6 @@ namespace jit {
         }
     }
 
-} // jit
-} // binops
-} // gdf
+} // namespace jit
+} // namespace binops
+} // namespace gdf

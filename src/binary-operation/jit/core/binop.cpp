@@ -172,9 +172,9 @@ namespace jit {
         return GDF_SUCCESS;
     }
 
-} // jit
-} // binops
-} // gdf
+} // namespace jit
+} // namespace binops
+} // namespace gdf
 
 
 gdf_error gdf_binary_operation_v_s_v(gdf_column* out, gdf_scalar* vax, gdf_column* vay, gdf_binary_operator ope) {

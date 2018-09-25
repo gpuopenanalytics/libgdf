@@ -74,8 +74,8 @@ namespace jit {
         std::vector<std::string> arguments;
     };
 
-} // jit
-} // binops
-} // gdf
+} // namespace jit
+} // namespace binops
+} // namespace gdf
 
 #endif
