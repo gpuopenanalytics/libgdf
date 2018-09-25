@@ -33,7 +33,7 @@ namespace jit {
             stream << code::traits;
             return &stream;
         }
-        if (filename == "kernel_gdf_data.h") {
+        if (filename == "gdf_data.h") {
             stream << code::gdf_data;
             return &stream;
         }

@@ -26,14 +26,13 @@ R"***(
     #include <cstdint>
     #include "traits.h"
     #include "operation.h"
-    #include "kernel_gdf_data.h"
+    #include "gdf_data.h"
 
-    #define WARP_SIZE 32
     #define WARP_MASK 0xFFFFFFFF
 
     __device__ __forceinline__
     uint32_t isValid(int tid, uint32_t* valid, uint32_t mask) {
-        return valid[tid / WARP_SIZE] & mask;
+        return valid[tid / warpSize] & mask;
     }
 
     __device__ __forceinline__
@@ -56,8 +55,7 @@ R"***(
         int step = blksz * gridsz;
 
         for (int i=start; i<size; i+=step) {
-            AbstractOperation<TypeOpe> operation;
-            out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[i], (TypeVay)vay_data);
+            out_data[i] = TypeOpe::template operate<TypeOut, TypeVax, TypeVay>(vax_data[i], (TypeVay)vay_data);
         }
     }
 
@@ -73,8 +71,7 @@ R"***(
         int step = blksz * gridsz;
 
         for (int i=start; i<size; i+=step) {
-            AbstractOperation<TypeOpe> operation;
-            out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data[i], vay_data[i]);
+            out_data[i] = TypeOpe::template operate<TypeOut, TypeVax, TypeVay>(vax_data[i], vay_data[i]);
         }
     }
 
@@ -92,7 +89,7 @@ R"***(
         int step = blksz * gridsz;
 
         for (int i=start; i<size; i+=step) {
-            uint32_t mask = 1 << (i % WARP_SIZE);
+            uint32_t mask = 1 << (i % warpSize);
             uint32_t is_vax_valid = isValid(i, vax_valid, mask);
 
             TypeVax vax_data_aux = vax_data[i];
@@ -100,13 +97,12 @@ R"***(
                 vax_data_aux = (TypeVal)def_data;
             }
 
-            AbstractOperation<TypeOpe> operation;
-            out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, (TypeVay)vay_data);
+            out_data[i] = TypeOpe::template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, (TypeVay)vay_data);
 
             shiftMask(mask);
 
-            if ((i % WARP_SIZE) == 0) {
-                out_valid[i / WARP_SIZE] = mask;
+            if ((i % warpSize) == 0) {
+                out_valid[i / warpSize] = mask;
             }
         }
     }
@@ -126,7 +122,7 @@ R"***(
         int step = blksz * gridsz;
 
         for (int i=start; i<size; i+=step) {
-            uint32_t mask = 1 << (i % WARP_SIZE);
+            uint32_t mask = 1 << (i % warpSize);
             uint32_t is_vax_valid = isValid(i, vax_valid, mask);
             uint32_t is_vay_valid = isValid(i, vay_valid, mask);
 
@@ -139,16 +135,15 @@ R"***(
                 vay_data_aux = (TypeVal)def_data;
             }
             if ((is_vax_valid | is_vay_valid) == mask) {
-                AbstractOperation<TypeOpe> operation;
-                out_data[i] = operation.template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, vay_data_aux);
+                out_data[i] = TypeOpe::template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, vay_data_aux);
             } else {
                 mask = 0;
             }
 
             shiftMask(mask);
 
-            if ((i % WARP_SIZE) == 0) {
-                out_valid[i / WARP_SIZE] = mask;
+            if ((i % warpSize) == 0) {
+                out_valid[i / warpSize] = mask;
             }
         }
     }

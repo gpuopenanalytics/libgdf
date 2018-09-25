@@ -36,7 +36,6 @@ R"***(
         float    fp32;
         double   fp64;
 
-
         operator int8_t() const {
             return si08;
         }
