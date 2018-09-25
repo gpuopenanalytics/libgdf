@@ -58,6 +58,10 @@ struct Readers<kGdf> {
     static inline gdf_error buffer_to_gdf_column(gdf_column *output, void *device_values, gdf_valid_type* device_valid, uint32_t values_malloc_size, gdf_size_type column_size, gdf_dtype dtype) {
         return gdf_column_view_init(output, device_values, device_valid, column_size, dtype, 0);
     }
+
+    static inline void freeDefLevels(int16_t* def_levels){
+    	cudaFree(def_levels);
+    }
 };
 
 
@@ -93,6 +97,10 @@ struct Readers<kParquet> {
         free(host_values);
         free(host_valid);
         return gdf_column_view_init(output, device_values, device_valid, column_size, dtype, zero_bits);
+    }
+
+    static inline void freeDefLevels(int16_t* def_levels){
+    	free(def_levels);
     }
 };
 
@@ -144,7 +152,11 @@ convert(gdf_column *column, ColumnReaderType *column_reader, int64_t amount_to_r
                                      &nulls_count);
         rows_read_total += rows_read;
     }
+
     Readers<T>::buffer_to_gdf_column(column, (void *)values_buffer, valid_bits, values_malloc_size, amount_to_read, parquet_traits<C>::gdf_type());
+
+    Readers<T>::freeDefLevels(definition_level);
+
     return GDF_SUCCESS;
 }
 
@@ -201,7 +213,7 @@ readRowGroup(const std::unique_ptr<typename Readers<T>::FileReader> &parquet_rea
 
     for(size_t i = 0; i < columns.size(); i++)
     {
-        delete_gdf_column(&columns[i]);
+        delete_gdf_column(&(columns[i]));
     }
 }
 
@@ -218,4 +230,5 @@ BM_FileRead(benchmark::State &state) {
 
 BENCHMARK_TEMPLATE(BM_FileRead, kParquet)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
 BENCHMARK_TEMPLATE(BM_FileRead, kGdf)->Arg(50000)->Arg(100000)->Arg(500000)->Arg(1000000);
+
  

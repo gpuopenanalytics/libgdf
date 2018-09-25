@@ -18,8 +18,7 @@
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
 set(PARQUET_FILE_PATH
-#    ${CMAKE_SOURCE_DIR}/src/tests/parquet/benchmark/huge_dataset.parquet)
-	/home/william/repos/DataSets/Performance_2000Q1.txt)
+    ${CMAKE_SOURCE_DIR}/src/tests/parquet/benchmark/huge_dataset.parquet)
 
 GDF_ADD_PARQUET_BENCHMARK(parquet-benchmark parquet-benchmark.cu
 						parquet-multithread-benchmark parquet-multithread-benchmark.cu

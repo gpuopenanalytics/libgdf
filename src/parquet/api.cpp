@@ -514,11 +514,7 @@ _GetColumnIndices(const std::unique_ptr<FileReader> &file_reader,
 
 			 parquet_columns.push_back(std::make_pair(schema->Column(i)->name(), i));
 
-			 std::cout<<"parquet_columns: "<<parquet_columns[parquet_columns.size() -1].first<<"  "<<parquet_columns[parquet_columns.size() -1].second<<std::endl;
-		 } else {
-			 std::cout<<"skipped one: "<<schema->Column(i)->name()<<std::endl;
 		 }
-
 	 }
 
 	if (raw_names != nullptr) {
