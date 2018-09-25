@@ -16,7 +16,9 @@
  */
 
 namespace gdf {
-namespace cuda {
+namespace binops {
+namespace jit {
+namespace code {
 
 const char* operation =
 R"***(
@@ -209,5 +211,8 @@ R"***(
         }
     };
 )***";
-}
-}
+
+} // code
+} // jit
+} // binops
+} // gdf

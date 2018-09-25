@@ -16,7 +16,9 @@
  */
 
 namespace gdf {
-namespace cuda {
+namespace binops {
+namespace jit {
+namespace code {
 
 const char* traits =
 R"***(
@@ -229,5 +231,7 @@ R"***(
     using CommonNumber = typename HelperCommonNumber<Vax, Vay>::Type;
 )***";
 
-}
-}
+} // code
+} // jit
+} // binops
+} // gdf

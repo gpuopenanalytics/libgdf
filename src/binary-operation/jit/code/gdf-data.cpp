@@ -16,9 +16,11 @@
  */
 
 namespace gdf {
-namespace cuda {
+namespace binops {
+namespace jit {
+namespace code {
 
-const char* kernel_gdf_data =
+const char* gdf_data =
 R"***(
 #pragma once
 
@@ -77,5 +79,8 @@ R"***(
     };
 
 )***";
-}
-}
+
+} // code
+} // jit
+} // binops
+} // gdf

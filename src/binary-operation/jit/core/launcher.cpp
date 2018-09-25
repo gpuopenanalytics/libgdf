@@ -15,30 +15,33 @@
  * limitations under the License.
  */
 
-#include "binary/binary2/launcher.h"
-#include "binary/binary2/cuda.h"
+#include "binary-operation/jit/core/launcher.h"
+#include "binary-operation/jit/code/code.h"
 
 namespace gdf {
+namespace binops {
+namespace jit {
+
     static thread_local jitify::JitCache JitCache;
 
     std::istream* headersCode(std::string filename, std::iostream& stream) {
         if (filename == "operation.h") {
-            stream << gdf::cuda::operation;
+            stream << code::operation;
             return &stream;
         }
         if (filename == "traits.h") {
-            stream << gdf::cuda::traits;
+            stream << code::traits;
             return &stream;
         }
         if (filename == "kernel_gdf_data.h") {
-            stream << gdf::cuda::kernel_gdf_data;
+            stream << code::gdf_data;
             return &stream;
         }
         return nullptr;
     }
 
     Launcher::Launcher()
-     : program {JitCache.program(gdf::cuda::kernel, headersName, compilerFlags, gdf::headersCode)}
+     : program {JitCache.program(code::kernel, headersName, compilerFlags, headersCode)}
     { }
 
     Launcher::Launcher(Launcher&& launcher)
@@ -91,4 +94,7 @@ namespace gdf {
 
         return GDF_SUCCESS;
     }
-}
+
+} // jit
+} // binops
+} // gdf

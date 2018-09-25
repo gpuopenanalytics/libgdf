@@ -16,9 +16,12 @@
  */
 
 #include "gdf/gdf.h"
-#include "binary/binary2/launcher.h"
+#include "binary-operation/jit/core/launcher.h"
 
 namespace gdf {
+namespace binops {
+namespace jit {
+
     struct Option {
         Option(bool state, gdf_error value)
          : is_correct{state}, gdf_error_value{value}
@@ -107,9 +110,9 @@ namespace gdf {
             return option_column.get_gdf_error();
         }
 
-        gdf::Launcher::launch().kernel("kernel_v_s")
-                               .instantiate(ope, out, vax, vay)
-                               .launch(out, vax, vay);
+        Launcher::launch().kernel("kernel_v_s")
+                          .instantiate(ope, out, vax, vay)
+                          .launch(out, vax, vay);
 
         return GDF_SUCCESS;
     }
@@ -120,9 +123,9 @@ namespace gdf {
             return option_column.get_gdf_error();
         }
 
-        gdf::Launcher::launch().kernel("kernel_v_v")
-                               .instantiate(ope, out, vax, vay)
-                               .launch(out, vax, vay);
+        Launcher::launch().kernel("kernel_v_v")
+                          .instantiate(ope, out, vax, vay)
+                          .launch(out, vax, vay);
 
         return GDF_SUCCESS;
     }
@@ -138,14 +141,14 @@ namespace gdf {
         }
         auto option_scalar_def = verify_scalar(def);
         if (!option_scalar_def) {
-            gdf::Launcher::launch().kernel("kernel_v_s")
-                                   .instantiate(ope, out, vax, vay)
-                                   .launch(out, vax, vay);
+            Launcher::launch().kernel("kernel_v_s")
+                              .instantiate(ope, out, vax, vay)
+                              .launch(out, vax, vay);
         }
         else {
-            gdf::Launcher::launch().kernel("kernel_v_s_d")
-                                   .instantiate(ope, out, vax, vay, def)
-                                   .launch(out, vax, vay, def);
+            Launcher::launch().kernel("kernel_v_s_d")
+                              .instantiate(ope, out, vax, vay, def)
+                              .launch(out, vax, vay, def);
         }
         return GDF_SUCCESS;
     }
@@ -157,40 +160,43 @@ namespace gdf {
         }
         auto option_scalar = verify_scalar(def);
         if (!option_scalar) {
-            gdf::Launcher::launch().kernel("kernel_v_v")
-                                   .instantiate(ope, out, vax, vay)
-                                   .launch(out, vax, vay);
+            Launcher::launch().kernel("kernel_v_v")
+                              .instantiate(ope, out, vax, vay)
+                              .launch(out, vax, vay);
         }
         else {
-            gdf::Launcher::launch().kernel("kernel_v_v_d")
-                                   .instantiate(ope, out, vax, vay, def)
-                                   .launch(out, vax, vay, def);
+            Launcher::launch().kernel("kernel_v_v_d")
+                              .instantiate(ope, out, vax, vay, def)
+                              .launch(out, vax, vay, def);
         }
         return GDF_SUCCESS;
     }
-}
+
+} // jit
+} // binops
+} // gdf
 
 
 gdf_error gdf_binary_operation_v_s_v(gdf_column* out, gdf_scalar* vax, gdf_column* vay, gdf_binary_operator ope) {
-    return gdf::binary_operation(out, vay, vax, ope);
+    return gdf::binops::jit::binary_operation(out, vay, vax, ope);
 }
 
 gdf_error gdf_binary_operation_v_v_s(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_binary_operator ope) {
-    return gdf::binary_operation(out, vax, vay, ope);
+    return gdf::binops::jit::binary_operation(out, vax, vay, ope);
 }
 
 gdf_error gdf_binary_operation_v_v_v(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_binary_operator ope) {
-    return gdf::binary_operation(out, vax, vay, ope);
+    return gdf::binops::jit::binary_operation(out, vax, vay, ope);
 }
 
 gdf_error gdf_binary_operation_v_s_v_d(gdf_column* out, gdf_scalar* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope) {
-    return gdf::binary_operation(out, vay, vax, def, ope);
+    return gdf::binops::jit::binary_operation(out, vay, vax, def, ope);
 }
 
 gdf_error gdf_binary_operation_v_v_s_d(gdf_column* out, gdf_column* vax, gdf_scalar* vay, gdf_scalar* def, gdf_binary_operator ope) {
-    return gdf::binary_operation(out, vax, vay, def, ope);
+    return gdf::binops::jit::binary_operation(out, vax, vay, def, ope);
 }
 
 gdf_error gdf_binary_operation_v_v_v_d(gdf_column* out, gdf_column* vax, gdf_column* vay, gdf_scalar* def, gdf_binary_operator ope) {
-    return gdf::binary_operation(out, vax, vay, def, ope);
+    return gdf::binops::jit::binary_operation(out, vax, vay, def, ope);
 }

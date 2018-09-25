@@ -15,14 +15,12 @@
 # limitations under the License.
 #=============================================================================
 
-message(STATUS "Binary Operation Version: V2 - NVRTC")
-
 set(source_files
-    src/binary/binary2/binary.cpp
-    src/binary/binary2/kernel_gdf_data.cpp
-    src/binary/binary2/kernel.cpp
-    src/binary/binary2/launcher.cpp
-    src/binary/binary2/operation.cpp
-    src/binary/binary2/traits.cpp
-    src/binary/binary2/type.cpp
+    src/binary-operation/jit/code/gdf-data.cpp
+    src/binary-operation/jit/code/kernel.cpp
+    src/binary-operation/jit/code/operation.cpp
+    src/binary-operation/jit/code/traits.cpp
+    src/binary-operation/jit/core/binop.cpp
+    src/binary-operation/jit/core/launcher.cpp
+    src/binary-operation/jit/util/type.cpp
 )

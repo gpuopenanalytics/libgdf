@@ -134,8 +134,8 @@ message(STATUS "ConfigBenchmark: ${result}")
 
 
 ## Binary Operations
-add_subdirectory(src/binary)
-get_directory_property(binary_operation_source_files DIRECTORY src/binary DEFINITION source_files)
+add_subdirectory(src/binary-operation)
+get_directory_property(binary_operation_source_files DIRECTORY src/binary-operation DEFINITION source_files)
 
 
 ## Variable 'libgdf_source_files' with all source files.

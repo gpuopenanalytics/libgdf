@@ -15,17 +15,22 @@
  * limitations under the License.
  */
 
-#ifndef GDF_BINARY_TYPE_H
-#define GDF_BINARY_TYPE_H
-
-#include "gdf/gdf.h"
+#ifndef GDF_BINARY_OPERATION_JIT_CODE_CODE_H
+#define GDF_BINARY_OPERATION_JIT_CODE_CODE_H
 
 namespace gdf {
+namespace binops {
+namespace jit {
+namespace code {
 
-    const char* getTypeName(gdf_dtype type);
+    extern const char* kernel;
+    extern const char* traits;
+    extern const char* operation;
+    extern const char* gdf_data;
 
-    const char* getOperatorName(gdf_binary_operator ope);
-
+}
+}
+}
 }
 
 #endif

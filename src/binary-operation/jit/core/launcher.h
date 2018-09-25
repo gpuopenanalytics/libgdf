@@ -15,13 +15,15 @@
  * limitations under the License.
  */
 
-#ifndef GDF_BINARY_LAUNCHER_H
-#define GDF_BINARY_LAUNCHER_H
+#ifndef GDF_BINARY_OPERATION_JIT_CORE_LAUNCHER_H
+#define GDF_BINARY_OPERATION_JIT_CORE_LAUNCHER_H
 
 #include <jitify.hpp>
-#include "binary/binary2/type.h"
+#include "binary-operation/jit/util/type.h"
 
 namespace gdf {
+namespace binops {
+namespace jit {
 
     std::istream* headersCode(std::string filename, std::iostream& stream);
 
@@ -48,7 +50,7 @@ namespace gdf {
 
         template <typename ... Args>
         Launcher& instantiate(gdf_binary_operator ope, Args&& ... args) {
-            arguments.assign({gdf::getTypeName(args->dtype)..., gdf::getOperatorName(ope)});
+            arguments.assign({getTypeName(args->dtype)..., getOperatorName(ope)});
             return *this;
         }
 
@@ -71,6 +73,9 @@ namespace gdf {
         std::string kernelName;
         std::vector<std::string> arguments;
     };
-}
+
+} // jit
+} // binops
+} // gdf
 
 #endif

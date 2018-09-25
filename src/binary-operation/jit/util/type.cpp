@@ -15,9 +15,11 @@
  * limitations under the License.
  */
 
-#include "binary/binary2/type.h"
+#include "binary-operation/jit/util/type.h"
 
 namespace gdf {
+namespace binops {
+namespace jit {
 
     const char* getTypeName(gdf_dtype type) {
         switch (type) {
@@ -89,4 +91,6 @@ namespace gdf {
         }
     }
 
-}
+} // jit
+} // binops
+} // gdf

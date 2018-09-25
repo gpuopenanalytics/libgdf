@@ -17,7 +17,9 @@
  */
 
 namespace gdf {
-namespace cuda {
+namespace binops {
+namespace jit {
+namespace code {
 
 const char* kernel =
 R"***(
@@ -151,5 +153,8 @@ R"***(
         }
     }
 )***";
-}
-}
+
+} // code
+} // jit
+} // binops
+} // gdf

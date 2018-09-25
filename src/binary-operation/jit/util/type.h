@@ -15,17 +15,20 @@
  * limitations under the License.
  */
 
-#ifndef GDF_BINARY_CUDA_H
-#define GDF_BINARY_CUDA_H
+#ifndef GDF_BINARY_OPERATION_JIT_UTIL_TYPE_H
+#define GDF_BINARY_OPERATION_JIT_UTIL_TYPE_H
+
+#include "gdf/gdf.h"
 
 namespace gdf {
-namespace cuda {
+namespace binops {
+namespace jit {
 
-    extern const char* kernel;
-    extern const char* traits;
-    extern const char* operation;
-    extern const char* kernel_gdf_data;
+    const char* getTypeName(gdf_dtype type);
 
+    const char* getOperatorName(gdf_binary_operator ope);
+
+}
 }
 }
 
