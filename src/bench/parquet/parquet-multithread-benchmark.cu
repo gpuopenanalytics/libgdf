@@ -5,7 +5,7 @@
 #include "column_reader.h"
 #include "file_reader.h"
 
-#include "../../helper/utils.cuh"
+#include "../../tests/helper/utils.cuh"
 
 #ifndef PARQUET_FILE_PATH
 #error PARQUET_FILE_PATH must be defined for precompiling

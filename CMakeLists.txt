@@ -213,5 +213,10 @@ if(GTEST_FOUND)
 else()
     message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
 endif()
+
+if(GDF_BENCHMARK)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/bench)
+endif()
+
 # Print the project summary
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)

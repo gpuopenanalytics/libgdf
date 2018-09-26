@@ -31,10 +31,3 @@ GDF_ADD_PARQUET_TEST(file_reader-test
 target_compile_definitions(file_reader-test
     PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
 target_link_libraries(file_reader-test Boost::filesystem)
-
-GDF_ADD_PARQUET_BENCHMARK(file_reader-benchmark file_reader-benchmark.cpp)
-
-if (GDF_BENCHMARK)
-target_compile_definitions(file_reader-benchmark
-    PUBLIC -DPARQUET_FILE_PATH="${PARQUET_FILE_PATH}")
-endif()
