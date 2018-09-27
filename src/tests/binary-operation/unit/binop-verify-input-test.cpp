@@ -16,8 +16,8 @@
  */
 
 #include "gtest/gtest.h"
-#include "library/scalar.h"
-#include "library/vector.h"
+#include "tests/binary-operation/util/scalar.h"
+#include "tests/binary-operation/util/vector.h"
 
 struct BinopVerifyInputTest : public ::testing::Test {
     BinopVerifyInputTest() {

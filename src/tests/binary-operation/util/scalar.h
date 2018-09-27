@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-#ifndef GDF_LIBRARY_SCALAR_H
-#define GDF_LIBRARY_SCALAR_H
+#ifndef GDF_TESTS_BINARY_OPERATION_UTIL_SCALAR_H
+#define GDF_TESTS_BINARY_OPERATION_UTIL_SCALAR_H
 
 #include "gdf/gdf.h"
-#include "library/types.h"
+#include "tests/binary-operation/util/types.h"
 
 namespace gdf {
 namespace library {
@@ -81,7 +81,7 @@ namespace library {
         gdf_scalar mScalar;
     };
 
-}  // library
-}  // gdf
+}  // namespace library
+}  // namespace gdf
 
 #endif

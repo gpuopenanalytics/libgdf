@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef GDF_LIBRARY_FIELD_H
-#define GDF_LIBRARY_FIELD_H
+#ifndef GDF_TESTS_BINARY_OPERATION_UTIL_FIELD_H
+#define GDF_TESTS_BINARY_OPERATION_UTIL_FIELD_H
 
 #include <vector>
 #include <algorithm>
@@ -103,7 +103,7 @@ namespace library {
         std::vector<Type> mCpuData;
     };
 
-}
-}
+} // namespace library
+} // namespace gdf
 
 #endif

@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef GDF_LIBRARY_TYPES_H
-#define GDF_LIBRARY_TYPES_H
+#ifndef GDF_TESTS_BINARY_OPERATION_UTIL_TYPES_H
+#define GDF_TESTS_BINARY_OPERATION_UTIL_TYPES_H
 
 #include "gdf/gdf.h"
 
@@ -193,7 +193,7 @@ namespace library {
 
     double getScalar(double, gdf_scalar* scalar);
 
-}
-}
+} // namespace library
+} // namespace gdf
 
 #endif

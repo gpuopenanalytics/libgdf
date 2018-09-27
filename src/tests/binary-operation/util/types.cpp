@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "library/types.h"
+#include "tests/binary-operation/util/types.h"
 
 namespace gdf {
 namespace library {
@@ -133,5 +133,5 @@ namespace library {
         return scalar->data.fp64;
     }
 
-}  // library
-}  // gdf
+}  // namespace library
+}  // namespace gdf

@@ -16,9 +16,9 @@
  */
 
 #include "gtest/gtest.h"
-#include "library/scalar.h"
-#include "library/vector.h"
-#include "library/operation.h"
+#include "tests/binary-operation/util/scalar.h"
+#include "tests/binary-operation/util/vector.h"
+#include "tests/binary-operation/util/operation.h"
 
 struct BinaryOperationIntegrationTest : public ::testing::Test {
     BinaryOperationIntegrationTest() {

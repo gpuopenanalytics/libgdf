@@ -19,8 +19,8 @@
 #include <thread>
 #include <cstdint>
 #include "benchmark/benchmark.h"
-#include "library/scalar.h"
-#include "library/vector.h"
+#include "tests/binary-operation/util/scalar.h"
+#include "tests/binary-operation/util/vector.h"
 
 namespace bench {
     static constexpr int NUMBER_COUNTERS = 6;

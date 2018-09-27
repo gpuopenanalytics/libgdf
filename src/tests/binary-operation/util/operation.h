@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef GDF_LIBRARY_OPERATION_H
-#define GDF_LIBRARY_OPERATION_H
+#ifndef GDF_TESTS_BINARY_OPERATION_UTIL_OPERATION_H
+#define GDF_TESTS_BINARY_OPERATION_UTIL_OPERATION_H
 
 namespace gdf {
 namespace library {
@@ -102,8 +102,8 @@ namespace operation {
         }
     };
 
-}  // operation
-}  // library
-}  // gdf
+}  // namespace operation
+}  // namespace library
+}  // namespace gdf
 
 #endif

@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-#ifndef GDF_LIBRARY_VECTOR_H
-#define GDF_LIBRARY_VECTOR_H
+#ifndef GDF_TESTS_BINARY_OPERATION_UTIL_VECTOR_H
+#define GDF_TESTS_BINARY_OPERATION_UTIL_VECTOR_H
 
 #include "gdf/gdf.h"
-#include "library/types.h"
-#include "library/field.h"
+#include "tests/binary-operation/util/types.h"
+#include "tests/binary-operation/util/field.h"
 
 namespace gdf {
 namespace library {
@@ -155,7 +155,8 @@ namespace library {
         Field<Type> mData;
         Field<ValidType> mValid;
     };
-}
-}
+
+} // namespace library
+} // namespace gdf
 
 #endif

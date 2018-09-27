@@ -16,12 +16,12 @@
 #=============================================================================
 
 ## Test name
-set(GDF_TEST_NAME BinopVerifyInputTest)
+set(GDF_TEST_NAME BinaryOperationsVerifyInputTest)
 
 
 ## Set sources
 set(GDF_SOURCE_FILES
-    "${PROJECT_SOURCE_DIR}/src/library/types.cpp"
+    "${PROJECT_SOURCE_DIR}/src/tests/binary-operation/util/types.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/binop-verify-input-test.cpp")
 
 
