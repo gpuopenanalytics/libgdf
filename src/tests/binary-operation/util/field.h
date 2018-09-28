@@ -61,6 +61,10 @@ namespace library {
             return mCpuData.end();
         }
 
+        auto back() -> typename std::vector<Type>::reference {
+            return mCpuData.back();
+        }
+
     public:
         auto size() -> std::size_t {
             return mCpuData.size();

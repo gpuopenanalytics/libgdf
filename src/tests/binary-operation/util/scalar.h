@@ -27,11 +27,21 @@ namespace library {
     template <typename Type>
     class Scalar {
     public:
-        void set(Type value) {
+        void setValue(Type value) {
             mScalar.dtype = gdf::library::GdfDataType<Type>::Value;
-            gdf::library::setScalar(mScalar, (Type)value);
+            gdf::library::setScalar(mScalar, value);
         }
 
+    public:
+        Type getValue() {
+            return (Type)*this;
+        }
+
+        gdf_dtype getType() {
+            return mScalar.dtype;
+        }
+
+    public:
         gdf_scalar* scalar() {
             return &mScalar;
         }

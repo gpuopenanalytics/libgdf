@@ -104,6 +104,7 @@ typedef struct {
  * Struct used for scalar type.
  * The 'data' member variable represents the value (union) and
  * 'dtype' member variable represents the type.
+ * The gdf_scalar has no null or invalid value.
  */
 /* ----------------------------------------------------------------------------*/
 typedef struct {

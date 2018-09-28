@@ -57,7 +57,9 @@ namespace jit {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)
                .configure_1d_max_occupancy()
-               .launch(out->size, out->data, vax->data, vay->data);
+               .launch(out->size,
+                       out->data, vax->data, vay->data,
+                       out->valid, vax->valid);
 
         return GDF_SUCCESS;
     }
@@ -66,7 +68,9 @@ namespace jit {
         program.kernel(kernelName.c_str())
                .instantiate(arguments)
                .configure_1d_max_occupancy()
-               .launch(out->size, out->data, vax->data, vay->data);
+               .launch(out->size,
+                       out->data, vax->data, vay->data,
+                       out->valid, vax->valid, vay->valid);
 
         return GDF_SUCCESS;
     }

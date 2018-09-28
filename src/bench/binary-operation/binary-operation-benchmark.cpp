@@ -36,20 +36,20 @@ namespace bench {
                 sampler.data.clear();
             }
 
-            vax.range((Type)state.range(2), (Type)state.range(3), (Type)state.range(4));
-            vax.valid(true, (int)state.range(2), (int)state.range(3), 3);
+            vax.rangeData((Type)state.range(2), (Type)state.range(3), (Type)state.range(4));
+            vax.rangeValid(true, (int)state.range(2), 3);
 
-            vay.range((Type)state.range(2), (Type)state.range(3), (Type)state.range(4));
-            vay.valid(true, (int)state.range(2), (int)state.range(3), 4);
+            vay.rangeData((Type)state.range(2), (Type)state.range(3), (Type)state.range(4));
+            vay.rangeValid(true, (int)state.range(2), 4);
 
-            out.emplace(vax.dataSize());
-            def.set((Type)state.range(3));
+            out.emplaceVector(vax.dataSize());
+            def.setValue((Type)state.range(3));
         }
 
         virtual void TearDown(benchmark::State& state) {
-            vax.clear();
-            vay.clear();
-            out.clear();
+            vax.clearGpu();
+            vay.clearGpu();
+            out.clearGpu();
         }
 
         void startTime() {

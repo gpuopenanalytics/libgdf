@@ -36,13 +36,13 @@ struct BinopVerifyInputTest : public ::testing::Test {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOutputVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.fill(0, 0);
+    vector_out.fillData(0, 0);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s(vector_out.column(), vector_vax.column(), scalar.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -51,13 +51,13 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOutputVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.fill(0, 0);
+    vector_vax.fillData(0, 0);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s(vector_out.column(), vector_vax.column(), scalar.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -66,10 +66,10 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOutputVectorNull) {
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s(nullptr, vector_vax.column(), scalar.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -78,10 +78,10 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOutputVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandVectorNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s(vector_out.column(), nullptr, scalar.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -90,10 +90,10 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandScalarNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_s(vector_out.column(), vector_vax.column(), nullptr, GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -102,14 +102,14 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandScalarNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOutputVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
     vector_out.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s(vector_out.column(), vector_vax.column(), scalar.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -118,14 +118,14 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOutputVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
     vector_vax.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s(vector_out.column(), vector_vax.column(), scalar.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -134,13 +134,13 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandScalarType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
     scalar.scalar()->dtype = (gdf_dtype)100;
 
     auto result = gdf_binary_operation_v_v_s(vector_out.column(), vector_vax.column(), scalar.scalar(), GDF_ADD);
@@ -150,13 +150,13 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_ErrorOperandScalarType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorOutputVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.fill(0, 0);
+    vector_out.fillData(0, 0);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), vector_vax.column(), vector_vay.column(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -165,13 +165,13 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorOutputVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorFirstOperandVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.fill(0, 0);
+    vector_vax.fillData(0, 0);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), vector_vax.column(), vector_vay.column(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -180,13 +180,13 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorFirstOperandVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorSecondOperandVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.fill(0, 0);
+    vector_vay.fillData(0, 0);
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), vector_vax.column(), vector_vay.column(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -195,10 +195,10 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorSecondOperandVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorOutputVectorNull) {
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_v(nullptr, vector_vax.column(), vector_vay.column(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -207,10 +207,10 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorOutputVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorFirstOperandVectorNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), nullptr, vector_vay.column(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -219,10 +219,10 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorFirstOperandVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorSecondOperandVectorNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), vector_vax.column(), nullptr, GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -231,14 +231,14 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorSecondOperandVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorOutputVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
     vector_out.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), vector_vax.column(), vector_vay.column(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -247,14 +247,14 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorOutputVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorFirstOperandVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
     vector_vax.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), vector_vax.column(), vector_vay.column(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -263,13 +263,13 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorFirstOperandVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorSecondOperandVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
     vector_vay.column()->dtype = (gdf_dtype)100;
 
     auto result = gdf_binary_operation_v_v_v(vector_out.column(), vector_vax.column(), vector_vay.column(), GDF_ADD);
@@ -279,16 +279,16 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_ErrorSecondOperandVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOutputVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.fill(0, 0);
+    vector_out.fillData(0, 0);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(vector_out.column(), vector_vax.column(), scalar.scalar(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -297,16 +297,16 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOutputVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.fill(0, 0);
+    vector_vax.fillData(0, 0);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(vector_out.column(), vector_vax.column(), scalar.scalar(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -315,13 +315,13 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOutputVectorNull) {
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(nullptr, vector_vax.column(), scalar.scalar(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -330,13 +330,13 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOutputVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandVectorNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(vector_out.column(), nullptr, scalar.scalar(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -345,13 +345,13 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandScalarNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(vector_out.column(), vector_vax.column(), nullptr, defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -360,17 +360,17 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandScalarNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOutputVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
     vector_out.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(vector_out.column(), vector_vax.column(), scalar.scalar(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -379,17 +379,17 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOutputVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
     vector_vax.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(vector_out.column(), vector_vax.column(), scalar.scalar(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -398,17 +398,17 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandScalarType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> scalar;
-    scalar.set(100);
+    scalar.setValue(100);
     scalar.scalar()->dtype = (gdf_dtype)100;
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_s_d(vector_out.column(), vector_vax.column(), scalar.scalar(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -417,16 +417,16 @@ TEST_F(BinopVerifyInputTest, Vector_Scalar_Default_ErrorOperandScalarType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorOutputVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.fill(0, 0);
+    vector_out.fillData(0, 0);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), vector_vax.column(), vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -435,16 +435,16 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorOutputVectorZeroSize) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorFirstOperandVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.fill(0, 0);
+    vector_vax.fillData(0, 0);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), vector_vax.column(), vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -453,16 +453,16 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorFirstOperandVectorZeroSi
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorSecondOperandVectorZeroSize) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.fill(0, 0);
+    vector_vay.fillData(0, 0);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), vector_vax.column(), vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_SUCCESS);
@@ -471,13 +471,13 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorSecondOperandVectorZeroS
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorOutputVectorNull) {
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(nullptr, vector_vax.column(), vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -486,13 +486,13 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorOutputVectorNull) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorFirstOperandVectorNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), nullptr, vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -501,13 +501,13 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorFirstOperandVectorNull) 
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorSecondOperandVectorNull) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), vector_vax.column(), nullptr, defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_DATASET_EMPTY);
@@ -516,17 +516,17 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorSecondOperandVectorNull)
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorOutputVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
     vector_out.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), vector_vax.column(), vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -535,17 +535,17 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorOutputVectorType) {
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorFirstOperandVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
     vector_vax.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), vector_vax.column(), vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);
@@ -554,17 +554,17 @@ TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorFirstOperandVectorType) 
 
 TEST_F(BinopVerifyInputTest, Vector_Vector_Default_ErrorSecondOperandVectorType) {
     gdf::library::Vector<uint64_t> vector_out;
-    vector_out.range(1, 10, 1);
+    vector_out.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vax;
-    vector_vax.range(1, 10, 1);
+    vector_vax.rangeData(1, 10, 1);
 
     gdf::library::Vector<uint64_t> vector_vay;
-    vector_vay.range(1, 10, 1);
+    vector_vay.rangeData(1, 10, 1);
     vector_vay.column()->dtype = (gdf_dtype)100;
 
     gdf::library::Scalar<uint64_t> defvalue;
-    defvalue.set(100);
+    defvalue.setValue(100);
 
     auto result = gdf_binary_operation_v_v_v_d(vector_out.column(), vector_vax.column(), vector_vay.column(), defvalue.scalar(), GDF_ADD);
     ASSERT_TRUE(result == GDF_UNSUPPORTED_DTYPE);

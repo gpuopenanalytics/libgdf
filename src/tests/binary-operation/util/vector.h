@@ -31,22 +31,33 @@ namespace library {
         using ValidType = int32_t;
         static constexpr int ValidSize = 32;
 
+    private:
+        template <typename T>
+        class InnerWrapper {
+        public:
+            InnerWrapper(Field<T>& container)
+             : mField {container}
+            { }
+
+            T operator[](int index) {
+                return mField[index];
+            }
+
+        private:
+            Field<T>& mField;
+        };
+
     public:
         ~Vector() {
             eraseGpu();
         }
 
-        void eraseGpu() {
-            mData.clear();
-            mValid.clear();
-        }
-
-        Vector& clear() {
+        Vector& clearGpu() {
             eraseGpu();
             return *this;
         }
 
-        Vector& range(Type init, Type final, Type step) {
+        Vector& rangeData(Type init, Type final, Type step) {
             assert((Type)0 < step);
             assert(init < final);
 
@@ -61,7 +72,7 @@ namespace library {
             return *this;
         }
 
-        Vector& fill(int size, Type value) {
+        Vector& fillData(int size, Type value) {
             mData.resize(size);
             std::fill(mData.begin(), mData.end(), value);
             mData.write();
@@ -69,23 +80,23 @@ namespace library {
             return *this;
         }
 
-        Vector& valid(bool value) {
+        Vector& rangeValid(bool value) {
             int size = (mData.size() / ValidSize) + ((mData.size() % ValidSize) ? 1 : 0);
             mValid.resize(size);
+
             std::generate(mValid.begin(), mValid.end(), [value] { return -(ValidType)value; });
+            clearPaddingBits();
+
             mValid.write();
             updateValid();
             return *this;
         }
 
-        // TODO: implementation incomplete
-        Vector& valid(bool value, std::initializer_list<int> list) {
-            return *this;
-        }
-
-        Vector& valid(bool value, int init, int final, int step) {
-            int size = (mData.size() / ValidSize) + ((mData.size() % ValidSize) ? 1 : 0);
+        Vector& rangeValid(bool value, int init, int step) {
+            int final = mData.size();
+            int size = (final / ValidSize) + ((final % ValidSize) ? 1 : 0);
             mValid.resize(size);
+
             for (int index = 0; index < size; ++index) {
                 ValidType val = 0;
                 while (((init / ValidSize) == index) && (init < final)) {
@@ -98,12 +109,14 @@ namespace library {
                     mValid[index] = ~val;
                 }
             }
+            clearPaddingBits();
+
             mValid.write();
             updateValid();
             return *this;
         }
 
-        void emplace(int size) {
+        void emplaceVector(int size) {
             int validSize = (size / ValidSize) + ((size % ValidSize) ? 1 : 0);
             mData.resize(size);
             mValid.resize(validSize);
@@ -111,7 +124,7 @@ namespace library {
             updateValid();
         }
 
-        void read() {
+        void readVector() {
             mData.read();
             mValid.read();
         }
@@ -129,15 +142,17 @@ namespace library {
             return &mColumn;
         }
 
-        Type data(int index) {
-            return mData[index];
-        }
+    public:
+        InnerWrapper<Type> data{mData};
 
-        ValidType valid(int index) {
-            return mValid[index];
-        }
+        InnerWrapper<ValidType> valid{mValid};
 
     private:
+        void eraseGpu() {
+            mData.clear();
+            mValid.clear();
+        }
+
         void updateData() {
             mColumn.size = mData.size();
             mColumn.dtype = GdfDataType<Type>::Value;
@@ -146,6 +161,14 @@ namespace library {
 
         void updateValid() {
             mColumn.valid = (gdf_valid_type*)mValid.getGpuData();
+        }
+
+        void clearPaddingBits() {
+            int padding = mData.size() % ValidSize;
+            if (padding) {
+                padding = (1 << padding) - 1;
+                mValid.back() &= padding;
+            }
         }
 
     private:
