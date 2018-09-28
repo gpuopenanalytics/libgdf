@@ -3,7 +3,7 @@
 
 /* --------------------------------------------------------------------------*/
 /** 
- * @Synopsis  Counts the number of valid bits in the mask that corresponds to
+ * @brief  Counts the number of valid bits in the mask that corresponds to
  * the specified number of rows.
  * 
  * @Param[in] masks Array of gdf_valid_types with enough bits to represent
@@ -16,30 +16,128 @@
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_count_nonzero_mask(gdf_valid_type const * masks, int num_rows, int * count);
 
-/* column operations */
 
+
+/* column operations */
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Returns the size of a gdf_column
+ *
+ * @Returns  The size (number of elements) of a gdf_column
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_size_type gdf_column_sizeof();
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Is a constructor for the gdf_column struct
+ *
+ * @Param[out] gdf_column being constructed
+ * @Param[in] the void* data pointer
+ * @Param[in] the gdf_valid_type* valid pointer
+ * @Param[in] size (number of elements) in the gdf_column
+ * @Param[in] gdf_dtype of the gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid,
                           gdf_size_type size, gdf_dtype dtype);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Is a constructor for the gdf_column struct
+ *
+ * @Param[out] gdf_column being constructed
+ * @Param[in] the void* data pointer
+ * @Param[in] the gdf_valid_type* valid pointer
+ * @Param[in] size (number of elements) in the gdf_column
+ * @Param[in] gdf_dtype of the gdf_column
+ * @Param[in] the number of nulls in the gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_column_view_augmented(gdf_column *column, void *data, gdf_valid_type *valid,
                           gdf_size_type size, gdf_dtype dtype, gdf_size_type null_count);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Frees the device memory in the gdf_column pointed to by data and valid
+ *
+ * @Param[in] gdf_column whose memory is being freed
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_column_free(gdf_column *column);
+
+
 
 /* context operations */
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Constructor for the gdf_context struct
+ *
+ * @Param[out] gdf_context being constructed
+ * @Param[in] Indicates if the input data is sorted. 0 = No, 1 = yes
+ * @Param[in] the method to be used for the operation (e.g., sort vs hash)
+ * @Param[in] for COUNT: DISTINCT = 1, else = 0
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_context_view(gdf_context *context, int flag_sorted, gdf_method flag_method,
                            int flag_distinct);
 
+
 /* error handling */
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Converts a gdf_error error code into a string
+ *
+ * @Param[in] gdf_error
+ *
+ * @Returns  name of the error
+ */
+/* ----------------------------------------------------------------------------*/
 const char * gdf_error_get_name(gdf_error errcode);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Returns the last error from a runtime call.
+ *
+ * @Returns  last error from a runtime call.
+ */
+/* ----------------------------------------------------------------------------*/
 int gdf_cuda_last_error();
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Returns the description string for an error code.
+ *
+ * @Param[in] cuda error code
+ *
+ * @Returns  description string for an error code.
+ */
+/* ----------------------------------------------------------------------------*/
 const char * gdf_cuda_error_string(int cuda_error);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Returns the string representation of an error code enum name.
+ *
+ * @Param[in] cuda error code
+ *
+ * @Returns  string representation of an error code enum name.
+ */
+/* ----------------------------------------------------------------------------*/
 const char * gdf_cuda_error_name(int cuda_error);
+
+
+
 
 /* ipc */
 
@@ -59,70 +157,295 @@ const char *gdf_ipc_parser_get_schema_json(gdf_ipc_parser_type *handle) ;
 const char *gdf_ipc_parser_get_layout_json(gdf_ipc_parser_type *handle) ;
 
 
+
+
 /* sorting */
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Constructor for the gdf_radixsort_plan_type object
+ *
+ * @Param[in] Number of items to sort
+ * @Param[in] Indicates if sort should be ascending or descending. 1 = Descending, 0 = Ascending
+ * @Param[in] The least-significant bit index (inclusive) needed for key comparison
+ * @Param[in] The most-significant bit index (exclusive) needed for key comparison (e.g., sizeof(unsigned int) * 8)
+ *
+ * @Returns  gdf_radixsort_plan_type object pointer
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_radixsort_plan_type* gdf_radixsort_plan(size_t num_items, int descending,
                                         unsigned begin_bit, unsigned end_bit);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Allocates device memory for the radixsort
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] sizeof data type of key
+ * @Param[in] sizeof data type of val
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_plan_setup(gdf_radixsort_plan_type *hdl,
                                    size_t sizeof_key, size_t sizeof_val);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Frees device memory used for the radixsort
+ *
+ * @Param[in] Radix sort plan
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_plan_free(gdf_radixsort_plan_type *hdl);
 
-/*
- * The following function performs a sort on the key and value columns.
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a radixsort on the key and value columns where the key is an int8
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
  */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_i8(gdf_radixsort_plan_type *hdl,
                            gdf_column *keycol,
                            gdf_column *valcol);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a radixsort on the key and value columns where the key is an int32
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_i32(gdf_radixsort_plan_type *hdl,
                             gdf_column *keycol,
                             gdf_column *valcol);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a radixsort on the key and value columns where the key is an int64
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_i64(gdf_radixsort_plan_type *hdl,
                             gdf_column *keycol,
                             gdf_column *valcol);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a radixsort on the key and value columns where the key is an float
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_f32(gdf_radixsort_plan_type *hdl,
                             gdf_column *keycol,
                             gdf_column *valcol);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a radixsort on the key and value columns where the key is an double
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_f64(gdf_radixsort_plan_type *hdl,
                             gdf_column *keycol,
                             gdf_column *valcol);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a radixsort on the key and value columns where the key is any type
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_generic(gdf_radixsort_plan_type *hdl,
                                 gdf_column *keycol,
                                 gdf_column *valcol);
 
+
+
+
 /* segmented sorting */
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Constructor for the gdf_segmented_radixsort_plan_type object
+ *
+ * @Param[in] Number of items to sort
+ * @Param[in] Indicates if sort should be ascending or descending. 1 = Descending, 0 = Ascending
+ * @Param[in] The least-significant bit index (inclusive) needed for key comparison
+ * @Param[in] The most-significant bit index (exclusive) needed for key comparison (e.g., sizeof(unsigned int) * 8)
+ *
+ * @Returns  gdf_segmented_radixsort_plan_type object pointer
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_segmented_radixsort_plan_type* gdf_segmented_radixsort_plan(size_t num_items, int descending,
     unsigned begin_bit, unsigned end_bit);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Allocates device memory for the segmented radixsort
+ *
+ * @Param[in] Segmented Radix sort plan
+ * @Param[in] sizeof data type of key
+ * @Param[in] sizeof data type of val
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_plan_setup(gdf_segmented_radixsort_plan_type *hdl,
 size_t sizeof_key, size_t sizeof_val);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Frees device memory used for the segmented radixsort
+ *
+ * @Param[in] Segmented Radix sort plan
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_plan_free(gdf_segmented_radixsort_plan_type *hdl);
 
-/*
-* The following function performs a sort on the key and value columns.
-*/
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a segmented radixsort on the key and value columns where the key is an int8
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ * @Param[in] The number of segments that comprise the sorting data
+ * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
+ * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_i8(gdf_segmented_radixsort_plan_type *hdl,
                                      gdf_column *keycol, gdf_column *valcol,
                                      unsigned num_segments,
                                      unsigned *d_begin_offsets,
                                      unsigned *d_end_offsets);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a segmented radixsort on the key and value columns where the key is an int32
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ * @Param[in] The number of segments that comprise the sorting data
+ * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
+ * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_i32(gdf_segmented_radixsort_plan_type *hdl,
                                      gdf_column *keycol, gdf_column *valcol,
                                      unsigned num_segments,
                                      unsigned *d_begin_offsets,
                                      unsigned *d_end_offsets);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a segmented radixsort on the key and value columns where the key is an int64
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ * @Param[in] The number of segments that comprise the sorting data
+ * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
+ * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_i64(gdf_segmented_radixsort_plan_type *hdl,
                                      gdf_column *keycol, gdf_column *valcol,
                                      unsigned num_segments,
                                      unsigned *d_begin_offsets,
                                      unsigned *d_end_offsets);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a segmented radixsort on the key and value columns where the key is an float
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ * @Param[in] The number of segments that comprise the sorting data
+ * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
+ * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_f32(gdf_segmented_radixsort_plan_type *hdl,
                                      gdf_column *keycol, gdf_column *valcol,
                                      unsigned num_segments,
                                      unsigned *d_begin_offsets,
                                      unsigned *d_end_offsets);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a segmented radixsort on the key and value columns where the key is an double
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ * @Param[in] The number of segments that comprise the sorting data
+ * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
+ * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_f64(gdf_segmented_radixsort_plan_type *hdl,
                                      gdf_column *keycol, gdf_column *valcol,
                                      unsigned num_segments,
                                      unsigned *d_begin_offsets,
                                      unsigned *d_end_offsets);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  performs a segmented radixsort on the key and value columns where the key is any type
+ *
+ * @Param[in] Radix sort plan
+ * @Param[in] key gdf_column
+ * @Param[in] value gdf_column
+ * @Param[in] The number of segments that comprise the sorting data
+ * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
+ * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
+ *
+ * @Returns  GDF_SUCCESS upon successful completion.
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_generic(gdf_segmented_radixsort_plan_type *hdl,
                                      gdf_column *keycol, gdf_column *valcol,
                                      unsigned num_segments,
@@ -132,32 +455,136 @@ gdf_error gdf_segmented_radixsort_generic(gdf_segmented_radixsort_plan_type *hdl
 // joins
 
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an inner join operation between two sets of columns
+ *
+ * @Param[in] The number of columns to join
+ * @Param[in] The left set of columns to join
+ * @Param[in] The right set of columns to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ * @Param[in] join_context A structure that determines various run parameters, such as
+   whether to perform a hash or sort based join
+  *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_inner_join(int num_cols, gdf_column **leftcol, gdf_column **rightcol,
                          gdf_column *left_result, gdf_column *right_result,
                          gdf_context *join_context);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes a left join operation between two sets of columns
+ *
+ * @Param[in] The number of columns to join
+ * @Param[in] The left set of columns to join
+ * @Param[in] The right set of columns to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ * @Param[in] join_context A structure that determines various run parameters, such as
+   whether to perform a hash or sort based join
+  *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_left_join(int num_cols, gdf_column **leftcol, gdf_column **rightcol,
                         gdf_column *left_result, gdf_column *right_result,
                         gdf_context *join_context);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an outer join operation between two int8 columns
+ *
+ * @Param[in] The left column to join
+ * @Param[in] The right of column to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_outer_join_i8(gdf_column *leftcol, gdf_column *rightcol,
-                            gdf_column *l_result, gdf_column *r_result);
+
+		/* --------------------------------------------------------------------------*/
+		/**
+		 * @brief  Computes an outer join operation between two int8 columns
+		 *
+		 * @Param[in] The left column to join
+		 * @Param[in] The right of column to join
+		 * @Param[out] The indexes of the left side of the join
+		 * @Param[out] The indexes of the right side of the join
+		 *
+		 * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+		 */gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_i16(gdf_column *leftcol, gdf_column *rightcol,
                             gdf_column *l_result, gdf_column *r_result);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an outer join operation between two int32 columns
+ *
+ * @Param[in] The left column to join
+ * @Param[in] The right of column to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_outer_join_i32(gdf_column *leftcol, gdf_column *rightcol,
                             gdf_column *l_result, gdf_column *r_result);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an outer join operation between two int64 columns
+ *
+ * @Param[in] The left column to join
+ * @Param[in] The right of column to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_outer_join_i64(gdf_column *leftcol, gdf_column *rightcol,
                             gdf_column *l_result, gdf_column *r_result);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an outer join operation between two float columns
+ *
+ * @Param[in] The left column to join
+ * @Param[in] The right of column to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_outer_join_f32(gdf_column *leftcol, gdf_column *rightcol,
                             gdf_column *l_result, gdf_column *r_result);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an outer join operation between two double columns
+ *
+ * @Param[in] The left column to join
+ * @Param[in] The right of column to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_outer_join_f64(gdf_column *leftcol, gdf_column *rightcol,
                             gdf_column *l_result, gdf_column *r_result);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an outer join operation between two columns of any but same type
+ *
+ * @Param[in] The left column to join
+ * @Param[in] The right of column to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_outer_join_generic(gdf_column *leftcol, gdf_column *rightcol,
                                  gdf_column *l_result, gdf_column *r_result);
 
 
 /* partioning */
-
 /* --------------------------------------------------------------------------*/
 /** 
  * @brief Computes the hash values of the rows in the specified columns of the 
@@ -189,12 +616,57 @@ gdf_error gdf_hash_partition(int num_input_cols,
                              int partition_offsets[],
                              gdf_hash_func hash);
 
-/* prefixsum */
 
+/* prefixsum */
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes a prefixsum on a gdf_column of any type
+ *
+ * @Param[in] The input gdf_column
+ * @Param[out] The output gdf_column. The memory for the output will be allocated by the function
+ * @Param[in] inclusive = 1 for inclusive prefixsum, inclusive = 0 for exclusive prefixsum
+  *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_prefixsum_generic(gdf_column *inp, gdf_column *out, int inclusive);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes a prefixsum on a gdf_column of type int8
+ *
+ * @Param[in] The input gdf_column
+ * @Param[out] The output gdf_column. The memory for the output will be allocated by the function
+ * @Param[in] inclusive = 1 for inclusive prefixsum, inclusive = 0 for exclusive prefixsum
+  *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_prefixsum_i8(gdf_column *inp, gdf_column *out, int inclusive);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes a prefixsum on a gdf_column of type int32
+ *
+ * @Param[in] The input gdf_column
+ * @Param[out] The output gdf_column. The memory for the output will be allocated by the function
+ * @Param[in] inclusive = 1 for inclusive prefixsum, inclusive = 0 for exclusive prefixsum
+  *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_prefixsum_i32(gdf_column *inp, gdf_column *out, int inclusive);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes a prefixsum on a gdf_column of type int64
+ *
+ * @Param[in] The input gdf_column
+ * @Param[out] The output gdf_column. The memory for the output will be allocated by the function
+ * @Param[in] inclusive = 1 for inclusive prefixsum, inclusive = 0 for exclusive prefixsum
+  *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_prefixsum_i64(gdf_column *inp, gdf_column *out, int inclusive);
+
 
 
 /* unary operators */
@@ -203,12 +675,12 @@ gdf_error gdf_prefixsum_i64(gdf_column *inp, gdf_column *out, int inclusive);
 
 /* --------------------------------------------------------------------------*/
 /** 
- * @Synopsis  Computes the hash value of each row in the input set of columns.
+ * @brief  Computes the hash value of each row in the input set of columns.
  * 
- * @Param num_cols The number of columns in the input set
- * @Param input The list of columns whose rows will be hashed
- * @Param hash The hash function to use
- * @Param output The hash value of each row of the input
+ * @Param[in] num_cols The number of columns in the input set
+ * @Param[in] input The list of columns whose rows will be hashed
+ * @Param[in] hash The hash function to use
+ * @Param[out] output The hash value of each row of the input
  * 
  * @Returns   GDF_SUCCESS if the operation was successful, otherwise an appropriate
  * error code
