@@ -56,5 +56,6 @@ add_subdirectory(groupby)
 add_subdirectory(unaryops)
 add_subdirectory(filterops_numeric)
 add_subdirectory(quantiles)
+add_subdirectory(validops)
 
 message(STATUS "******** Tests are ready ********")

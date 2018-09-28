@@ -161,6 +161,7 @@ set(libgdf_source_files
     src/unaryops.cu
     #src/windowedops.cu
     src/quantiles.cu
+    src/validops.cu
     ${binary_operation_source_files}
 )
 
