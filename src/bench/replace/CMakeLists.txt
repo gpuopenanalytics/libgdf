@@ -15,5 +15,8 @@
 # limitations under the License.
 #=============================================================================
 
-configure_test(replace-test replace-test.cu)
 
+if (GDF_BENCHMARK)
+
+GDF_ADD_BENCHMARK(replace-benchmark replace-benchmark.cu)
+endif()
