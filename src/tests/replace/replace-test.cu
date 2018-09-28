@@ -29,6 +29,9 @@ MakeDeviceVector(const std::initializer_list<T> list) {
     return device_data;
 }
 
+
+
+// This is the main teast feature
 template <class T>
 class ReplaceTest : public testing::Test {
 protected:
@@ -65,6 +68,7 @@ using Types = testing::
 
 TYPED_TEST_CASE(ReplaceTest, Types);
 
+// Simple test, replacing all even values
 TYPED_TEST(ReplaceTest, ReplaceEvenPosition) {
     thrust::device_ptr<TypeParam> results =
       this->test({1, 2, 3, 4, 5, 6, 7, 8}, {2, 4, 6, 8}, {0, 2, 4, 6});
@@ -75,9 +79,11 @@ TYPED_TEST(ReplaceTest, ReplaceEvenPosition) {
     EXPECT_EQ(6, results[7]);
 }
 
+
+// Similar test as ReplaceEvenPosition, but with unordered data
 TYPED_TEST(ReplaceTest, Unordered) {
     thrust::device_ptr<TypeParam> results =
-      this->test({7, 5, 6, 3, 1, 2, 8, 4}, {2, 4, 6, 8}, {0, 2, 4, 6});
+      this->test({7, 5, 6, 3, 1, 2, 8, 4}, {2, 6, 4, 8}, {0, 4, 2, 6});
 
     EXPECT_EQ(4, results[2]);
     EXPECT_EQ(0, results[5]);
@@ -86,8 +92,43 @@ TYPED_TEST(ReplaceTest, Unordered) {
 }
 
 
+// Testing with Empty Replace
+TYPED_TEST(ReplaceTest, EmptyReplace) {
+    thrust::device_ptr<TypeParam> results =
+      this->test({7, 5, 6, 3, 1, 2, 8, 4}, {}, {});
+
+    EXPECT_EQ(7, results[0]);
+    EXPECT_EQ(5, results[1]);
+    EXPECT_EQ(6, results[2]);
+    EXPECT_EQ(3, results[3]);
+    EXPECT_EQ(1, results[4]);
+    EXPECT_EQ(2, results[5]);
+    EXPECT_EQ(8, results[6]);
+    EXPECT_EQ(4, results[7]);
+}
+
+// Testing with Nothing To Replace
+TYPED_TEST(ReplaceTest, NothingToReplace) {
+    thrust::device_ptr<TypeParam> results =
+      this->test({7, 5, 6, 3, 1, 2, 8, 4}, {10, 11, 12}, {15, 16, 17});
+
+    EXPECT_EQ(7, results[0]);
+    EXPECT_EQ(5, results[1]);
+    EXPECT_EQ(6, results[2]);
+    EXPECT_EQ(3, results[3]);
+    EXPECT_EQ(1, results[4]);
+    EXPECT_EQ(2, results[5]);
+    EXPECT_EQ(8, results[6]);
+    EXPECT_EQ(4, results[7]);
+}
+
+// Testing with Empty Data
+TYPED_TEST(ReplaceTest, EmptyData) {
+    this->test({}, {10, 11, 12}, {15, 16, 17});
+}
 
 
+// Test with much larger data sets
 TEST(LargeScaleReplaceTest, LargeScaleReplaceTest) {
 
 	{

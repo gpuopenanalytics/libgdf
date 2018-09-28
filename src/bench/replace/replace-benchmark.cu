@@ -24,7 +24,7 @@
 
 #include <gdf/gdf.h>
 
-#include "utils.h"
+#include "../../tests/replace/utils.h"
 
 using T = std::int64_t;
 
