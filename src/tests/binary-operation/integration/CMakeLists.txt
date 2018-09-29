@@ -15,40 +15,44 @@
 # limitations under the License.
 #=============================================================================
 
-## Test name
-set(GDF_TEST_NAME BinaryOperationsIntegrationTest)
+function(ConfigureTest  test_name  test_source)
+    ## Add link directory
+    link_directories(${CUDA_LIBRARY_DIR})
+    link_directories(${CUDA_LIBRARY_STUBS_DIR})
+
+    ## Add test
+    add_executable(${test_name} ${test_source})
+    add_test(NAME ${test_name} COMMAND ${test_name})
+
+    ## Clear include header property
+    set_target_properties(${test_name} PROPERTIES INCLUDE_DIRECTORIES "")
+    set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
+
+    ## Include headers
+    target_include_directories(${test_name} PRIVATE "${GTEST_INCLUDE_DIRS}")
+    target_include_directories(${test_name} PRIVATE "${CUDA_INCLUDE_DIRS}")
+    target_include_directories(${test_name} PRIVATE "${PROJECT_SOURCE_DIR}/include")
+    target_include_directories(${test_name} PRIVATE "${PROJECT_SOURCE_DIR}/src")
+
+    ## Link libraries
+    target_link_libraries(${test_name} ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries(${test_name} ${GTEST_LIBRARIES})
+    target_link_libraries(${test_name} gdf)
+    target_link_libraries(${test_name} ${CUDA_CUDA_LIB})
+    target_link_libraries(${test_name} ${CUDA_NVRTC_LIB})
+endfunction()
 
 
-## Set sources
-set(GDF_SOURCE_FILES
+## BinaryOperationIntegrationTest
+set(binop_source
     "${PROJECT_SOURCE_DIR}/src/tests/binary-operation/util/types.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/binary-operation-integration-test.cpp")
 
+ConfigureTest("BinaryOperationIntegrationTest" "${binop_source}")
 
-## Add link directory
-link_directories(${CUDA_LIBRARY_DIR})
-link_directories(${CUDA_LIBRARY_STUBS_DIR})
+## BinaryOperationOperandsNullTest
+set(binop_source
+    "${PROJECT_SOURCE_DIR}/src/tests/binary-operation/util/types.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/binary-operation-operands-null-test.cpp")
 
-
-## Add test
-add_executable(${GDF_TEST_NAME} ${GDF_SOURCE_FILES})
-add_test(NAME ${GDF_TEST_NAME} COMMAND ${GDF_TEST_NAME})
-
-
-## Clear include header property
-set_target_properties(${GDF_TEST_NAME} PROPERTIES INCLUDE_DIRECTORIES "")
-set_target_properties(${GDF_TEST_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
-
-
-## Include headers
-target_include_directories(${GDF_TEST_NAME} PRIVATE "${GTEST_INCLUDE_DIRS}")
-target_include_directories(${GDF_TEST_NAME} PRIVATE "${CUDA_INCLUDE_DIRS}")
-target_include_directories(${GDF_TEST_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")
-target_include_directories(${GDF_TEST_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/src")
-
-
-## Link libraries
-target_link_libraries(${GDF_TEST_NAME} ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(${GDF_TEST_NAME} gdf)
-target_link_libraries(${GDF_TEST_NAME} ${CUDA_CUDA_LIB})
-target_link_libraries(${GDF_TEST_NAME} ${CUDA_NVRTC_LIB})
+ConfigureTest("BinaryOperationOperandsNullTest" "${binop_source}")

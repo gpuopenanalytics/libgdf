@@ -28,21 +28,11 @@ R"***(
     #include "operation.h"
     #include "gdf_data.h"
 
-    #define WARP_MASK 0xFFFFFFFF
-
-    __device__ __forceinline__
-    void shiftMask(uint32_t& mask) {
-        #pragma unroll
-        for (int offset = 16; offset > 0; offset /= 2) {
-            mask += __shfl_down_sync(WARP_MASK, mask, offset);
-        }
-    }
-
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
     __global__
     void kernel_v_s(int size,
                     TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data,
-                    uint32_t* out_valid, uint32_t* vax_valid) {
+                    uint32_t* out_valid, uint32_t* vax_valid, uint32_t vay_valid) {
         int tid = threadIdx.x;
         int blkid = blockIdx.x;
         int blksz = blockDim.x;
@@ -56,7 +46,7 @@ R"***(
 
             if ((i % warpSize) == 0) {
                 int index = i / warpSize;
-                out_valid[index] = vax_valid[index];
+                out_valid[index] = vax_valid[index] & vay_valid;
             }
         }
     }
@@ -79,16 +69,16 @@ R"***(
 
             if ((i % warpSize) == 0) {
                 int index = i / warpSize;
-                out_valid[index] = vax_valid[index] | vay_valid[index];
+                out_valid[index] = vax_valid[index] & vay_valid[index];
             }
         }
     }
 
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeVal, typename TypeOpe>
     __global__
-    void kernel_v_s_d(int size, gdf_data def_data,
-                      TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data,
-                      uint32_t* out_valid, uint32_t* vax_valid) {
+    void kernel_v_s_d(int size,
+                      TypeOut* out_data, TypeVax* vax_data, gdf_data vay_data, gdf_data def_data,
+                      uint32_t* out_valid, uint32_t* vax_valid, uint32_t vay_valid, uint32_t def_valid) {
         int tid = threadIdx.x;
         int blkid = blockIdx.x;
         int blksz = blockDim.x;
@@ -98,27 +88,32 @@ R"***(
         int step = blksz * gridsz;
 
         for (int i=start; i<size; i+=step) {
+            int index = i / warpSize;
             uint32_t position = i % warpSize;
-            uint32_t is_vax_valid = vax_valid[i / warpSize];
+            uint32_t is_vax_valid = vax_valid[index];
 
             uint32_t sel_vax = (is_vax_valid >> position) & 1;
-            TypeVax vax_data_aux = ((TypeVax)sel_vax * vax_data[i]) + ((TypeVax)(sel_vax ^ 1) * (TypeVax)((TypeVal)def_data));
+            TypeVax vax_data_aux = ((TypeVax)sel_vax * vax_data[i]) +
+                                   ((TypeVax)(sel_vax ^ 1) * (TypeVax)((TypeVal)def_data));
 
-            out_data[i] = TypeOpe::template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, (TypeVay)vay_data);
+            TypeVay vay_data_aux = ((TypeVay)(vay_valid & 1) * (TypeVay)vay_data) +
+                                   ((TypeVay)(vay_valid + 1) * (TypeVay)((TypeVal)def_data));
+
+            out_data[i] = TypeOpe::template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, vay_data_aux);
 
             if ((i % warpSize) == 0) {
-                int index = i / warpSize;
-                out_valid[index] = vax_valid[index];
+                out_valid[index] = (vax_valid[index] & vay_valid) |
+                                   (vax_valid[index] & def_valid) |
+                                   (vay_valid & def_valid);
             }
         }
     }
 
-
     template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeVal, typename TypeOpe>
     __global__
-    void kernel_v_v_d(int size, gdf_data def_data,
-                      TypeOut* out_data, TypeVax* vax_data, TypeVay* vay_data,
-                      uint32_t* out_valid, uint32_t* vax_valid, uint32_t* vay_valid) {
+    void kernel_v_v_d(int size,
+                      TypeOut* out_data, TypeVax* vax_data, TypeVay* vay_data, gdf_data def_data,
+                      uint32_t* out_valid, uint32_t* vax_valid, uint32_t* vay_valid, uint32_t def_valid) {
         int tid = threadIdx.x;
         int blkid = blockIdx.x;
         int blksz = blockDim.x;
@@ -134,18 +129,19 @@ R"***(
             uint32_t is_vay_valid = vay_valid[index];
 
             uint32_t sel_vax = (is_vax_valid >> position) & 1;
-            TypeVax vax_data_aux = ((TypeVax)sel_vax * vax_data[i]) + ((TypeVax)(sel_vax ^ 1) * (TypeVax)((TypeVal)def_data));
+            TypeVax vax_data_aux = ((TypeVax)sel_vax * vax_data[i]) +
+                                   ((TypeVax)(sel_vax ^ 1) * (TypeVax)((TypeVal)def_data));
 
             uint32_t sel_vay = (is_vay_valid >> position) & 1;
-            TypeVay vay_data_aux = ((TypeVay)sel_vay * vay_data[i]) + ((TypeVay)(sel_vay ^ 1) * (TypeVay)((TypeVal)def_data));
+            TypeVay vay_data_aux = ((TypeVay)sel_vay * vay_data[i]) +
+                                   ((TypeVay)(sel_vay ^ 1) * (TypeVay)((TypeVal)def_data));
 
             out_data[i] = TypeOpe::template operate<TypeOut, TypeVax, TypeVay>(vax_data_aux, vay_data_aux);
 
-            uint32_t valid = (is_vax_valid | is_vay_valid) & (1 << position);
-            shiftMask(valid);
-
             if ((i % warpSize) == 0) {
-                out_valid[index] = valid;
+                out_valid[index] = (vax_valid[index] & vay_valid[index]) |
+                                   (vax_valid[index] & def_valid) |
+                                   (vay_valid[index] & def_valid);
             }
         }
     }

@@ -141,15 +141,13 @@ namespace jit {
         }
         auto option_scalar_def = verify_scalar(def);
         if (!option_scalar_def) {
-            Launcher::launch().kernel("kernel_v_s")
-                              .instantiate(ope, out, vax, vay)
-                              .launch(out, vax, vay);
+            return option_scalar_def.get_gdf_error();
         }
-        else {
-            Launcher::launch().kernel("kernel_v_s_d")
-                              .instantiate(ope, out, vax, vay, def)
-                              .launch(out, vax, vay, def);
-        }
+
+        Launcher::launch().kernel("kernel_v_s_d")
+                          .instantiate(ope, out, vax, vay, def)
+                          .launch(out, vax, vay, def);
+
         return GDF_SUCCESS;
     }
 
@@ -160,15 +158,13 @@ namespace jit {
         }
         auto option_scalar = verify_scalar(def);
         if (!option_scalar) {
-            Launcher::launch().kernel("kernel_v_v")
-                              .instantiate(ope, out, vax, vay)
-                              .launch(out, vax, vay);
+            return option_scalar.get_gdf_error();
         }
-        else {
-            Launcher::launch().kernel("kernel_v_v_d")
-                              .instantiate(ope, out, vax, vay, def)
-                              .launch(out, vax, vay, def);
-        }
+
+        Launcher::launch().kernel("kernel_v_v_d")
+                          .instantiate(ope, out, vax, vay, def)
+                          .launch(out, vax, vay, def);
+
         return GDF_SUCCESS;
     }
 

@@ -36,7 +36,7 @@ namespace library {
         class InnerWrapper {
         public:
             InnerWrapper(Field<T>& container)
-             : mField {container}
+             : mField (container)
             { }
 
             T operator[](int index) {

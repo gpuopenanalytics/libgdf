@@ -27,9 +27,16 @@ namespace library {
     template <typename Type>
     class Scalar {
     public:
-        void setValue(Type value) {
+        Scalar& setValue(Type value) {
             mScalar.dtype = gdf::library::GdfDataType<Type>::Value;
             gdf::library::setScalar(mScalar, value);
+            mScalar.is_valid = true;
+            return *this;
+        }
+
+        Scalar& setValid(bool value) {
+            mScalar.is_valid = value;
+            return *this;
         }
 
     public:
@@ -39,6 +46,10 @@ namespace library {
 
         gdf_dtype getType() {
             return mScalar.dtype;
+        }
+
+        bool isValid() {
+            return mScalar.is_valid;
         }
 
     public:

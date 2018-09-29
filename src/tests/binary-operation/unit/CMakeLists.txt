@@ -16,7 +16,7 @@
 #=============================================================================
 
 ## Test name
-set(GDF_TEST_NAME BinaryOperationsVerifyInputTest)
+set(GDF_TEST_NAME BinaryOperationVerifyInputTest)
 
 
 ## Set sources

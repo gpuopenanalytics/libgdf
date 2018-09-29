@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-#include "gtest/gtest.h"
-#include "tests/binary-operation/util/scalar.h"
-#include "tests/binary-operation/util/vector.h"
-#include "tests/binary-operation/util/operation.h"
+#include "tests/binary-operation/integration/assert-binops.h"
+
+namespace gdf {
+namespace test {
+namespace binop {
 
 struct BinaryOperationIntegrationTest : public ::testing::Test {
     BinaryOperationIntegrationTest() {
@@ -31,142 +32,6 @@ struct BinaryOperationIntegrationTest : public ::testing::Test {
     }
 
     virtual void TearDown() {
-    }
-
-    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
-    void assertVector(gdf::library::Vector<TypeOut>& out,
-                      gdf::library::Vector<TypeVax>& vax,
-                      gdf::library::Scalar<TypeVay>& vay,
-                      TypeOpe&& ope) {
-        ASSERT_TRUE(out.dataSize() == vax.dataSize());
-        for (int index = 0; index < out.dataSize(); ++index) {
-            ASSERT_TRUE(out.data[index] == (TypeOut)(ope(vax.data[index], (TypeVay) vay.getValue())));
-        }
-
-        ASSERT_TRUE(out.validSize() == vax.validSize());
-        for (int index = 0; index < out.validSize(); ++index) {
-            ASSERT_TRUE(out.valid[index] == vax.valid[index]);
-        }
-    }
-
-    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
-    void assertVector(gdf::library::Vector<TypeOut>& out,
-                      gdf::library::Vector<TypeVax>& vax,
-                      gdf::library::Vector<TypeVay>& vay,
-                      TypeOpe&& ope) {
-        ASSERT_TRUE(out.dataSize() == vax.dataSize());
-        ASSERT_TRUE(out.dataSize() == vay.dataSize());
-        for (int index = 0; index < out.dataSize(); ++index) {
-            ASSERT_TRUE(out.data[index] == (TypeOut)(ope(vax.data[index], vay.data[index])));
-        }
-
-        ASSERT_TRUE(out.validSize() == vax.validSize());
-        ASSERT_TRUE(out.validSize() == vay.validSize());
-        for (int index = 0; index < out.validSize(); ++index) {
-            ASSERT_TRUE(out.valid[index] == vax.valid[index] | vay.valid[index]);
-        }
-    }
-
-    /**
-     * According to CUDA Programming Guide, 'E.1. Standard Functions', 'Table 7 - Double-Precision
-     * Mathematical Standard Library Functions with Maximum ULP Error'
-     * The pow function has 2 (full range) maximum ulp error.
-     */
-    template <typename TypeOut, typename TypeVax, typename TypeVay>
-    void assertVector(gdf::library::Vector<TypeOut>& out,
-                      gdf::library::Vector<TypeVax>& vax,
-                      gdf::library::Vector<TypeVay>& vay,
-                      gdf::library::operation::Pow<TypeOut, TypeVax, TypeVay>&& ope) {
-        const int ULP = 2.0;
-        ASSERT_TRUE(out.dataSize() == vax.dataSize());
-        ASSERT_TRUE(out.dataSize() == vay.dataSize());
-        for (int index = 0; index < out.dataSize(); ++index) {
-            ASSERT_TRUE(abs(out.data[index] - (TypeOut)(ope(vax.data[index], vay.data[index]))) < ULP);
-        }
-
-        ASSERT_TRUE(out.validSize() == vax.validSize());
-        ASSERT_TRUE(out.validSize() == vay.validSize());
-        for (int index = 0; index < out.validSize(); ++index) {
-            ASSERT_TRUE(out.valid[index] == vax.valid[index] | vay.valid[index]);
-        }
-    }
-
-    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeVal, typename TypeOpe>
-    void assertVector(gdf::library::Vector<TypeOut>& out,
-                      gdf::library::Vector<TypeVax>& vax,
-                      gdf::library::Scalar<TypeVay>& vay,
-                      gdf::library::Scalar<TypeVal>& def,
-                      TypeOpe&& ope) {
-        using ValidType = typename gdf::library::Vector<TypeOut>::ValidType;
-        int ValidSize = gdf::library::Vector<TypeOut>::ValidSize;
-
-        ASSERT_TRUE(out.dataSize() == vax.dataSize());
-        ASSERT_TRUE(out.validSize() == vax.validSize());
-
-        ValidType mask = 1;
-        int index_valid = 0;
-        for (int index = 0; index < out.dataSize(); ++index) {
-            if (!(index % ValidSize)) {
-                mask = 1;
-                index_valid = index / ValidSize;
-            } else {
-                mask <<= 1;
-            }
-
-            TypeVax vax_aux = vax.data[index];
-            if ((vax.valid[index_valid] & mask) == 0) {
-                vax_aux = (TypeVal) def.getValue();
-            }
-
-            ASSERT_TRUE(out.data[index] == (TypeOut)(ope(vax_aux, (TypeVay)vay)));
-        }
-
-        ASSERT_TRUE(out.validSize() == vax.validSize());
-        for (int index = 0; index < out.validSize(); ++index) {
-            ASSERT_TRUE(out.valid[index] == vax.valid[index]);
-        }
-    }
-
-    template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeDef, typename TypeOpe>
-    void assertVector(gdf::library::Vector<TypeOut>& out,
-                      gdf::library::Vector<TypeVax>& vax,
-                      gdf::library::Vector<TypeVay>& vay,
-                      gdf::library::Scalar<TypeDef>& def,
-                      TypeOpe&& ope) {
-        using ValidType = typename gdf::library::Vector<TypeOut>::ValidType;
-        int ValidSize = gdf::library::Vector<TypeOut>::ValidSize;
-
-        ASSERT_TRUE(out.dataSize() == vax.dataSize());
-        ASSERT_TRUE(out.dataSize() == vay.dataSize());
-
-        ValidType mask = 1;
-        int index_valid = 0;
-        for (int index = 0; index < out.dataSize(); ++index) {
-            if (!(index % ValidSize)) {
-                mask = 1;
-                index_valid = index / ValidSize;
-            } else {
-                mask <<= 1;
-            }
-
-            TypeVax vax_aux = vax.data[index];
-            if ((vax.valid[index_valid] & mask) == 0) {
-                vax_aux = (TypeVax) def.getValue();
-            }
-
-            TypeVay vay_aux = vay.data[index];
-            if ((vay.valid[index_valid] & mask) == 0) {
-                vay_aux = (TypeVay) def.getValue();
-            }
-
-            ASSERT_TRUE(out.data[index] == (TypeOut)(ope(vax_aux, vay_aux)));
-        }
-
-        ASSERT_TRUE(out.validSize() == vax.validSize());
-        ASSERT_TRUE(out.validSize() == vay.validSize());
-        for (int index = 0; index < out.validSize(); ++index) {
-            ASSERT_TRUE(out.valid[index] == vax.valid[index] | vay.valid[index]);
-        }
     }
 };
 
@@ -191,7 +56,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_SI32_FP32_UI32) {
 
     out.readVector();
 
-    assertVector(out, vay, vax, ADD());
+    ASSERT_BINOP(out, vay, vax, ADD());
 }
 
 
@@ -215,7 +80,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_SI08_UI16_SI16) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, ADD());
+    ASSERT_BINOP(out, vax, vay, ADD());
 }
 
 
@@ -240,7 +105,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_UI32_FP64_SI08) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, ADD());
+    ASSERT_BINOP(out, vax, vay, ADD());
 }
 
 
@@ -267,7 +132,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_Default_SI32_SI16_UI64_
 
     out.readVector();
 
-    assertVector(out, vay, vax, def, ADD());
+    ASSERT_BINOP(out, vay, vax, def, ADD());
 }
 
 
@@ -294,7 +159,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_Default_FP32_SI16_UI08_
 
     out.readVector();
 
-    assertVector(out, vax, vay, def, ADD());
+    ASSERT_BINOP(out, vax, vay, def, ADD());
 }
 
 
@@ -322,7 +187,7 @@ TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_Default_FP64_SI32_UI32_
 
     out.readVector();
 
-    assertVector(out, vax, vay, def, ADD());
+    ASSERT_BINOP(out, vax, vay, def, ADD());
 }
 
 
@@ -345,7 +210,7 @@ TEST_F(BinaryOperationIntegrationTest, Sub_Vector_Vector_UI64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, SUB());
+    ASSERT_BINOP(out, vax, vay, SUB());
 }
 
 
@@ -368,7 +233,7 @@ TEST_F(BinaryOperationIntegrationTest, Mul_Vector_Vector_UI64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, MUL());
+    ASSERT_BINOP(out, vax, vay, MUL());
 }
 
 
@@ -391,7 +256,7 @@ TEST_F(BinaryOperationIntegrationTest, Div_Vector_Vector_UI64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, DIV());
+    ASSERT_BINOP(out, vax, vay, DIV());
 }
 
 
@@ -414,7 +279,7 @@ TEST_F(BinaryOperationIntegrationTest, TrueDiv_Vector_Vector_UI64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, TRUEDIV());
+    ASSERT_BINOP(out, vax, vay, TRUEDIV());
 }
 
 
@@ -437,7 +302,7 @@ TEST_F(BinaryOperationIntegrationTest, FloorDiv_Vector_Vector_UI64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, FLOORDIV());
+    ASSERT_BINOP(out, vax, vay, FLOORDIV());
 }
 
 
@@ -460,7 +325,7 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_UI64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, MOD());
+    ASSERT_BINOP(out, vax, vay, MOD());
 }
 
 
@@ -483,7 +348,7 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP32) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, MOD());
+    ASSERT_BINOP(out, vax, vay, MOD());
 }
 
 
@@ -506,7 +371,7 @@ TEST_F(BinaryOperationIntegrationTest, Mod_Vector_Vector_FP64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, MOD());
+    ASSERT_BINOP(out, vax, vay, MOD());
 }
 
 
@@ -529,54 +394,9 @@ TEST_F(BinaryOperationIntegrationTest, Pow_Vector_Vector_UI64) {
 
     out.readVector();
 
-    assertVector(out, vax, vay, POW());
+    ASSERT_BINOP(out, vax, vay, POW());
 }
 
-
-TEST_F(BinaryOperationIntegrationTest, Add_Vector_Scalar_Default_FP32_FP32_FP32_FP32) {
-    using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
-    using ADD = gdf::library::operation::Add<FP32, FP32, FP32>;
-
-    gdf::library::Vector<FP32> out;
-    gdf::library::Vector<FP32> vax;
-    gdf::library::Scalar<FP32> vay;
-    gdf::library::Scalar<FP32> def;
-
-    vax.rangeData(0, 100000.0, 1.0)
-       .rangeValid(false, 0, 3);
-    vay.setValue(1000000.0);
-    def.setValue(2222222.0);
-    out.emplaceVector(vax.dataSize());
-
-    auto result = gdf_binary_operation_v_v_s_d(out.column(), vax.column(), vay.scalar(), def.scalar(), GDF_ADD);
-    ASSERT_TRUE(result == GDF_SUCCESS);
-
-    out.readVector();
-
-    assertVector(out, vax, vay, def, ADD());
-}
-
-
-TEST_F(BinaryOperationIntegrationTest, Add_Vector_Vector_Default_FP32_FP32_FP32_FP32) {
-    using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
-    using ADD = gdf::library::operation::Add<FP32, FP32, FP32>;
-
-    gdf::library::Vector<FP32> out;
-    gdf::library::Vector<FP32> vax;
-    gdf::library::Vector<FP32> vay;
-    gdf::library::Scalar<FP32> def;
-
-    vax.rangeData(0, 100000.0, 1.0)
-       .rangeValid(false, 0, 3);
-    vay.rangeData(0, 200000.0, 2.0)
-       .rangeValid(false, 0, 4);
-    def.setValue(5555.0);
-    out.emplaceVector(vax.dataSize());
-
-    auto result = gdf_binary_operation_v_v_v_d(out.column(), vax.column(), vay.column(), def.scalar(), GDF_ADD);
-    ASSERT_TRUE(result == GDF_SUCCESS);
-
-    out.readVector();
-
-    assertVector(out, vax, vay, def, ADD());
-}
+} // namespace binop
+} // namespace test
+} // namespace gdf

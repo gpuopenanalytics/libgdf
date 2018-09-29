@@ -27,28 +27,26 @@ typedef enum {
     N_GDF_TYPES, /* additional types should go BEFORE N_GDF_TYPES */
 } gdf_dtype;
 
-/* ----------------------------------------------------------------------------*/
 /**
- * @Synopsis
- * Union used for scalar type.
+ * @union gdf_data
+ * @brief Union used for scalar type.
  * It stores a unique value for scalar type.
  * It has a direct relationship with the gdf_dtype.
  */
-/* ----------------------------------------------------------------------------*/
 typedef union {
-    int8_t   si08;  // GDF_INT8
-    int16_t  si16;  // GDF_INT16
-    int32_t  si32;  // GDF_INT32
-    int64_t  si64;  // GDF_INT64
-    uint8_t  ui08;  // GDF_UINT8
-    uint16_t ui16;  // GDF_UINT16
-    uint32_t ui32;  // GDF_UINT32
-    uint64_t ui64;  // GDF_UINT64
-    float    fp32;  // GDF_FLOAT32
-    double   fp64;  // GDF_FLOAT64
-    int32_t  dt32;  // GDF_DATE32
-    int64_t  dt64;  // GDF_DATE64
-    int64_t  tmst;  // GDF_TIMESTAMP
+    int8_t   si08;  /**< GDF_INT8      */
+    int16_t  si16;  /**< GDF_INT16     */
+    int32_t  si32;  /**< GDF_INT32     */
+    int64_t  si64;  /**< GDF_INT64     */
+    uint8_t  ui08;  /**< GDF_UINT8     */
+    uint16_t ui16;  /**< GDF_UINT16    */
+    uint32_t ui32;  /**< GDF_UINT32    */
+    uint64_t ui64;  /**< GDF_UINT64    */
+    float    fp32;  /**< GDF_FLOAT32   */
+    double   fp64;  /**< GDF_FLOAT64   */
+    int32_t  dt32;  /**< GDF_DATE32    */
+    int64_t  dt64;  /**< GDF_DATE64    */
+    int64_t  tmst;  /**< GDF_TIMESTAMP */
 } gdf_data;
 
 /* --------------------------------------------------------------------------*/
@@ -97,18 +95,20 @@ typedef struct {
 	// here we can also hold info for decimal datatype or any other datatype that requires additional information
 } gdf_dtype_extra_info;
 
-/* ----------------------------------------------------------------------------*/
 /**
- * @Synopsis
- * Struct used for scalar type.
- * The 'data' member variable represents the value (union) and
- * 'dtype' member variable represents the type.
- * The gdf_scalar has no null or invalid value.
+ * @struct gdf_scalar
+ * @brief  literal or variable
+ *
+ * The struct is used as a literal or a variable in the libgdf library.
+ *
+ * @var data     A union that represents the value.
+ * @var dtype    An enum that represents the type of the value.
+ * @var is_valid A boolean that represents whether the scalar is null.
  */
-/* ----------------------------------------------------------------------------*/
 typedef struct {
     gdf_data  data;
     gdf_dtype dtype;
+    bool      is_valid;
 } gdf_scalar;
 
 typedef struct gdf_column_{
@@ -159,12 +159,17 @@ typedef enum {
   N_GDF_AGG_OPS,      /**< The total number of aggregation operations. ALL NEW OPERATIONS SHOULD BE ADDED ABOVE THIS LINE*/
 } gdf_agg_op;
 
-/* ----------------------------------------------------------------------------*/
 /**
- * @Synopsis
- * It represents the different binary operators implemented.
+ * @enum gdf_binary_operator
+ * It contains the different operations that can be performed in the binary operations.
+ * The enumeration is used in the following functions:
+ * - gdf_binary_operation_v_s_v
+ * - gdf_binary_operation_v_v_s
+ * - gdf_binary_operation_v_v_v
+ * - gdf_binary_operation_v_s_v_d
+ * - gdf_binary_operation_v_v_s_d
+ * - gdf_binary_operation_v_v_v_d
  */
-/* ----------------------------------------------------------------------------*/
 typedef enum {
     GDF_ADD,
     GDF_SUB,
