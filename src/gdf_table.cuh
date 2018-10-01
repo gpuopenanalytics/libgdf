@@ -74,6 +74,7 @@ struct row_masker
   gdf_valid_type ** column_valid_masks;
 };
 
+
 /* --------------------------------------------------------------------------*/
 /** 
  * @Synopsis  Scatters a validity bitmask.
@@ -106,11 +107,13 @@ void scatter_valid_mask( gdf_valid_type const * const input_mask,
   while(row_number < num_rows)
   {
     // Get the bit corresponding to the row
+    // FIXME Replace with a standard `get_bit` function
     const mask_type input_bit = input_mask32[row_number/BITS_PER_MASK] & (static_cast<mask_type>(1) << (row_number % BITS_PER_MASK));
 
     // Only scatter the input bit if it is valid
     if(input_bit > 0)
     {
+      // FIXME Replace with a standard `get_bit` function
       const size_type output_row = scatter_map[row_number];
       // Set the according output bit
       const mask_type output_bit = static_cast<mask_type>(1) << (output_row % BITS_PER_MASK);
@@ -125,6 +128,62 @@ void scatter_valid_mask( gdf_valid_type const * const input_mask,
     row_number += blockDim.x * gridDim.x;
   }
 }
+
+/* --------------------------------------------------------------------------*/
+/** 
+ * @Synopsis  Gathers a validity bitmask.
+ * 
+ * This kernel is used in order to gather the validity bit mask for a gdf_column.
+ * 
+ * @Param input_mask The mask that will be gathered.
+ * @Param output_mask The output after gathering the input
+ * @Param gather_map The map that indicates where elements from the input
+   will be gathered to in the output. output_bit[ gather_map [i] ] = input_bit[i]
+ * @Param num_rows The number of bits in the masks
+ */
+/* ----------------------------------------------------------------------------*/
+template <typename size_type>
+__global__ 
+void gather_valid_mask( gdf_valid_type const * const input_mask,
+                        gdf_valid_type * const output_mask,
+                        size_type const * const __restrict__ gather_map,
+                        size_type const num_rows)
+{
+  using mask_type = uint32_t;
+  constexpr uint32_t BITS_PER_MASK = 8 * sizeof(mask_type);
+
+  // Cast the validity type to a type where atomicOr is natively supported
+  const mask_type * __restrict__ input_mask32 = reinterpret_cast<mask_type const *>(input_mask);
+  mask_type * const __restrict__ output_mask32 = reinterpret_cast<mask_type * >(output_mask);
+
+  size_type row_number = threadIdx.x + blockIdx.x * blockDim.x;
+
+  while(row_number < num_rows)
+  {
+    const size_type gather_location = gather_map[row_number];
+
+    // Get the bit corresponding from the gathered row
+    // FIXME Replace with a standard `get_bit` function
+    const mask_type input_bit = input_mask32[gather_location/BITS_PER_MASK] & (static_cast<mask_type>(1) << (gather_location % BITS_PER_MASK));
+
+    // Only set the output bit if the input is valid
+    if(input_bit > 0)
+    {
+      // FIXME Replace with a standard `set_bit` function
+      // Construct the mask that sets the bit for the output row
+      const mask_type output_bit = static_cast<mask_type>(1) << (row_number % BITS_PER_MASK);
+
+      // Find the mask in the output that will hold the bit for output row
+      const size_type output_location = row_number / BITS_PER_MASK;
+
+      // Bitwise OR to set the gathered row's bit
+      atomicOr(&output_mask32[output_location], output_bit);
+    }
+
+    row_number += blockDim.x * gridDim.x;
+  }
+}
+
 
 /* --------------------------------------------------------------------------*/
 /** 
@@ -158,6 +217,7 @@ public:
     }
 
 
+
     // Copy pointers to each column's data, types, and validity bitmasks 
     // to the device  as contiguous arrays
     device_columns_data.reserve(num_cols);
@@ -173,7 +233,7 @@ public:
       {
         assert(nullptr != current_column->data);
       }
-	
+
       // Compute the size of a row in the table in bytes
       int column_width_bytes{0};
       if(GDF_SUCCESS == get_column_byte_width(current_column, &column_width_bytes))
@@ -254,13 +314,6 @@ public:
     return column_length;
   }
 
-  __device__ bool is_row_valid(size_type row_index) const
-  {
-    const bool row_valid = gdf_is_valid(d_row_valid, row_index);
-
-    return row_valid;
-  }
-
 
   /* --------------------------------------------------------------------------*/
   /** 
@@ -273,6 +326,15 @@ public:
   byte_type get_row_size_bytes() const
   {
     return row_size_bytes;
+  }
+
+
+  
+  __device__ bool is_row_valid(size_type row_index) const
+  {
+    const bool row_valid = gdf_is_valid(d_row_valid, row_index);
+
+    return row_valid;
   }
 
 
@@ -767,6 +829,8 @@ public:
   gdf_error gather(thrust::device_vector<size_type> const & row_gather_map,
           gdf_table<size_type> & gather_output_table)
   {
+
+    // TODO Gather the bit validity masks for each column
     gdf_error gdf_status{GDF_SUCCESS};
   
     // Each column can be gathered in parallel, therefore create a 
@@ -1152,7 +1216,9 @@ gdf_error scatter_column(column_type const * const __restrict__ input_column,
 }
 
 
-  const size_type num_columns; /** The number of columns in the table */
+
+  const size_type num_columns;    /** The number of columns in the table */
+
   size_type column_length{0};     /** The number of rows in the table */
 
   gdf_column ** host_columns{nullptr};  /** The set of gdf_columns that this table wraps */

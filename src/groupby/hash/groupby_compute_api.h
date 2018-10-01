@@ -138,8 +138,10 @@ template< typename aggregation_type,
           typename aggregation_operation>
 gdf_error GroupbyHash(gdf_table<size_type> const & groupby_input_table,
                         const aggregation_type * const in_aggregation_column,
+                        gdf_valid_type const * const in_aggregation_validity_mask,
                         gdf_table<size_type> & groupby_output_table,
                         aggregation_type * out_aggregation_column,
+                        gdf_valid_type ** out_aggregation_validity_mask,
                         size_type * out_size,
                         aggregation_operation aggregation_op,
                         bool sort_result = false)
@@ -168,12 +170,23 @@ gdf_error GroupbyHash(gdf_table<size_type> const & groupby_input_table,
 
   CUDA_TRY(cudaGetLastError());
 
+  // Allocate an array to indicate the state of each bucket in the hash table
+  // There are 3 possible states:
+  // EMPTY: The bucket's payload is empty
+  // NULL_VALUD: The bucket's payload is a NULL
+  // VALID_VALUE: The bucket's payload is a valid value
+  bucket_state * hash_bucket_states{nullptr};
+  CUDA_TRY( cudaMalloc(&hash_bucket_states, hash_table_size * sizeof(bucket_state)) );
+  CUDA_TRY( cudaMemset(hash_bucket_states, bucket_state::EMPTY, hash_table_size * sizeof(bucket_state)) );
+
   // Inserts (i, aggregation_column[i]) as a key-value pair into the
   // hash table. When a given key already exists in the table, the aggregation operation
   // is computed between the new and existing value, and the result is stored back.
   build_aggregation_table<<<build_grid_size, block_size>>>(the_map.get(), 
                                                            groupby_input_table, 
                                                            in_aggregation_column,
+                                                           in_aggregation_validity_mask,
+                                                           hash_bucket_states,
                                                            input_num_rows,
                                                            aggregation_op,
                                                            row_comparator<map_type, size_type>(*the_map, groupby_input_table, groupby_input_table));
@@ -186,13 +199,23 @@ gdf_error GroupbyHash(gdf_table<size_type> const & groupby_input_table,
 
   const dim3 extract_grid_size ((hash_table_size + THREAD_BLOCK_SIZE - 1) / THREAD_BLOCK_SIZE, 1, 1);
 
+  // Initialize output aggregation column's validity mask
+  const size_type num_masks = gdf_get_num_chars_bitmask(input_num_rows);
+  if(nullptr == *out_aggregation_validity_mask)
+  {
+    CUDA_TRY( cudaMalloc(out_aggregation_validity_mask, num_masks * sizeof(gdf_valid_type)) );
+  }
+  CUDA_TRY( cudaMemset(*out_aggregation_validity_mask, 0, num_masks * sizeof(gdf_valid_type)) );
+
   // Extracts every non-empty key and value into separate contiguous arrays,
   // which provides the result of the groupby operation
   extract_groupby_result<<<extract_grid_size, block_size>>>(the_map.get(),
                                                             hash_table_size,
+                                                            hash_bucket_states,
                                                             groupby_output_table,
                                                             groupby_input_table,
                                                             out_aggregation_column,
+                                                            *out_aggregation_validity_mask,
                                                             global_write_index);
  
   CUDA_TRY(cudaGetLastError());
@@ -204,15 +227,32 @@ gdf_error GroupbyHash(gdf_table<size_type> const & groupby_input_table,
   groupby_output_table.set_column_length(*out_size);
 
   // Optionally sort the groupby/aggregation result columns
-  if(true == sort_result) {
+  if((*out_size > 0) && (true == sort_result)) {
       auto sorted_indices = groupby_output_table.sort();
       thrust::device_vector<aggregation_type> agg(*out_size);
       thrust::gather(thrust::device,
-              sorted_indices.begin(), sorted_indices.end(),
-              out_aggregation_column,
-              agg.begin());
+                     sorted_indices.begin(), 
+                     sorted_indices.end(),
+                     out_aggregation_column,
+                     agg.begin());
       thrust::copy(agg.begin(), agg.end(), out_aggregation_column);
+
+      if(nullptr != *out_aggregation_validity_mask)
+      {
+        // Reorder the bit-validity mask of the aggregation output column
+        // according to the new sorted order
+        const size_type gather_grid_size = (*out_size + THREAD_BLOCK_SIZE - 1)/THREAD_BLOCK_SIZE;
+        const size_type num_masks = gdf_get_num_chars_bitmask(*out_size);
+        thrust::device_vector<gdf_valid_type> new_valid_mask(num_masks,0);
+        gather_valid_mask<<<gather_grid_size, THREAD_BLOCK_SIZE>>>(*out_aggregation_validity_mask,
+                                                                   new_valid_mask.data().get(),
+                                                                   sorted_indices.data().get(),
+                                                                   *out_size);
+        thrust::copy(new_valid_mask.begin(), new_valid_mask.end(), *out_aggregation_validity_mask);
+      }
   }
+
+  CUDA_TRY( cudaFree(hash_bucket_states) );
 
   return GDF_SUCCESS;
 }
