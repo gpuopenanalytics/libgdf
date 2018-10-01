@@ -85,26 +85,34 @@ const ::parquet::RowGroupMetaData* GdfRowGroupReader::metadata() const { return 
 std::unique_ptr<FileReader>
 FileReader::OpenFile(const std::string &                path,
                      const ::parquet::ReaderProperties &properties) {
-    FileReader *const reader = new FileReader();
-    reader->parquetFileReader_.reset(new ::parquet::ParquetFileReader());
 
     std::shared_ptr<::arrow::io::ReadableFile> file;
 
     PARQUET_THROW_NOT_OK(
       ::arrow::io::ReadableFile::Open(path, properties.memory_pool(), &file));
 
-    std::unique_ptr<::parquet::RandomAccessSource> source(
-      new ::parquet::ArrowInputFile(file));
+    return FileReader::OpenFile(file, properties);
+}
 
-    std::unique_ptr<::parquet::ParquetFileReader::Contents> contents(
-      new internal::FileReaderContents(std::move(source), properties));
+std::unique_ptr<FileReader>
+FileReader::OpenFile(std::shared_ptr<::arrow::io::ReadableFile> file,
+		const ::parquet::ReaderProperties &properties) {
 
-    static_cast<internal::FileReaderContents *>(contents.get())
-      ->ParseMetaData();
+	FileReader *const reader = new FileReader();
+	reader->parquetFileReader_.reset(new ::parquet::ParquetFileReader());
 
-    reader->parquetFileReader_->Open(std::move(contents));
+	std::unique_ptr<::parquet::RandomAccessSource> source(
+			new ::parquet::ArrowInputFile(file));
 
-    return std::unique_ptr<FileReader>(reader);
+	std::unique_ptr<::parquet::ParquetFileReader::Contents> contents(
+			new internal::FileReaderContents(std::move(source), properties));
+
+	static_cast<internal::FileReaderContents *>(contents.get())
+	    		  ->ParseMetaData();
+
+	reader->parquetFileReader_->Open(std::move(contents));
+
+	return std::unique_ptr<FileReader>(reader);
 }
 
 std::shared_ptr<GdfRowGroupReader>

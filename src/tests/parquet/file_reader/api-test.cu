@@ -401,3 +401,45 @@ TEST_F(ParquetReaderAPITest, ByIdsInOrder) {
     checkInt64(*columns[2]);
     checkDouble(*columns[3]);
 }
+
+TEST_F(ParquetReaderAPITest, ByIdsOutOfOrder) {
+    const std::vector<std::size_t> row_group_indices = {0, 1};
+    const std::vector<std::size_t> column_indices    = {1, 3, 2, 0};
+
+    std::vector<gdf_column *> columns;
+
+    gdf_error error_code = gdf::parquet::read_parquet_by_ids(
+      filename, row_group_indices, column_indices, columns);
+
+    EXPECT_EQ(GDF_SUCCESS, error_code);
+
+    EXPECT_EQ(4U, columns.size());
+
+    checkBoolean(*columns[3]);
+    checkInt32(*columns[0]);
+    checkInt64(*columns[2]);
+    checkDouble(*columns[1]);
+}
+
+TEST_F(ParquetReaderAPITest, ByIdsInFromInterface) {
+    const std::vector<std::size_t> row_group_indices = {0, 1};
+    const std::vector<std::size_t> column_indices    = {0, 1, 2, 3};
+
+    std::vector<gdf_column *> columns;
+
+    std::shared_ptr<::arrow::io::ReadableFile> file;
+    const ::parquet::ReaderProperties properties = ::parquet::default_reader_properties();
+    ::arrow::io::ReadableFile::Open(filename, properties.memory_pool(), &file);
+
+    gdf_error error_code = gdf::parquet::read_parquet_by_ids(
+    		file, row_group_indices, column_indices, columns);
+
+    EXPECT_EQ(GDF_SUCCESS, error_code);
+
+    EXPECT_EQ(4U, columns.size());
+
+    checkBoolean(*columns[0]);
+    checkInt32(*columns[1]);
+    checkInt64(*columns[2]);
+    checkDouble(*columns[3]);
+}

@@ -31,7 +31,7 @@
 
 BEGIN_NAMESPACE_GDF_PARQUET
 
-/// \brief Read parquet file into array of gdf columns
+/// \brief Read parquet file from file path into array of gdf columns
 /// \param[in] filename path to parquet file
 /// \param[in] columns will be read from the file
 /// \param[out] out_gdf_columns array
@@ -47,17 +47,29 @@ END_NAMESPACE_GDF_PARQUET
 
 #include <string>
 #include <vector>
+#include <arrow/io/file.h>
 
 namespace gdf {
 namespace parquet {
 
-/// \brief Read parquet file into array of gdf columns
+/// \brief Read parquet file from file path into array of gdf columns
 /// \param[in] filename path to parquet file
 /// \param[in] indices of the rowgroups that will be read from the file
 /// \param[in] indices of the columns that will be read from the file
 /// \param[out] out_gdf_columns vector of gdf_column pointers. The data read.
 gdf_error
 read_parquet_by_ids(const std::string &             filename,
+                    const std::vector<std::size_t> &row_group_indices,
+                    const std::vector<std::size_t> &column_indices,
+                    std::vector<gdf_column *> &     out_gdf_columns);
+
+/// \brief Read parquet file from file interface into array of gdf columns
+/// \param[in] filename path to parquet file
+/// \param[in] indices of the rowgroups that will be read from the file
+/// \param[in] indices of the columns that will be read from the file
+/// \param[out] out_gdf_columns vector of gdf_column pointers. The data read.
+gdf_error
+read_parquet_by_ids(std::shared_ptr<::arrow::io::ReadableFile> file,
                     const std::vector<std::size_t> &row_group_indices,
                     const std::vector<std::size_t> &column_indices,
                     std::vector<gdf_column *> &     out_gdf_columns);

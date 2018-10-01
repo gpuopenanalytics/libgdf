@@ -20,6 +20,7 @@
 #define _GDF_PARQUET_FILE_READER_H
 
 #include <parquet/file_reader.h>
+#include <arrow/io/file.h>
 
 namespace gdf {
 namespace parquet {
@@ -50,6 +51,11 @@ public:
     OpenFile(const std::string &                path,
              const ::parquet::ReaderProperties &properties =
                ::parquet::default_reader_properties());
+
+    static std::unique_ptr<FileReader>
+        OpenFile(std::shared_ptr<::arrow::io::ReadableFile> file,
+                 const ::parquet::ReaderProperties &properties =
+                   ::parquet::default_reader_properties());
 
     std::shared_ptr<GdfRowGroupReader> RowGroup(int i);
     std::shared_ptr<::parquet::FileMetaData>   metadata() const;

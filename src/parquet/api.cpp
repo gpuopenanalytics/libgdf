@@ -560,20 +560,24 @@ _OpenFile(const std::string &filename) try {
     return nullptr;
 }
 
+static inline std::unique_ptr<FileReader>
+_OpenFile(std::shared_ptr<::arrow::io::ReadableFile> file) try {
+    return FileReader::OpenFile(file);
+} catch (std::exception &e) {
+#ifdef GDF_DEBUG
+    std::cerr << "Open file\n" << e.what() << std::endl;
+#endif
+    return nullptr;
+}
+
 }  // namespace
 
-gdf_error
-read_parquet_by_ids(const std::string &             filename,
+
+static inline gdf_error
+_read_parquet_by_ids(const std::unique_ptr<FileReader> & file_reader,
                     const std::vector<std::size_t> &row_group_indices,
                     const std::vector<std::size_t> &column_indices,
-                    std::vector<gdf_column *> &     out_gdf_columns) {
-    const std::unique_ptr<FileReader> file_reader = _OpenFile(filename);
-
-    if (!file_reader) { return GDF_IO_ERROR; }
-
-    if (_CheckMinimalData(file_reader) != GDF_SUCCESS) { return GDF_IO_ERROR; }
-
-    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
+					gdf_column *const                  gdf_columns) {
 
     if (gdf_columns == nullptr) { return GDF_IO_ERROR; }
 
@@ -587,11 +591,54 @@ read_parquet_by_ids(const std::string &             filename,
         return GDF_IO_ERROR;
     }
 
+    return GDF_SUCCESS;
+}
+
+
+gdf_error
+read_parquet_by_ids(const std::string &             filename,
+                    const std::vector<std::size_t> &row_group_indices,
+                    const std::vector<std::size_t> &column_indices,
+                    std::vector<gdf_column *> &     out_gdf_columns) {
+
+	const std::unique_ptr<FileReader> file_reader = _OpenFile(filename);
+
+    if (!file_reader) { return GDF_IO_ERROR; }
+
+    if (_CheckMinimalData(file_reader) != GDF_SUCCESS) { return GDF_IO_ERROR; }
+
+    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
+
+    gdf_error status = _read_parquet_by_ids(std::move(file_reader), row_group_indices, column_indices, gdf_columns);
+
     for (std::size_t i = 0; i < column_indices.size(); i++) {
-        out_gdf_columns.push_back(&gdf_columns[i]);
+    	out_gdf_columns.push_back(&gdf_columns[i]);
     }
 
-    return GDF_SUCCESS;
+    return status;
+}
+
+gdf_error
+read_parquet_by_ids(std::shared_ptr<::arrow::io::ReadableFile> file,
+                    const std::vector<std::size_t> &row_group_indices,
+                    const std::vector<std::size_t> &column_indices,
+                    std::vector<gdf_column *> &     out_gdf_columns) {
+
+    const std::unique_ptr<FileReader> file_reader = _OpenFile(file);
+
+    if (!file_reader) { return GDF_IO_ERROR; }
+
+    if (_CheckMinimalData(file_reader) != GDF_SUCCESS) { return GDF_IO_ERROR; }
+
+    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
+
+    gdf_error status = _read_parquet_by_ids(std::move(file_reader), row_group_indices, column_indices, gdf_columns);
+
+    for (std::size_t i = 0; i < column_indices.size(); i++) {
+    	out_gdf_columns.push_back(&gdf_columns[i]);
+    }
+
+    return status;
 }
 
 extern "C" {
@@ -601,6 +648,7 @@ read_parquet(const char *const        filename,
              const char *const *const columns,
              gdf_column **const       out_gdf_columns,
              size_t *const            out_gdf_columns_length) {
+
     const std::unique_ptr<FileReader> file_reader = _OpenFile(filename);
 
     if (!file_reader) { return GDF_IO_ERROR; }
@@ -610,30 +658,25 @@ read_parquet(const char *const        filename,
     const std::vector<std::size_t> column_indices =
     		_GetColumnIndices(file_reader, columns);
 
-    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
-
-    if (gdf_columns == nullptr) { return GDF_IO_ERROR; }
-
     const std::shared_ptr<::parquet::FileMetaData> &metadata =
     		file_reader->metadata();
     const std::size_t num_row_groups =
     		static_cast<std::size_t>(metadata->num_row_groups());
 
-    std::vector<std::size_t> row_group_indices(num_row_groups);
-    std::iota( row_group_indices.begin(), row_group_indices.end(), 0);
+    std::vector<std::size_t> row_group_ind(num_row_groups);
+    std::iota( row_group_ind.begin(), row_group_ind.end(), 0);
 
-    if (_AllocateGdfColumns(file_reader, row_group_indices, column_indices, gdf_columns)
-        != GDF_SUCCESS) {
-        return GDF_IO_ERROR;
-    }
-    if (_ReadFileMultiThread(file_reader, row_group_indices, column_indices, gdf_columns) != GDF_SUCCESS) {
-        return GDF_IO_ERROR;
-    }
+    const std::vector<std::size_t> row_group_indices(row_group_ind);
 
-    *out_gdf_columns        = gdf_columns;
-    *out_gdf_columns_length = column_indices.size();
+    gdf_column *const gdf_columns = _CreateGdfColumns(column_indices.size());
 
-    return GDF_SUCCESS;
+    gdf_error status = _read_parquet_by_ids(std::move(file_reader), row_group_indices, column_indices, gdf_columns);
+
+   *out_gdf_columns = gdf_columns;
+   *out_gdf_columns_length = column_indices.size();
+
+    return status;
+
 }
 }
 
