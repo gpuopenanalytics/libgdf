@@ -3,9 +3,12 @@
 typedef size_t gdf_size_type;
 typedef gdf_size_type gdf_index_type;
 typedef unsigned char gdf_valid_type;
+typedef	int64_t	gdf_date64;
+typedef	int32_t	gdf_date32;
+typedef	int32_t	gdf_category;
 
 /* --------------------------------------------------------------------------*/
-/** 
+ /**
  * @Synopsis  These enums indicate the possible data types for a gdf_column
  */
 /* ----------------------------------------------------------------------------*/
@@ -17,17 +20,19 @@ typedef enum {
     GDF_INT64,
     GDF_FLOAT32,
     GDF_FLOAT64,
-    GDF_DATE32,   // int32_t days since the UNIX epoch
-    GDF_DATE64,   // int64_t milliseconds since the UNIX epoch
-    GDF_TIMESTAMP,// Exact timestamp encoded with int64 since UNIX epoch (Default unit millisecond)
-    N_GDF_TYPES, /* additional types should go BEFORE N_GDF_TYPES */
+    GDF_DATE32,   	/**< int32_t days since the UNIX epoch */
+    GDF_DATE64,   	/**< int64_t milliseconds since the UNIX epoch */
+    GDF_TIMESTAMP,	/**< Exact timestamp encoded with int64 since UNIX epoch (Default unit millisecond) */
+    GDF_CATEGORY,
+    GDF_STRING,
+    N_GDF_TYPES, 	/* additional types should go BEFORE N_GDF_TYPES */
 } gdf_dtype;
 
 
 /* --------------------------------------------------------------------------*/
-/** 
- * @Synopsis  These are all possible gdf error codes that can be returned from 
- * a libgdf function. ANY NEW ERROR CODE MUST ALSO BE ADDED TO `gdf_error_get_name` 
+/**
+ * @Synopsis  These are all possible gdf error codes that can be returned from
+ * a libgdf function. ANY NEW ERROR CODE MUST ALSO BE ADDED TO `gdf_error_get_name`
  * AS WELL
  */
 /* ----------------------------------------------------------------------------*/
@@ -39,11 +44,11 @@ typedef enum {
     GDF_COLUMN_SIZE_TOO_BIG,          /**< Size of column is larger than the max supported size */      
     GDF_DATASET_EMPTY,                /**< Input dataset is either null or has size 0 when it shouldn't */   
     GDF_VALIDITY_MISSING,             /**< gdf_column's validity bitmask is null */  
-    GDF_VALIDITY_UNSUPPORTED,         
+    GDF_VALIDITY_UNSUPPORTED,         /**< The requested gdf operation does not support validity bitmask handling, and one of the input columns has the valid bits enabled */
     GDF_INVALID_API_CALL,             /**< The arguments passed into the function were invalid */   
     GDF_JOIN_DTYPE_MISMATCH,          /**< Datatype mismatch between corresponding columns in  left/right tables in the Join function */   
     GDF_JOIN_TOO_MANY_COLUMNS,        /**< Too many columns were passed in for the requested join operation*/       
-    GDF_GROUPBY_TOO_MANY_COLUMNS,
+    
     GDF_IO_ERROR,                     /**< Error occured in a parquet-reader api which load a parquet file into gdf_columns */
     GDF_DTYPE_MISMATCH,               /**< Type mismatch between columns that should be the same type */
     GDF_UNSUPPORTED_METHOD,           /**< The method requested to perform an operation was invalid or unsupported (e.g., hash vs. sort)*/ 
@@ -52,6 +57,8 @@ typedef enum {
     GDF_PARTITION_DTYPE_MISMATCH,     /**< Datatype mismatch between columns of input/output in the hash partition function */
     GDF_HASH_TABLE_INSERT_FAILURE,    /**< Failed to insert to hash table, likely because its full */
     GDF_UNSUPPORTED_JOIN_TYPE,        /**< The type of join requested is unsupported */
+    GDF_C_ERROR,				         	    /**< C error not related to CUDA */
+    GDF_FILE_ERROR,   				        /**< error processing sepcified file */      
 
 } gdf_error;
 
@@ -79,7 +86,8 @@ typedef struct gdf_column_{
     gdf_size_type size;               /**< Number of data elements in the columns data buffer*/
     gdf_dtype dtype;                  /**< The datatype of the column's data */
     gdf_size_type null_count;         /**< The number of NULL values in the column's data */
-    gdf_dtype_extra_info dtype_info;  
+    gdf_dtype_extra_info dtype_info;
+    char *			col_name;			// host-side:	null terminated string
 } gdf_column;
 
 /* --------------------------------------------------------------------------*/

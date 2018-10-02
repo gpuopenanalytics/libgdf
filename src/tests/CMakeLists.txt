@@ -49,5 +49,6 @@ add_subdirectory(filterops_numeric)
 add_subdirectory(hash_map)
 add_subdirectory(groupby)
 add_subdirectory(quantiles)
+add_subdirectory(validops)
 
 message(STATUS "******** Tests are ready ********")
