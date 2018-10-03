@@ -11,7 +11,7 @@
  * @Param[in] num_rows The number of rows represented in the bit-validity mask.
  * @Param[out] count The number of valid rows in the mask
  * 
- * @Returns  GDF_SUCCESS upon successful completion. 
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_count_nonzero_mask(gdf_valid_type const * masks, int num_rows, int * count);
@@ -38,7 +38,7 @@ gdf_size_type gdf_column_sizeof();
  * @Param[in] size (number of elements) in the gdf_column
  * @Param[in] gdf_dtype of the gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid,
@@ -55,7 +55,7 @@ gdf_error gdf_column_view(gdf_column *column, void *data, gdf_valid_type *valid,
  * @Param[in] gdf_dtype of the gdf_column
  * @Param[in] the number of nulls in the gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_column_view_augmented(gdf_column *column, void *data, gdf_valid_type *valid,
@@ -67,7 +67,7 @@ gdf_error gdf_column_view_augmented(gdf_column *column, void *data, gdf_valid_ty
  *
  * @Param[in] gdf_column whose memory is being freed
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_column_free(gdf_column *column);
@@ -85,7 +85,7 @@ gdf_error gdf_column_free(gdf_column *column);
  * @Param[in] the method to be used for the operation (e.g., sort vs hash)
  * @Param[in] for COUNT: DISTINCT = 1, else = 0
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_context_view(gdf_context *context, int flag_sorted, gdf_method flag_method,
@@ -184,7 +184,7 @@ gdf_radixsort_plan_type* gdf_radixsort_plan(size_t num_items, int descending,
  * @Param[in] sizeof data type of key
  * @Param[in] sizeof data type of val
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_plan_setup(gdf_radixsort_plan_type *hdl,
@@ -196,7 +196,7 @@ gdf_error gdf_radixsort_plan_setup(gdf_radixsort_plan_type *hdl,
  *
  * @Param[in] Radix sort plan
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_plan_free(gdf_radixsort_plan_type *hdl);
@@ -210,7 +210,7 @@ gdf_error gdf_radixsort_plan_free(gdf_radixsort_plan_type *hdl);
  * @Param[in] key gdf_column
  * @Param[in] value gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_i8(gdf_radixsort_plan_type *hdl,
@@ -224,7 +224,7 @@ gdf_error gdf_radixsort_i8(gdf_radixsort_plan_type *hdl,
  * @Param[in] key gdf_column
  * @Param[in] value gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_i32(gdf_radixsort_plan_type *hdl,
@@ -238,7 +238,7 @@ gdf_error gdf_radixsort_i32(gdf_radixsort_plan_type *hdl,
  * @Param[in] key gdf_column
  * @Param[in] value gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_i64(gdf_radixsort_plan_type *hdl,
@@ -252,7 +252,7 @@ gdf_error gdf_radixsort_i64(gdf_radixsort_plan_type *hdl,
  * @Param[in] key gdf_column
  * @Param[in] value gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_f32(gdf_radixsort_plan_type *hdl,
@@ -266,7 +266,7 @@ gdf_error gdf_radixsort_f32(gdf_radixsort_plan_type *hdl,
  * @Param[in] key gdf_column
  * @Param[in] value gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_f64(gdf_radixsort_plan_type *hdl,
@@ -280,7 +280,7 @@ gdf_error gdf_radixsort_f64(gdf_radixsort_plan_type *hdl,
  * @Param[in] key gdf_column
  * @Param[in] value gdf_column
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_radixsort_generic(gdf_radixsort_plan_type *hdl,
@@ -315,7 +315,7 @@ gdf_segmented_radixsort_plan_type* gdf_segmented_radixsort_plan(size_t num_items
  * @Param[in] sizeof data type of key
  * @Param[in] sizeof data type of val
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_plan_setup(gdf_segmented_radixsort_plan_type *hdl,
@@ -327,7 +327,7 @@ size_t sizeof_key, size_t sizeof_val);
  *
  * @Param[in] Segmented Radix sort plan
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_plan_free(gdf_segmented_radixsort_plan_type *hdl);
@@ -343,7 +343,7 @@ gdf_error gdf_segmented_radixsort_plan_free(gdf_segmented_radixsort_plan_type *h
  * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
  * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_i8(gdf_segmented_radixsort_plan_type *hdl,
@@ -363,7 +363,7 @@ gdf_error gdf_segmented_radixsort_i8(gdf_segmented_radixsort_plan_type *hdl,
  * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
  * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_i32(gdf_segmented_radixsort_plan_type *hdl,
@@ -383,7 +383,7 @@ gdf_error gdf_segmented_radixsort_i32(gdf_segmented_radixsort_plan_type *hdl,
  * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
  * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_i64(gdf_segmented_radixsort_plan_type *hdl,
@@ -403,7 +403,7 @@ gdf_error gdf_segmented_radixsort_i64(gdf_segmented_radixsort_plan_type *hdl,
  * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
  * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_f32(gdf_segmented_radixsort_plan_type *hdl,
@@ -423,7 +423,7 @@ gdf_error gdf_segmented_radixsort_f32(gdf_segmented_radixsort_plan_type *hdl,
  * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
  * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_f64(gdf_segmented_radixsort_plan_type *hdl,
@@ -443,7 +443,7 @@ gdf_error gdf_segmented_radixsort_f64(gdf_segmented_radixsort_plan_type *hdl,
  * @Param[in] Pointer to the sequence of beginning offsets of length num_segments, such that d_begin_offsets[i] is the first element of the ith data segment in d_keys_* and d_values_*
  * @Param[in] Pointer to the sequence of ending offsets of length num_segments, such that d_end_offsets[i]-1 is the last element of the ith data segment in d_keys_* and d_values_*. If d_end_offsets[i]-1 <= d_begin_offsets[i], the ith is considered empty.
  *
- * @Returns  GDF_SUCCESS upon successful completion.
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_segmented_radixsort_generic(gdf_segmented_radixsort_plan_type *hdl,
@@ -503,18 +503,19 @@ gdf_error gdf_left_join(int num_cols, gdf_column **leftcol, gdf_column **rightco
  * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 gdf_error gdf_outer_join_i8(gdf_column *leftcol, gdf_column *rightcol,
+		gdf_column *l_result, gdf_column *r_result);
 
-		/* --------------------------------------------------------------------------*/
-		/**
-		 * @brief  Computes an outer join operation between two int8 columns
-		 *
-		 * @Param[in] The left column to join
-		 * @Param[in] The right of column to join
-		 * @Param[out] The indexes of the left side of the join
-		 * @Param[out] The indexes of the right side of the join
-		 *
-		 * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
-		 */gdf_column *l_result, gdf_column *r_result);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes an outer join operation between two int8 columns
+ *
+ * @Param[in] The left column to join
+ * @Param[in] The right of column to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
 gdf_error gdf_outer_join_i16(gdf_column *leftcol, gdf_column *rightcol,
                             gdf_column *l_result, gdf_column *r_result);
 /* --------------------------------------------------------------------------*/
@@ -584,7 +585,7 @@ gdf_error gdf_outer_join_generic(gdf_column *leftcol, gdf_column *rightcol,
                                  gdf_column *l_result, gdf_column *r_result);
 
 
-/* partioning */
+/* partitioning */
 /* --------------------------------------------------------------------------*/
 /** 
  * @brief Computes the hash values of the rows in the specified columns of the 
@@ -620,7 +621,7 @@ gdf_error gdf_hash_partition(int num_input_cols,
 /* prefixsum */
 /* --------------------------------------------------------------------------*/
 /**
- * @brief  Computes a prefixsum on a gdf_column of any type
+ * @brief  Computes a prefixsum on a gdf_column of any integer type
  *
  * @Param[in] The input gdf_column
  * @Param[out] The output gdf_column. The memory for the output will be allocated by the function
@@ -682,75 +683,500 @@ gdf_error gdf_prefixsum_i64(gdf_column *inp, gdf_column *out, int inclusive);
  * @Param[in] hash The hash function to use
  * @Param[out] output The hash value of each row of the input
  * 
- * @Returns   GDF_SUCCESS if the operation was successful, otherwise an appropriate
- * error code
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
 /* ----------------------------------------------------------------------------*/
 gdf_error gdf_hash(int num_cols, gdf_column **input, gdf_hash_func hash, gdf_column *output);
 
 /* trig */
 
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric sine function for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_sin_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric sine function for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_sin_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric sine function for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_sin_f64(gdf_column *input, gdf_column *output);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric cosine function for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cos_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric cosine function for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cos_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric cosine function for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cos_f64(gdf_column *input, gdf_column *output);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric tangent function for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_tan_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric tangent function for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_tan_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric tangent function for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_tan_f64(gdf_column *input, gdf_column *output);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arcsin function for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_asin_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arcsin function for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_asin_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arcsin function for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_asin_f64(gdf_column *input, gdf_column *output);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arccos function for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_acos_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arccos function for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_acos_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arccos function for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_acos_f64(gdf_column *input, gdf_column *output);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arctan function for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_atan_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arctan function for a float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_atan_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes trigonometric arctan function for a double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_atan_f64(gdf_column *input, gdf_column *output);
+
 
 /* exponential */
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes e (Euler's number, 2.7182818...) raised to the given power arg for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_exp_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes e (Euler's number, 2.7182818...) raised to the given power arg float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_exp_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes e (Euler's number, 2.7182818...) raised to the given power arg for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_exp_f64(gdf_column *input, gdf_column *output);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the natural (base e) logarithm of arg for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_log_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the natural (base e) logarithm of arg for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_log_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the natural (base e) logarithm of arg for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_log_f64(gdf_column *input, gdf_column *output);
+
 
 /* power */
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the square root for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_sqrt_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the square root for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_sqrt_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the square root for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_sqrt_f64(gdf_column *input, gdf_column *output);
+
 
 
 /* rounding */
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the smallest integer value not less than arg for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_ceil_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the smallest integer value not less than arg for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_ceil_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the smallest integer value not less than arg for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_ceil_f64(gdf_column *input, gdf_column *output);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the largest integer value not greater than arg for any floating point data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_floor_generic(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the largest integer value not greater than arg for float data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_floor_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Computes the largest integer value not greater than arg for double data type
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_floor_f64(gdf_column *input, gdf_column *output);
+
+
 
 /* casting */
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of any data type to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_generic_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_INT8 to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_i8_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_INT32 to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_i32_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_INT64 to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_i64_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_FLOAT32 to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_f32_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_FLOAT64 to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_f64_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_DATE32 to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_date32_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_DATE64 to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_date64_to_f32(gdf_column *input, gdf_column *output);
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Casts data in a gdf_column of type GDF_TIMESTAMP to a GDF_FLOAT32
+ *
+ * @Param[in] gdf_column of the input
+ * @Param[out] output gdf_column
+ *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_cast_timestamp_to_f32(gdf_column *input, gdf_column *output);
 
 gdf_error gdf_cast_generic_to_f64(gdf_column *input, gdf_column *output);
