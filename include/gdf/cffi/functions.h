@@ -459,6 +459,8 @@ gdf_error gdf_segmented_radixsort_generic(gdf_segmented_radixsort_plan_type *hdl
 /**
  * @brief  Computes an inner join operation between two sets of columns
  *
+ * Function allocates GPU memory for the results
+ *
  * @Param[in] The number of columns to join
  * @Param[in] The left set of columns to join
  * @Param[in] The right set of columns to join
@@ -476,6 +478,8 @@ gdf_error gdf_inner_join(int num_cols, gdf_column **leftcol, gdf_column **rightc
 /* --------------------------------------------------------------------------*/
 /**
  * @brief  Computes a left join operation between two sets of columns
+ *
+ * Function allocates GPU memory for the results
  *
  * @Param[in] The number of columns to join
  * @Param[in] The left set of columns to join
@@ -495,6 +499,8 @@ gdf_error gdf_left_join(int num_cols, gdf_column **leftcol, gdf_column **rightco
 /**
  * @brief  Computes an outer join operation between two int8 columns
  *
+ * Function allocates GPU memory for the results
+ *
  * @Param[in] The left column to join
  * @Param[in] The right of column to join
  * @Param[out] The indexes of the left side of the join
@@ -509,6 +515,8 @@ gdf_error gdf_outer_join_i8(gdf_column *leftcol, gdf_column *rightcol,
 /**
  * @brief  Computes an outer join operation between two int8 columns
  *
+ * Function allocates GPU memory for the results
+ *
  * @Param[in] The left column to join
  * @Param[in] The right of column to join
  * @Param[out] The indexes of the left side of the join
@@ -521,6 +529,8 @@ gdf_error gdf_outer_join_i16(gdf_column *leftcol, gdf_column *rightcol,
 /* --------------------------------------------------------------------------*/
 /**
  * @brief  Computes an outer join operation between two int32 columns
+ *
+ * Function allocates GPU memory for the results
  *
  * @Param[in] The left column to join
  * @Param[in] The right of column to join
@@ -535,6 +545,8 @@ gdf_error gdf_outer_join_i32(gdf_column *leftcol, gdf_column *rightcol,
 /**
  * @brief  Computes an outer join operation between two int64 columns
  *
+ * Function allocates GPU memory for the results
+ *
  * @Param[in] The left column to join
  * @Param[in] The right of column to join
  * @Param[out] The indexes of the left side of the join
@@ -547,6 +559,8 @@ gdf_error gdf_outer_join_i64(gdf_column *leftcol, gdf_column *rightcol,
 /* --------------------------------------------------------------------------*/
 /**
  * @brief  Computes an outer join operation between two float columns
+ *
+ * Function allocates GPU memory for the results
  *
  * @Param[in] The left column to join
  * @Param[in] The right of column to join
@@ -561,6 +575,8 @@ gdf_error gdf_outer_join_f32(gdf_column *leftcol, gdf_column *rightcol,
 /**
  * @brief  Computes an outer join operation between two double columns
  *
+ * Function allocates GPU memory for the results
+ *
  * @Param[in] The left column to join
  * @Param[in] The right of column to join
  * @Param[out] The indexes of the left side of the join
@@ -573,6 +589,8 @@ gdf_error gdf_outer_join_f64(gdf_column *leftcol, gdf_column *rightcol,
 /* --------------------------------------------------------------------------*/
 /**
  * @brief  Computes an outer join operation between two columns of any but same type
+ *
+ * Function allocates GPU memory for the results
  *
  * @Param[in] The left column to join
  * @Param[in] The right of column to join
