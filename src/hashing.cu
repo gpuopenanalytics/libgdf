@@ -103,7 +103,7 @@ gdf_error gdf_hash(int num_cols, gdf_column **input, gdf_hash_func hash, gdf_col
     }
   }
   if(0 == output->size) {
-    return GDF_SUCCESS;
+    return GDF_DATASET_EMPTY;
   }
   else if(nullptr == output->data) {
     return GDF_DATASET_EMPTY;
