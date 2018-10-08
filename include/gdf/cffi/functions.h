@@ -2731,7 +2731,20 @@ gdf_error gdf_filter(size_t nrows,     //in: # rows
 		     size_t* new_sz);  //out: host-side # rows that remain after filtering
 
 
-
+/**
+ * @brief  Performs SQL like GROUP BY with SUM aggregation
+ *
+ * @Param[in] # columns
+ * @Param[in] input cols
+ * @Param[in] column to aggregate on
+ * @Param[out] if not null return indices of re-ordered rows
+ * @Param[out] if not null return the grouped-by columns (multi-gather based on indices, which are needed anyway)
+ * @Param[out] aggregation result
+ * @Param[in] struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+  *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_group_by_sum(int ncols,                    // # columns
                            gdf_column** cols,            //input cols
                            gdf_column* col_agg,          //column to aggregate on
@@ -2740,7 +2753,20 @@ gdf_error gdf_group_by_sum(int ncols,                    // # columns
                                                          //(multi-gather based on indices, which are needed anyway)
                            gdf_column* out_col_agg,      //aggregation result
                            gdf_context* ctxt);           //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
-
+/**
+ * @brief  Performs SQL like GROUP BY with MIN aggregation
+ *
+ * @Param[in] # columns
+ * @Param[in] input cols
+ * @Param[in] column to aggregate on
+ * @Param[out] if not null return indices of re-ordered rows
+ * @Param[out] if not null return the grouped-by columns (multi-gather based on indices, which are needed anyway)
+ * @Param[out] aggregation result
+ * @Param[in] struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+  *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_group_by_min(int ncols,                    // # columns
                            gdf_column** cols,            //input cols
                            gdf_column* col_agg,          //column to aggregate on
@@ -2750,7 +2776,20 @@ gdf_error gdf_group_by_min(int ncols,                    // # columns
                            gdf_column* out_col_agg,      //aggregation result
                            gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
 
-
+/**
+ * @brief  Performs SQL like GROUP BY with MAX aggregation
+ *
+ * @Param[in] # columns
+ * @Param[in] input cols
+ * @Param[in] column to aggregate on
+ * @Param[out] if not null return indices of re-ordered rows
+ * @Param[out] if not null return the grouped-by columns (multi-gather based on indices, which are needed anyway)
+ * @Param[out] aggregation result
+ * @Param[in] struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+  *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_group_by_max(int ncols,                    // # columns
                            gdf_column** cols,            //input cols
                            gdf_column* col_agg,          //column to aggregate on
@@ -2760,7 +2799,20 @@ gdf_error gdf_group_by_max(int ncols,                    // # columns
                            gdf_column* out_col_agg,      //aggregation result
                            gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
 
-
+/**
+ * @brief  Performs SQL like GROUP BY with AVG aggregation
+ *
+ * @Param[in] # columns
+ * @Param[in] input cols
+ * @Param[in] column to aggregate on
+ * @Param[out] if not null return indices of re-ordered rows
+ * @Param[out] if not null return the grouped-by columns (multi-gather based on indices, which are needed anyway)
+ * @Param[out] aggregation result
+ * @Param[in] struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+  *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_group_by_avg(int ncols,                    // # columns
                            gdf_column** cols,            //input cols
                            gdf_column* col_agg,          //column to aggregate on
@@ -2770,6 +2822,20 @@ gdf_error gdf_group_by_avg(int ncols,                    // # columns
                            gdf_column* out_col_agg,      //aggregation result
                            gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
 
+/**
+ * @brief  Performs SQL like GROUP BY with COUNT aggregation
+ *
+ * @Param[in] # columns
+ * @Param[in] input cols
+ * @Param[in] column to aggregate on
+ * @Param[out] if not null return indices of re-ordered rows
+ * @Param[out] if not null return the grouped-by columns (multi-gather based on indices, which are needed anyway)
+ * @Param[out] aggregation result
+ * @Param[in] struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
+  *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_group_by_count(int ncols,                    // # columns
                              gdf_column** cols,            //input cols
                              gdf_column* col_agg,          //column to aggregate on
@@ -2779,6 +2845,18 @@ gdf_error gdf_group_by_count(int ncols,                    // # columns
                              gdf_column* out_col_agg,      //aggregation result
                              gdf_context* ctxt);            //struct with additional info: bool is_sorted, flag_sort_or_hash, bool flag_count_distinct
 
+/**
+ * @brief  Calculates exact quantiles
+ *
+ * @Param[in] input column
+ * @Param[in] precision: type of quantile method calculation
+ * @Param[in] requested quantile in [0,1]
+ * @Param[out] result; for <exact> should probably be double*; it's void* because: (1) for uniformity of interface with <approx>; (2) for possible types bigger than double, in the future;
+ * @Param[in] struct with additional info
+  *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_quantile_exact(	gdf_column*         col_in,       //input column;
                                 gdf_quantile_method prec,         //precision: type of quantile method calculation
                                 double              q,            //requested quantile in [0,1]
@@ -2787,6 +2865,17 @@ gdf_error gdf_quantile_exact(	gdf_column*         col_in,       //input column;
                                                                   //(2) for possible types bigger than double, in the future;
                                 gdf_context*        ctxt);        //context info
 
+/**
+ * @brief  Calculates approximate quantiles
+ *
+ * @Param[in] input column
+ * @Param[in] requested quantile in [0,1]
+ * @Param[out] result; type-erased result of same type as column;
+ * @Param[in] struct with additional info
+  *
+* @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_error gdf_quantile_aprrox(	gdf_column*  col_in,       //input column;
                                 double       q,            //requested quantile in [0,1]
                                 void*        t_erased_res, //type-erased result of same type as column;
