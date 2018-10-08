@@ -456,74 +456,83 @@ gdf_error gdf_segmented_radixsort_generic(gdf_segmented_radixsort_plan_type *hdl
 
 
 /* --------------------------------------------------------------------------*/
-/**
- * @brief  Computes an inner join operation between two sets of columns
- *
- * Function allocates GPU memory for the results
- *
- * @Param[in] The number of columns to join
- * @Param[in] The left set of columns to join
- * @Param[in] The right set of columns to join
- * @Param[out] The indexes of the left side of the join
- * @Param[out] The indexes of the right side of the join
- * @Param[in] join_context A structure that determines various run parameters, such as
-   whether to perform a hash or sort based join
-  *
- * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+/** 
+ * @brief  Joins two dataframes (left, right) together on the specified columns
+ * 
+ * @Param[in] left_cols[] The columns of the left dataframe
+ * @Param[in] num_left_cols The number of columns in the left dataframe
+ * @Param[in] left_join_cols[] The column indices of columns from the left dataframe
+ * to join on
+ * @Param[in] right_cols[] The columns of the right dataframe
+ * @Param[in] num_right_cols The number of columns in the right dataframe
+ * @Param[in] right_join_cols[] The column indices of columns from the right dataframe
+ * to join on
+ * @Param[in] num_cols_to_join The total number of columns to join on
+ * @Param[in] result_num_cols The number of columns in the resulting dataframe
+ * @Param[out] gdf_column *result_cols[] If not nullptr, the dataframe that results from joining
+ * the left and right tables on the specified columns
+ * @Param[out] gdf_column * left_indices If not nullptr, indices of rows from the left table that match rows in the right table
+ * @Param[out] gdf_column * right_indices If not nullptr, indices of rows from the right table that match rows in the left table
+ * @Param[in] join_context The context to use to control how the join is performed,e.g.,
+ * sort vs hash based implementation
+ * 
+ * @Returns   
  */
-gdf_error gdf_inner_join(int num_cols, gdf_column **leftcol, gdf_column **rightcol,
-                         gdf_column *left_result, gdf_column *right_result,
+/* ----------------------------------------------------------------------------*/
+gdf_error gdf_inner_join(
+                         gdf_column **left_cols, 
+                         int num_left_cols,
+                         int left_join_cols[],
+                         gdf_column **right_cols,
+                         int num_right_cols,
+                         int right_join_cols[],
+                         int num_cols_to_join,
+                         int result_num_cols,
+                         gdf_column **result_cols,
+                         gdf_column * left_indices,
+                         gdf_column * right_indices,
                          gdf_context *join_context);
 
 /* --------------------------------------------------------------------------*/
-/**
- * @brief  Computes a left join operation between two sets of columns
- *
- * Function allocates GPU memory for the results
- *
- * @Param[in] The number of columns to join
- * @Param[in] The left set of columns to join
- * @Param[in] The right set of columns to join
- * @Param[out] The indexes of the left side of the join
- * @Param[out] The indexes of the right side of the join
- * @Param[in] join_context A structure that determines various run parameters, such as
-   whether to perform a hash or sort based join
-  *
- * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
+/** 
+ * @brief  Joins two dataframes (left, right) together on the specified columns
+ * 
+ * @Param[in] left_cols[] The columns of the left dataframe
+ * @Param[in] num_left_cols The number of columns in the left dataframe
+ * @Param[in] left_join_cols[] The column indices of columns from the left dataframe
+ * to join on
+ * @Param[in] right_cols[] The columns of the right dataframe
+ * @Param[in] num_right_cols The number of columns in the right dataframe
+ * @Param[in] right_join_cols[] The column indices of columns from the right dataframe
+ * to join on
+ * @Param[in] num_cols_to_join The total number of columns to join on
+ * @Param[in] result_num_cols The number of columns in the resulting dataframe
+ * @Param[out] gdf_column *result_cols[] If not nullptr, the dataframe that results from joining
+ * the left and right tables on the specified columns
+ * @Param[out] gdf_column * left_indices If not nullptr, indices of rows from the left table that match rows in the right table
+ * @Param[out] gdf_column * right_indices If not nullptr, indices of rows from the right table that match rows in the left table
+ * @Param[in] join_context The context to use to control how the join is performed,e.g.,
+ * sort vs hash based implementation
+ * 
+ * @Returns   
  */
-gdf_error gdf_left_join(int num_cols, gdf_column **leftcol, gdf_column **rightcol,
-                        gdf_column *left_result, gdf_column *right_result,
-                        gdf_context *join_context);
+/* ----------------------------------------------------------------------------*/
+gdf_error gdf_left_join(
+                         gdf_column **left_cols, 
+                         int num_left_cols,
+                         int left_join_cols[],
+                         gdf_column **right_cols,
+                         int num_right_cols,
+                         int right_join_cols[],
+                         int num_cols_to_join,
+                         int result_num_cols,
+                         gdf_column **result_cols,
+                         gdf_column * left_indices,
+                         gdf_column * right_indices,
+                         gdf_context *join_context);
 
-/* --------------------------------------------------------------------------*/
-/**
- * @brief  Computes an outer join operation between two int8 columns
- *
- * Function allocates GPU memory for the results
- *
- * @Param[in] The left column to join
- * @Param[in] The right of column to join
- * @Param[out] The indexes of the left side of the join
- * @Param[out] The indexes of the right side of the join
- *
- * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
- */
 gdf_error gdf_outer_join_i8(gdf_column *leftcol, gdf_column *rightcol,
-		gdf_column *l_result, gdf_column *r_result);
-
-/* --------------------------------------------------------------------------*/
-/**
- * @brief  Computes an outer join operation between two int8 columns
- *
- * Function allocates GPU memory for the results
- *
- * @Param[in] The left column to join
- * @Param[in] The right of column to join
- * @Param[out] The indexes of the left side of the join
- * @Param[out] The indexes of the right side of the join
- *
- * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
- */
+                            gdf_column *l_result, gdf_column *r_result);
 gdf_error gdf_outer_join_i16(gdf_column *leftcol, gdf_column *rightcol,
                             gdf_column *l_result, gdf_column *r_result);
 /* --------------------------------------------------------------------------*/
