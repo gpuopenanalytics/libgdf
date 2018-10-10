@@ -19,9 +19,15 @@ dependencies:
 - sqlite=3.13.0=0
 - tk=8.5.18=0
 - wheel=0.29.0=py35_0
-- xz=5.2.2=1
+- xz>=5.2.4,<5.3.0
 - zlib>=1.2.8,<1.3
 - llvmlite=0.18.0=py35_0
 - numba=0.34.0.dev=np112py35_316
-- cmake=3.6.3=0
+- cmake=3.12.0
 - pyarrow=0.10.0
+- gcc_linux-64=7.2.0
+- gxx_linux-64=7.2.0
+- conda-build
+- anaconda-client
+- libboost=1.65.1
+- conda-verify

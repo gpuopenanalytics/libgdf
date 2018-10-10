@@ -47,6 +47,10 @@ include(CTest)
 include(ConfigureGoogleTest)
 include(ConfigureArrow)
 
+if( DEFINED ENV{CONDA_PREFIX} )
+  set( CMAKE_SYSTEM_PREFIX_PATH $ENV{CONDA_PREFIX}/$ENV{HOST}/sysroot;${CMAKE_SYSTEM_PREFIX_PATH} )
+endif()
+
 find_package(CUDA)
 set_package_properties(
     CUDA PROPERTIES TYPE REQUIRED
@@ -71,6 +75,9 @@ else()
 endif()
 
 # Locate the Apache Arrow package (Requires that you use ConfigureArrow module)
+if( DEFINED ENV{CONDA_PREFIX} )
+  set( ARROW_ROOT $ENV{CONDA_PREFIX} )
+endif()
 message(STATUS "ARROW_ROOT: " ${ARROW_ROOT})
 find_package(Arrow REQUIRED)
 set_package_properties(Arrow PROPERTIES TYPE REQUIRED

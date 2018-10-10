@@ -31,7 +31,7 @@ if(result)
 endif()
 
 execute_process(
-    COMMAND ${CMAKE_COMMAND} --build .
+    COMMAND ${CMAKE_COMMAND} -DCMAKE_SYSTEM_PREFIX_PATH=${CMAKE_SYSTEM_PREFIX_PATH} --build .
     RESULT_VARIABLE result
     WORKING_DIRECTORY ${ARROW_DOWNLOAD_BINARY_DIR}
 )
@@ -59,10 +59,27 @@ else()
   set(ARROW_GENERATED_IPC_DIR ${ARROW_DOWNLOAD_BINARY_DIR}/arrow-prefix/src/arrow-build/src/arrow/ipc/)
 endif()
 
-configure_file(${ARROW_GENERATED_IPC_DIR}/File_generated.h ${CMAKE_SOURCE_DIR}/include/gdf/ipc/File_generated.h COPYONLY)
-configure_file(${ARROW_GENERATED_IPC_DIR}/Message_generated.h ${CMAKE_SOURCE_DIR}/include/gdf/ipc/Message_generated.h COPYONLY)
-configure_file(${ARROW_GENERATED_IPC_DIR}/Schema_generated.h ${CMAKE_SOURCE_DIR}/include/gdf/ipc/Schema_generated.h COPYONLY)
-configure_file(${ARROW_GENERATED_IPC_DIR}/Tensor_generated.h ${CMAKE_SOURCE_DIR}/include/gdf/ipc/Tensor_generated.h COPYONLY)
+find_file( File_generated_header
+  File_generated.h
+  PATHS ${ARROW_GENERATED_IPC_DIR};${CMAKE_CURRENT_SOURCE_DIR}/include/gdf/ipc
+)
+find_file( Message_generated_header
+  Message_generated.h
+  PATHS ${ARROW_GENERATED_IPC_DIR};${CMAKE_CURRENT_SOURCE_DIR}/include/gdf/ipc
+)
+find_file( Schema_generated_header
+  Schema_generated.h
+  PATHS ${ARROW_GENERATED_IPC_DIR};${CMAKE_CURRENT_SOURCE_DIR}/include/gdf/ipc
+)
+find_file( Tensor_generated_header
+  Tensor_generated.h
+  PATHS ${ARROW_GENERATED_IPC_DIR};${CMAKE_CURRENT_SOURCE_DIR}/include/gdf/ipc
+)
+
+configure_file(${File_generated_header} ${CMAKE_SOURCE_DIR}/include/gdf/ipc/File_generated.h COPYONLY)
+configure_file(${Message_generated_header} ${CMAKE_SOURCE_DIR}/include/gdf/ipc/Message_generated.h COPYONLY)
+configure_file(${Schema_generated_header} ${CMAKE_SOURCE_DIR}/include/gdf/ipc/Schema_generated.h COPYONLY)
+configure_file(${Tensor_generated_header} ${CMAKE_SOURCE_DIR}/include/gdf/ipc/Tensor_generated.h COPYONLY)
 
 # Add transitive dependency: Flatbuffers
 set(FLATBUFFERS_ROOT ${ARROW_DOWNLOAD_BINARY_DIR}/arrow-prefix/src/arrow-build/flatbuffers_ep-prefix/src/flatbuffers_ep-install/)
