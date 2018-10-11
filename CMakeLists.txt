@@ -119,7 +119,6 @@ if(HASH_JOIN)
 endif()
 
 
-
 # switch between cudaMalloc and cudaMallocManaged for hash tables
 option(HT_LEGACY_ALLOCATOR "legacy allocator for hash tables" ON)
 if(HT_LEGACY_ALLOCATOR)
@@ -161,7 +160,10 @@ set(libgdf_source_files
     src/unaryops.cu
     #src/windowedops.cu
     src/quantiles.cu
+    src/io/csv/csv-reader.cu
+    src/io/convert/gdf-to-csr.cu      
     src/validops.cu
+    src/nvtx_utils.cpp
     ${binary_operation_source_files}
 )
 
@@ -185,6 +187,20 @@ if(LIBGDF_STATIC_LIB)
 else()
     message(STATUS "libgdf static library disabled")
 endif()
+
+
+# Switch to enable NVTX ranges for profiling
+option(USE_NVTX "Build with NVTX" ON)
+if(USE_NVTX)
+  message("-- Using NVTX ranges")
+  find_library(NVTX_LIBRARY nvToolsExt HINTS /usr/local/cuda/lib64)
+  target_link_libraries(gdf ${NVTX_LIBRARY})
+  set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS}; -DUSE_NVTX)
+
+  if(LIBGDF_STATIC_LIB)
+    target_link_libraries(gdf_static ${NVTX_LIBRARY})
+  endif()
+endif(USE_NVTX)
 
 
 if (ARROW_NUMERIC_VERSION EQUAL 900)
