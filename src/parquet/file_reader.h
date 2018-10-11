@@ -53,7 +53,7 @@ public:
                ::parquet::default_reader_properties());
 
     static std::unique_ptr<FileReader>
-        OpenFile(std::shared_ptr<::arrow::io::ReadableFile> file,
+        OpenFile(std::shared_ptr<::arrow::io::RandomAccessFile> file,
                  const ::parquet::ReaderProperties &properties =
                    ::parquet::default_reader_properties());
 

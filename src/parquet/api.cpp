@@ -561,7 +561,7 @@ _OpenFile(const std::string &filename) try {
 }
 
 static inline std::unique_ptr<FileReader>
-_OpenFile(std::shared_ptr<::arrow::io::ReadableFile> file) try {
+_OpenFile(std::shared_ptr<::arrow::io::RandomAccessFile> file) try {
     return FileReader::OpenFile(file);
 } catch (std::exception &e) {
 #ifdef GDF_DEBUG
@@ -619,7 +619,7 @@ read_parquet_by_ids(const std::string &             filename,
 }
 
 gdf_error
-read_parquet_by_ids(std::shared_ptr<::arrow::io::ReadableFile> file,
+read_parquet_by_ids(std::shared_ptr<::arrow::io::RandomAccessFile> file,
                     const std::vector<std::size_t> &row_group_indices,
                     const std::vector<std::size_t> &column_indices,
                     std::vector<gdf_column *> &     out_gdf_columns) {

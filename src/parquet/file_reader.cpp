@@ -86,16 +86,30 @@ std::unique_ptr<FileReader>
 FileReader::OpenFile(const std::string &                path,
                      const ::parquet::ReaderProperties &properties) {
 
-    std::shared_ptr<::arrow::io::ReadableFile> file;
+	FileReader *const reader = new FileReader();
+	reader->parquetFileReader_.reset(new ::parquet::ParquetFileReader());
 
-    PARQUET_THROW_NOT_OK(
-      ::arrow::io::ReadableFile::Open(path, properties.memory_pool(), &file));
+	std::shared_ptr<::arrow::io::ReadableFile> file;
 
-    return FileReader::OpenFile(file, properties);
+	PARQUET_THROW_NOT_OK(
+			::arrow::io::ReadableFile::Open(path, properties.memory_pool(), &file));
+
+	std::unique_ptr<::parquet::RandomAccessSource> source(
+			new ::parquet::ArrowInputFile(file));
+
+	std::unique_ptr<::parquet::ParquetFileReader::Contents> contents(
+			new internal::FileReaderContents(std::move(source), properties));
+
+	static_cast<internal::FileReaderContents *>(contents.get())
+	    		   ->ParseMetaData();
+
+	reader->parquetFileReader_->Open(std::move(contents));
+
+	return std::unique_ptr<FileReader>(reader);
 }
 
 std::unique_ptr<FileReader>
-FileReader::OpenFile(std::shared_ptr<::arrow::io::ReadableFile> file,
+FileReader::OpenFile(std::shared_ptr<::arrow::io::RandomAccessFile> file,
 		const ::parquet::ReaderProperties &properties) {
 
 	FileReader *const reader = new FileReader();
@@ -108,9 +122,10 @@ FileReader::OpenFile(std::shared_ptr<::arrow::io::ReadableFile> file,
 			new internal::FileReaderContents(std::move(source), properties));
 
 	static_cast<internal::FileReaderContents *>(contents.get())
-	    		  ->ParseMetaData();
+		    				   ->ParseMetaData();
 
 	reader->parquetFileReader_->Open(std::move(contents));
+
 
 	return std::unique_ptr<FileReader>(reader);
 }
