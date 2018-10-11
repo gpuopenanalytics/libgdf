@@ -24,4 +24,6 @@ dependencies:
 - llvmlite=0.18.0=py35_0
 - numba=0.34.0.dev=np112py35_316
 - cmake=3.6.3=0
+- flex=2.6.0
+- bison=3.0.4
 - pyarrow=0.10.0

@@ -3,6 +3,8 @@
 #define GDF_TEST_UTILS
 
 #include <iostream>
+#include <cassert>
+
 #include <gdf/gdf.h>
 #include <gdf/cffi/functions.h>
 #include <thrust/functional.h>
@@ -13,7 +15,16 @@
 #include <functional>
 #include <vector>
 #include <tuple>
-#include "gdf/gdf.h"
+
+#ifndef EXPECT_TRUE
+#define EXPECT_TRUE (expr)
+    assert(expr);
+#endif
+
+#ifndef EXPECT_EQ
+#define EXPECT_EQ (lhs, rhs)
+    assert((lsh) == (rhs));
+#endif
 
 template <typename gdf_type>
 inline gdf_dtype gdf_enum_type_for()

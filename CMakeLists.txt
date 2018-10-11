@@ -1,6 +1,7 @@
 #=============================================================================
 # Copyright 2018 BlazingDB, Inc.
 #     Copyright 2018 Percy Camilo Triveño Aucahuasi <percy@blazingdb.com>
+#     Copyright 2018 Cristhian Alberto Gonzales Castillo <cristhian@blazingdb.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +26,7 @@
 
 PROJECT(libgdf)
 
-cmake_minimum_required(VERSION 2.8)  # not sure about version required
+cmake_minimum_required(VERSION 3.3)  # not sure about version required
 
 set(CMAKE_CXX_STANDARD 11)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
@@ -46,6 +47,7 @@ include(CTest)
 # Include custom modules (see cmake directory)
 include(ConfigureGoogleTest)
 include(ConfigureArrow)
+include(ConfigureParquetCpp)
 
 find_package(CUDA)
 set_package_properties(
@@ -83,12 +85,15 @@ else()
     message(FATAL_ERROR "Apache Arrow not found, please check your settings.")
 endif()
 
+get_property(PARQUETCPP_INCLUDE_DIRS TARGET Apache::ParquetCpp PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cub"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/moderngpu/src"
     "${CUDA_INCLUDE_DIRS}"
     "${ARROW_INCLUDEDIR}"
+    "${PARQUETCPP_INCLUDE_DIRS}"
 )
 
 IF(CUDA_VERSION_MAJOR GREATER 7)
@@ -118,6 +123,19 @@ if(HT_LEGACY_ALLOCATOR)
   set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS};-DHT_LEGACY_ALLOCATOR)
 endif()
 
+cuda_add_library(gdf-parquet
+    src/parquet/api.cpp
+    src/parquet/column_reader.cu
+    src/parquet/file_reader.cpp
+    src/parquet/file_reader_contents.cpp
+    src/parquet/page_reader.cpp
+    src/parquet/row_group_reader_contents.cpp
+    src/parquet/decoder/cu_level_decoder.cu
+    src/arrow/cu_decoder.cu
+    src/arrow/util/pinned_allocator.cu
+)
+
+target_link_libraries(gdf-parquet Apache::ParquetCpp)
 
 cuda_add_library(gdf SHARED
     src/binaryops.cu
@@ -207,5 +225,10 @@ if(GTEST_FOUND)
 else()
     message(AUTHOR_WARNING "Google C++ Testing Framework (Google Test) not found: automated tests are disabled.")
 endif()
+
+if(GDF_BENCHMARK)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/bench)
+endif()
+
 # Print the project summary
 feature_summary(WHAT ALL INCLUDE_QUIET_PACKAGES FATAL_ON_MISSING_REQUIRED_PACKAGES)
