@@ -32,11 +32,21 @@ R"***(
         }
     };
 
+    using RAdd = Add;
+
     struct Sub {
         template <typename TypeOut, typename TypeVax, typename TypeVay>
         static TypeOut operate(TypeVax x, TypeVay y) {
             using Common = CommonNumber<TypeVax, TypeVay>;
             return (TypeOut)((Common)x - (Common)y);
+        }
+    };
+
+    struct RSub {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            using Common = CommonNumber<TypeVax, TypeVay>;
+            return (TypeOut)((Common)y - (Common)x);
         }
     };
 
@@ -48,11 +58,21 @@ R"***(
         }
     };
 
+    using RMul = Mul;
+
     struct Div {
         template <typename TypeOut, typename TypeVax, typename TypeVay>
         static TypeOut operate(TypeVax x, TypeVay y) {
             using Common = CommonNumber<TypeVax, TypeVay>;
             return (TypeOut)((Common)x / (Common)y);
+        }
+    };
+
+    struct RDiv {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            using Common = CommonNumber<TypeVax, TypeVay>;
+            return (TypeOut)((Common)y / (Common)x);
         }
     };
 
@@ -63,10 +83,24 @@ R"***(
         }
     };
 
+    struct RTrueDiv {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            return (TypeOut)((double)y / (double)x);
+        }
+    };
+
     struct FloorDiv {
         template <typename TypeOut, typename TypeVax, typename TypeVay>
         static TypeOut operate(TypeVax x, TypeVay y) {
             return (TypeOut)floor((double)x / (double)y);
+        }
+    };
+
+    struct RFloorDiv {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            return (TypeOut)floor((double)y / (double)x);
         }
     };
 
@@ -99,10 +133,46 @@ R"***(
         }
     };
 
+    struct RMod {
+        template <typename TypeOut,
+                  typename TypeVax,
+                  typename TypeVay,
+                  typename Common = CommonNumber<TypeVax, TypeVay>,
+                  enableIf<(isIntegral<Common>)>* = nullptr>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            return (TypeOut)((Common)y % (Common)x);
+        }
+
+        template <typename TypeOut,
+                  typename TypeVax,
+                  typename TypeVay,
+                  typename Common = CommonNumber<TypeVax, TypeVay>,
+                  enableIf<(isFloat<Common>)>* = nullptr>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            return (TypeOut)fmodf((Common)y, (Common)x);
+        }
+
+        template <typename TypeOut,
+                  typename TypeVax,
+                  typename TypeVay,
+                  typename Common = CommonNumber<TypeVax, TypeVay>,
+                  enableIf<(isDouble<Common>)>* = nullptr>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            return (TypeOut)fmod((Common)y, (Common)x);
+        }
+    };
+
     struct Pow {
         template <typename TypeOut, typename TypeVax, typename TypeVay>
         static TypeOut operate(TypeVax x, TypeVay y) {
             return (TypeOut)pow((double)x, (double)y);
+        }
+    };
+
+    struct RPow {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            return (TypeOut)pow((double)y, (double)x);
         }
     };
 
@@ -114,6 +184,8 @@ R"***(
         }
     };
 
+    using REqual = Equal;
+
     struct NotEqual {
         template <typename TypeOut, typename TypeVax, typename TypeVay>
         static TypeOut operate(TypeVax x, TypeVay y) {
@@ -122,11 +194,21 @@ R"***(
         }
     };
 
+    using RNotEqual = NotEqual;
+
     struct Less {
         template <typename TypeOut, typename TypeVax, typename TypeVay>
         static TypeOut operate(TypeVax x, TypeVay y) {
             using Common = CommonNumber<TypeVax, TypeVay>;
             return (TypeOut)((Common)x < (Common)y);
+        }
+    };
+
+    struct RLess {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            using Common = CommonNumber<TypeVax, TypeVay>;
+            return (TypeOut)((Common)y < (Common)x);
         }
     };
 
@@ -138,11 +220,27 @@ R"***(
         }
     };
 
+    struct RGreater {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            using Common = CommonNumber<TypeVax, TypeVay>;
+            return (TypeOut)((Common)y > (Common)x);
+        }
+    };
+
     struct LessEqual {
         template <typename TypeOut, typename TypeVax, typename TypeVay>
         static TypeOut operate(TypeVax x, TypeVay y) {
             using Common = CommonNumber<TypeVax, TypeVay>;
             return (TypeOut)((Common)x <= (Common)y);
+        }
+    };
+
+    struct RLessEqual {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            using Common = CommonNumber<TypeVax, TypeVay>;
+            return (TypeOut)((Common)y <= (Common)x);
         }
     };
 
@@ -154,6 +252,13 @@ R"***(
         }
     };
 
+    struct RGreaterEqual {
+        template <typename TypeOut, typename TypeVax, typename TypeVay>
+        static TypeOut operate(TypeVax x, TypeVay y) {
+            using Common = CommonNumber<TypeVax, TypeVay>;
+            return (TypeOut)((Common)y >= (Common)x);
+        }
+    };
 )***";
 
 /*

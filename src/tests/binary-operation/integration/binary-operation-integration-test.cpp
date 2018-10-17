@@ -56,7 +56,31 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_SI32_FP32_UI32) {
 
     out.readVector();
 
-    ASSERT_BINOP(out, vay, vax, ADD());
+    ASSERT_BINOP(out, vax, vay, ADD());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Sub_Scalar_Vector_SI32_FP32_UI32) {
+    using SI32 = gdf::library::GdfEnumType<GDF_INT32>;
+    using FP32 = gdf::library::GdfEnumType<GDF_FLOAT32>;
+    using UI32 = gdf::library::GdfEnumType<GDF_UINT32>;
+    using SUB = gdf::library::operation::Sub<SI32, FP32, UI32>;
+
+    gdf::library::Vector<SI32> out;
+    gdf::library::Scalar<FP32> vax;
+    gdf::library::Vector<UI32> vay;
+
+    vay.rangeData(0, 100000, 1)
+       .rangeValid(false, 0, 4);
+    vax.setValue(10000);
+    out.emplaceVector(vay.dataSize());
+
+    auto result = gdf_binary_operation_v_s_v(out.column(), vax.scalar(), vay.column(), GDF_SUB);
+    ASSERT_TRUE(result == GDF_SUCCESS);
+
+    out.readVector();
+
+    ASSERT_BINOP(out, vax, vay, SUB());
 }
 
 
@@ -132,7 +156,34 @@ TEST_F(BinaryOperationIntegrationTest, Add_Scalar_Vector_Default_SI32_SI16_UI64_
 
     out.readVector();
 
-    ASSERT_BINOP(out, vay, vax, def, ADD());
+    ASSERT_BINOP(out, vax, vay, def, ADD());
+}
+
+
+TEST_F(BinaryOperationIntegrationTest, Sub_Scalar_Vector_Default_SI32_SI16_UI64_SI64) {
+    using SI32 = gdf::library::GdfEnumType<GDF_INT32>;
+    using SI16 = gdf::library::GdfEnumType<GDF_INT16>;
+    using UI64 = gdf::library::GdfEnumType<GDF_UINT64>;
+    using SI64 = gdf::library::GdfEnumType<GDF_INT64>;
+    using SUB = gdf::library::operation::Sub<SI32, SI16, UI64>;
+
+    gdf::library::Vector<SI32> out;
+    gdf::library::Scalar<SI16> vax;
+    gdf::library::Vector<UI64> vay;
+    gdf::library::Scalar<SI64> def;
+
+    vax.setValue(500);
+    vay.rangeData(0, 10000, 2)
+       .rangeValid(false, 0, 4);
+    def.setValue(1000);
+    out.emplaceVector(vay.dataSize());
+
+    auto result = gdf_binary_operation_v_s_v_d(out.column(), vax.scalar(), vay.column(), def.scalar(), GDF_SUB);
+    ASSERT_TRUE(result == GDF_SUCCESS);
+
+    out.readVector();
+
+    ASSERT_BINOP(out, vax, vay, def, SUB());
 }
 
 

@@ -22,5 +22,6 @@ set(source_files
     src/binary-operation/jit/code/traits.cpp
     src/binary-operation/jit/core/binop.cpp
     src/binary-operation/jit/core/launcher.cpp
+    src/binary-operation/jit/util/operator.cpp
     src/binary-operation/jit/util/type.cpp
 )

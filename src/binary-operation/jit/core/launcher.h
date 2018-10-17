@@ -20,6 +20,7 @@
 
 #include <jitify.hpp>
 #include "binary-operation/jit/util/type.h"
+#include "binary-operation/jit/util/operator.h"
 
 namespace gdf {
 namespace binops {
@@ -49,8 +50,9 @@ namespace jit {
         Launcher& kernel(std::string&& value);
 
         template <typename ... Args>
-        Launcher& instantiate(gdf_binary_operator ope, Args&& ... args) {
-            arguments.assign({getTypeName(args->dtype)..., getOperatorName(ope)});
+        Launcher& instantiate(gdf_binary_operator ope, Operator::Type type, Args&& ... args) {
+            Operator operatorSelector;
+            arguments.assign({getTypeName(args->dtype)..., operatorSelector.getOperatorName(ope, type)});
             return *this;
         }
 

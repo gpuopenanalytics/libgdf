@@ -29,6 +29,23 @@ namespace binop {
 
 template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
 void ASSERT_BINOP(gdf::library::Vector<TypeOut>& out,
+                  gdf::library::Scalar<TypeVax>& vax,
+                  gdf::library::Vector<TypeVay>& vay,
+                  TypeOpe&& ope) {
+    ASSERT_TRUE(out.dataSize() == vay.dataSize());
+    for (int index = 0; index < out.dataSize(); ++index) {
+        ASSERT_TRUE(out.data[index] == (TypeOut)(ope((TypeVay) vax.getValue(), vay.data[index])));
+    }
+
+    uint32_t vax_valid = (vax.isValid() ? UINT32_MAX : 0);
+    ASSERT_TRUE(out.validSize() == vay.validSize());
+    for (int index = 0; index < out.validSize(); ++index) {
+        ASSERT_TRUE(out.valid[index] == (vax_valid & vay.valid[index]));
+    }
+}
+
+template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeOpe>
+void ASSERT_BINOP(gdf::library::Vector<TypeOut>& out,
                   gdf::library::Vector<TypeVax>& vax,
                   gdf::library::Scalar<TypeVay>& vay,
                   TypeOpe&& ope) {
@@ -83,6 +100,52 @@ void ASSERT_BINOP(gdf::library::Vector<TypeOut>& out,
     ASSERT_TRUE(out.validSize() == vay.validSize());
     for (int index = 0; index < out.validSize(); ++index) {
         ASSERT_TRUE(out.valid[index] == (vax.valid[index] & vay.valid[index]));
+    }
+}
+
+template <typename TypeOut, typename TypeVax, typename TypeVay, typename TypeVal, typename TypeOpe>
+void ASSERT_BINOP(gdf::library::Vector<TypeOut>& out,
+                  gdf::library::Scalar<TypeVax>& vax,
+                  gdf::library::Vector<TypeVay>& vay,
+                  gdf::library::Scalar<TypeVal>& def,
+                  TypeOpe&& ope) {
+    using ValidType = typename gdf::library::Vector<TypeOut>::ValidType;
+    int ValidSize = gdf::library::Vector<TypeOut>::ValidSize;
+
+    ASSERT_TRUE(out.dataSize() == vay.dataSize());
+    ASSERT_TRUE(out.validSize() == vay.validSize());
+
+    ValidType mask = 1;
+    int index_valid = 0;
+    for (int index = 0; index < out.dataSize(); ++index) {
+        if (!(index % ValidSize)) {
+            mask = 1;
+            index_valid = index / ValidSize;
+        } else {
+            mask <<= 1;
+        }
+
+        TypeVay vax_aux = (TypeVay)vax;
+        if (!vax.isValid()) {
+            vax_aux = (TypeVay)((TypeVal) def.getValue());
+        }
+
+        TypeVax vay_aux = vay.data[index];
+        if ((vay.valid[index_valid] & mask) == 0) {
+            vay_aux = (TypeVal) def.getValue();
+        }
+
+        ASSERT_TRUE(out.data[index] == (TypeOut)(ope(vax_aux, vay_aux)));
+    }
+
+    uint32_t vax_valid = (vax.isValid() ? UINT32_MAX : 0);
+    uint32_t def_valid = (def.isValid() ? UINT32_MAX : 0);
+    ASSERT_TRUE(out.validSize() == vay.validSize());
+    for (int index = 0; index < out.validSize(); ++index) {
+        uint32_t output = (vay.valid[index] & vax_valid) |
+                          (vay.valid[index] & def_valid) |
+                          (vax_valid & def_valid);
+        ASSERT_TRUE(out.valid[index] == output);
     }
 }
 
