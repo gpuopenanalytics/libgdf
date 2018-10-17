@@ -27,6 +27,7 @@
 
 namespace {
 
+//! traits to get primitive type from gdf dtype
 template <gdf_dtype DTYPE>
 struct gdf_dtype_traits {};
 
@@ -48,6 +49,11 @@ DTYPE_FACTORY(TIMESTAMP, std::int64_t);
 
 #undef DTYPE_FACTORY
 
+/// /brief Replace kernel
+/// \param[in/out] data with elements to be replaced
+/// \param[in] values contains the replacement values
+/// \param[in] to_replace_begin begin pointer of `to_replace` array
+/// \param[in] to_replace_begin end pointer of `to_replace` array
 template <class T>
 __global__ void
 replace_kernel(T *const                          data,
@@ -71,6 +77,12 @@ replace_kernel(T *const                          data,
     }
 }
 
+/// /brief Call replace kernel according to primitive type T
+/// \param[in/out] data with elements to be replaced
+/// \param[in] data_size number of elements in data
+/// \param[in] to_replace contains values that will be replaced
+/// \param[in] values contains the replacement values
+/// \param[in] replacement_ptrdiff to get the end pointer of `to_replace` array
 template <class T>
 static inline gdf_error
 Replace(T *const             data,
@@ -78,29 +90,35 @@ Replace(T *const             data,
         const T *const       to_replace,
         const T *const       values,
         const std::ptrdiff_t replacement_ptrdiff) {
-    const std::size_t blocks = std::ceil(data_size /  256.);
+    const std::size_t blocks = std::ceil(data_size / 256.);
 
     const thrust::device_ptr<const T> to_replace_begin(to_replace);
     const thrust::device_ptr<const T> to_replace_end(to_replace_begin
                                                      + replacement_ptrdiff);
 
-    replace_kernel<T>
-      <<<blocks, 256>>>(  // TODO: calc blocks and threads
-        data,
-        data_size,
-        values,
-        to_replace_begin,
-        to_replace_end);
+    replace_kernel<T><<<blocks, 256>>>(  // TODO: calc blocks and threads
+      data,
+      data_size,
+      values,
+      to_replace_begin,
+      to_replace_end);
 
     return GDF_SUCCESS;
 }
 
+/// \brief Check if two gdf_columns have the same size
+/// \param[in] to_replace is a gdf_column
+/// \param[in] values is a gdf_column
 static inline bool
 NotEqualReplacementSize(const gdf_column *to_replace,
                         const gdf_column *values) {
     return to_replace->size != values->size;
 }
 
+/// \brief Check if the three gdf columns have the same dtype
+/// \param[in] column is as gdf_column
+/// \param[in] to_replace is a gdf_column
+/// \param[in] values is a gdf_column
 static inline bool
 NotSameDType(const gdf_column *column,
              const gdf_column *to_replace,
@@ -111,6 +129,12 @@ NotSameDType(const gdf_column *column,
 
 }  // namespace
 
+/// \brief Replace `to_replace` data of `column` with `values`
+/// \param[in/out] column data
+/// \param[in] to_replace contains values of column that will be replaced
+/// \param[in] values contains the replacement values
+///
+/// Note that `to_replace` and `values` are related by the index
 gdf_error
 gdf_replace(gdf_column *      column,
             const gdf_column *to_replace,

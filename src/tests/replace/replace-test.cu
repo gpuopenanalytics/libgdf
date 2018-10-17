@@ -31,7 +31,7 @@ MakeDeviceVector(const std::initializer_list<T> list) {
 
 
 
-// This is the main teast feature
+// This is the main test feature
 template <class T>
 class ReplaceTest : public testing::Test {
 protected:

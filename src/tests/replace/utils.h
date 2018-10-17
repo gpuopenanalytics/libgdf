@@ -19,6 +19,7 @@
 
 #include <gdf/gdf.h>
 
+//! traits to get gdf dtype from primitive type
 template <class U>
 struct TypeTraits {};
 
@@ -37,6 +38,7 @@ TYPE_FACTORY(double, FLOAT64);
 
 #undef TYPE_FACTORY
 
+//! Convert thrust device vector to gdf_column
 template <class T>
 static inline gdf_column
 MakeGdfColumn(thrust::device_vector<T> &device_vector) {
@@ -50,6 +52,7 @@ MakeGdfColumn(thrust::device_vector<T> &device_vector) {
     };
 }
 
+//! Convert STL vector to gdf_column
 template <class T>
 static inline gdf_column
 MakeGdfColumn(std::vector<T> &vector) {
