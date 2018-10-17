@@ -18,6 +18,8 @@
 #ifndef GDF_TESTS_BINARY_OPERATION_UTIL_OPERATION_H
 #define GDF_TESTS_BINARY_OPERATION_UTIL_OPERATION_H
 
+#include <cmath>
+
 namespace gdf {
 namespace library {
 namespace operation {
