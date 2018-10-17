@@ -45,5 +45,15 @@ else
     exit 1
 fi
 export CUDA_HOME=/usr/local/cuda-${CUDA:0:3}
-export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${CUDA_HOME}/lib64/stubs:${LD_LIBRARY_PATH}
 export PATH=${CUDA_HOME}/bin:${PATH}
+
+LIBRARY_PATH_VAR=${CUDA_HOME}/lib64:${CUDA_HOME}/lib64/stubs
+if [ -z ${LD_LIBRARY_PATH} ]; then
+    export LD_LIBRARY_PATH=${LIBRARY_PATH_VAR}
+else
+    export LD_LIBRARY_PATH=${LIBRARY_PATH_VAR}:${LD_LIBRARY_PATH}
+fi
+
+if [ -f ${CUDA_HOME}/lib64/stubs/libcuda.so ] && [ ! -f ${CUDA_HOME}/lib64/stubs/libcuda.so.1 ]; then
+    sudo ln -s ${CUDA_HOME}/lib64/stubs/libcuda.so ${CUDA_HOME}/lib64/stubs/libcuda.so.1
+fi
