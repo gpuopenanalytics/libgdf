@@ -51,6 +51,11 @@ END_NAMESPACE_GDF_PARQUET
 namespace gdf {
 namespace parquet {
 
+/// \brief Read parquet file filtering by row_group_indices and column_indices
+/// \param[in] filename path
+/// \param[in] row_group_indices collection
+/// \param[in] column_indices collection
+/// \param[out] out_gdf_columns filtered gdf columns
 gdf_error
 read_parquet_by_ids(const std::string &             filename,
                     const std::vector<std::size_t> &row_group_indices,

@@ -135,6 +135,11 @@ _ReadColumn(const std::shared_ptr<GdfRowGroupReader> &row_group_reader,
     return GDF_SUCCESS;
 }
 
+/// \brief Get gdf columns from parquet file reader filtered by columns
+/// \param[in] file_reader parquet file reader
+/// \param[in] row_group_indices to be filtered from file
+/// \param[in] column_indices to be filtered from row groups
+/// \param[out] gdf_columns with data from columns of parquet file
 static inline gdf_error
 _ReadFile(const std::unique_ptr<FileReader> &file_reader,
           const std::vector<std::size_t> &   indices,
@@ -162,6 +167,12 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
     return GDF_SUCCESS;
 }
 
+/// \brief Get gdf columns from parquet file reader filtered by columns
+///        and row groups
+/// \param[in] file_reader parquet file reader
+/// \param[in] row_group_indices to be filtered from file
+/// \param[in] column_indices to be filtered from row groups
+/// \param[out] gdf_columns with data from columns of parquet file
 static inline gdf_error
 _ReadFile(const std::unique_ptr<FileReader> &file_reader,
           const std::vector<std::size_t> &   row_group_indices,
@@ -189,6 +200,11 @@ _ReadFile(const std::unique_ptr<FileReader> &file_reader,
     return GDF_SUCCESS;
 }
 
+/// \brief Set artibutes of gdf column getting dtype
+//         from parquet column descriptor
+/// \param[in] num_rows for gdf column
+/// \param[in] column_descriptor of parquet file
+/// \param[out] _gdf_column to initialize attibutes
 template <::parquet::Type::type TYPE>
 static inline gdf_error
 _AllocateGdfColumn(const std::size_t                        num_rows,
@@ -219,8 +235,12 @@ _AllocateGdfColumn(const std::size_t                        num_rows,
     _gdf_column.dtype = _DTypeFrom(column_descriptor);
 
     return GDF_SUCCESS;
-}  // namespace
+}
 
+/// \brief Get filtered column descriptors from parquet file reader
+/// \param[in] file_reader parquet file reader
+/// \param[in] indices of columns in parquet file
+/// \return column descriptors
 static inline std::vector<const ::parquet::ColumnDescriptor *>
 _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
                        const std::vector<std::size_t> &   indices) {
@@ -236,6 +256,10 @@ _ColumnDescriptorsFrom(const std::unique_ptr<FileReader> &file_reader,
     return column_descriptors;
 }
 
+/// \brief Create gdf columns filtering column indices
+/// \param[in] file_reader parquet file reader
+/// \param[in] indeces of columns in parquet file
+/// \param[out] gdf_column array created
 static inline gdf_error
 _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
                     const std::vector<std::size_t> &   indices,
@@ -274,6 +298,9 @@ _AllocateGdfColumns(const std::unique_ptr<FileReader> &file_reader,
     return GDF_SUCCESS;
 }
 
+/// \brief Allocate memory for gdf_columns
+/// \param[in] num_columns to allocate
+/// \return array of gdf columns
 static inline gdf_column *
 _CreateGdfColumns(const std::size_t num_columns) try {
     return new gdf_column[num_columns];
@@ -284,8 +311,12 @@ _CreateGdfColumns(const std::size_t num_columns) try {
     return nullptr;
 }
 
+//! \brief To manage column names of parquet file reader.
 class ColumnNames {
 public:
+
+    //! Store in `column_names` std::vector the indexed column names
+    /// from the parquet file reader.
     explicit ColumnNames(const std::unique_ptr<FileReader> &file_reader) {
         const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
           file_reader->metadata();
@@ -302,17 +333,20 @@ public:
         }
     }
 
+    //! Check that column index is valid
     bool
     Contains(std::size_t index) const {
         return index < Size();
     }
 
+    //! Get the index of column name
     std::size_t
     IndexOf(const std::string &name) const {
         return std::find(column_names.cbegin(), column_names.cend(), name)
                - column_names.cbegin();
     }
 
+    //! Size of columns in parquet file reader
     std::size_t
     Size() const {
         return column_names.size();
@@ -322,8 +356,11 @@ private:
     std::vector<std::string> column_names;
 };
 
+//! \brief Tool to filter column names from parquet file.
 class ColumnFilter {
 public:
+
+    //! Add filter names from raw_names
     explicit ColumnFilter(const char *const *const raw_names) {
         if (raw_names != nullptr) {
             for (const char *const *name_ptr = raw_names; *name_ptr != nullptr;
@@ -333,6 +370,8 @@ public:
         }
     }
 
+    /// Using filter_names from read_parquet(filename, filtering_columns),
+    /// get indices from parquet file filtering by column name.
     std::vector<std::size_t>
     IndicesFrom(const ColumnNames &column_names) const {
         std::vector<std::size_t> indices;
@@ -365,6 +404,7 @@ private:
     std::vector<std::string> filter_names;
 };
 
+//! Ensure that parquet file reader has at least one row group and rows
 static inline gdf_error
 _CheckMinimalData(const std::unique_ptr<FileReader> &file_reader) {
     const std::shared_ptr<const ::parquet::FileMetaData> &metadata =
@@ -377,6 +417,7 @@ _CheckMinimalData(const std::unique_ptr<FileReader> &file_reader) {
     return GDF_SUCCESS;
 }
 
+//! Get gdf Parquet file reader from filename
 static inline std::unique_ptr<FileReader>
 _OpenFile(const std::string &filename) try {
     return FileReader::OpenFile(filename);
@@ -389,6 +430,11 @@ _OpenFile(const std::string &filename) try {
 
 }  // namespace
 
+/// \brief Read parquet file filtering by row_group_indices and column_indices
+/// \param[in] filename path
+/// \param[in] row_group_indices collection
+/// \param[in] column_indices collection
+/// \param[out] out_gdf_columns filtered gdf columns
 gdf_error
 read_parquet_by_ids(const std::string &             filename,
                     const std::vector<std::size_t> &row_group_indices,
@@ -423,6 +469,11 @@ read_parquet_by_ids(const std::string &             filename,
 
 extern "C" {
 
+/// \brief Read parquet file into array of gdf columns
+/// \param[in] filename path to parquet file
+/// \param[in] columns will be read from the file
+/// \param[out] out_gdf_columns array
+/// \param[out] out_gdf_columns_length number of columns
 gdf_error
 read_parquet(const char *const        filename,
              const char *const *const columns,
