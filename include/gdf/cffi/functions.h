@@ -191,19 +191,118 @@ const char * gdf_cuda_error_name(int cuda_error);
 
 /* ipc */
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Opens a parser from a pyarrow RecordBatch schema
+ *
+ * @Param[in] Pointer to a byte array containing the pyarrow RecordBatch schema
+ * @Param[in] Size of the byte array
+  *
+ * @Returns Pointer to a parsing struct gdf_ipc_parser_type
+ */
+/* ----------------------------------------------------------------------------*/
 gdf_ipc_parser_type* gdf_ipc_parser_open(const uint8_t *schema, size_t length);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Opens a pyarrow RecordBatch bytearray
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ * @Param[in] Pointer to a pyarrow RecordBatch bytearray
+ * @Param[in] Size of the byte array
+ *
+ * @Returns void
+ */
+/* ----------------------------------------------------------------------------*/
 void gdf_ipc_parser_open_recordbatches(gdf_ipc_parser_type *handle,
                                        const uint8_t *recordbatches,
                                        size_t length);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Closes a parser from a pyarrow RecordBatch schema
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns void
+ */
+/* ----------------------------------------------------------------------------*/
 void gdf_ipc_parser_close(gdf_ipc_parser_type *handle);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Checks for a failure in the parser
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns 1 if error
+ */
+/* ----------------------------------------------------------------------------*/
 int gdf_ipc_parser_failed(gdf_ipc_parser_type *handle);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Returns parsed data as json
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns char* of parsed data as json
+ */
+/* ----------------------------------------------------------------------------*/
 const char* gdf_ipc_parser_to_json(gdf_ipc_parser_type *handle);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Gets error from gdf_ipc_parser_type
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns Error message as char*
+ */
+/* ----------------------------------------------------------------------------*/
 const char* gdf_ipc_parser_get_error(gdf_ipc_parser_type *handle);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Gets parsed data from gdf_ipc_parser_type
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns Pointer parsed data
+ */
+/* ----------------------------------------------------------------------------*/
 const void* gdf_ipc_parser_get_data(gdf_ipc_parser_type *handle);
+
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Gets data offset from gdf_ipc_parser_type
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns Data offset
+ */
+/* ----------------------------------------------------------------------------*/
 int64_t gdf_ipc_parser_get_data_offset(gdf_ipc_parser_type *handle);
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Returns parsed schema as json
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns char* of parsed schema as json
+ */
+/* ----------------------------------------------------------------------------*/
 const char *gdf_ipc_parser_get_schema_json(gdf_ipc_parser_type *handle) ;
+/* --------------------------------------------------------------------------*/
+/**
+ * @brief  Returns layout as json
+ *
+ * @Param[in] Pointer to a parsing struct gdf_ipc_parser_type
+ *
+ * @Returns char* of layout as json
+ */
+/* ----------------------------------------------------------------------------*/
 const char *gdf_ipc_parser_get_layout_json(gdf_ipc_parser_type *handle) ;
 
 
