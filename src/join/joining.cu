@@ -179,12 +179,13 @@ gdf_error sort_join_typed(gdf_column *leftcol, gdf_column *rightcol,
  * @Synopsis  Computes the join operation between a single left and single right column
  using the sort based implementation.
  * 
- * @Param leftcol The left column to join
- * @Param rightcol The right column to join
- * @Param out_result The output of the join operation
- * @Param ctxt Structure that determines various run parameters, such as if the inputs
+ * @Param[in] leftcol The left column to join
+ * @Param[in] rightcol The right column to join
+ * @Param[out] l_result The result indexes of the left side of the join operation
+ * @Param[out] r_result The result indexes of the right side of the join operation
+ * @Param[in] ctxt Structure that determines various run parameters, such as if the inputs
  are already sorted.
-   @tparama join_type The type of join to perform
+ * @tparama join_type The type of join to perform
  * 
  * @Returns GDF_SUCCESS upon succesful completion of the join, otherwise returns 
  appropriate error code.
@@ -223,20 +224,19 @@ gdf_error sort_join<JoinType::LEFT_JOIN>(gdf_column *leftcol, gdf_column *rightc
 
 /* --------------------------------------------------------------------------*/
 /** 
- * @Synopsis  Computes the join operation between two sets of columns
+ * @Synopsis  Computes an inner join operation between two sets of columns
  * 
- * @Param num_cols The number of columns to join
- * @Param leftcol The left set of columns to join
- * @Param rightcol The right set of columns to join
- * @Param out_result The result of the join operation. The output is structured such that
- * the pair (i, i + output_size/2) is the (left, right) index of matching rows.
- * @Param join_context A structure that determines various run parameters, such as
+ * @Param[in] The number of columns to join
+ * @Param[in] The left set of columns to join
+ * @Param[in] The right set of columns to join
+ * @Param[out] The indexes of the left side of the join
+ * @Param[out] The indexes of the right side of the join
+ * @Param[in] join_context A structure that determines various run parameters, such as
    whether to perform a hash or sort based join
- * @tparam join_type The type of join to be performed
- * 
- * @Returns GDF_SUCCESS upon succesfull compute, otherwise returns appropriate error code
+ * @tparama join_type The type of join to perform
+  *
+ * @Returns GDF_SUCCESS upon successful compute, otherwise returns appropriate error code
  */
-/* ----------------------------------------------------------------------------*/
 template <JoinType join_type>
 gdf_error join_call( int num_cols, gdf_column **leftcol, gdf_column **rightcol,
                      gdf_column *left_result, gdf_column *right_result,
