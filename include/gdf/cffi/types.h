@@ -18,10 +18,6 @@ typedef enum {
     GDF_INT16,
     GDF_INT32,
     GDF_INT64,
-    GDF_UINT8,
-    GDF_UINT16,
-    GDF_UINT32,
-    GDF_UINT64,
     GDF_FLOAT32,
     GDF_FLOAT64,
     GDF_DATE32,   	/**< int32_t days since the UNIX epoch */
@@ -29,6 +25,10 @@ typedef enum {
     GDF_TIMESTAMP,	/**< Exact timestamp encoded with int64 since UNIX epoch (Default unit millisecond) */
     GDF_CATEGORY,
     GDF_STRING,
+    GDF_UINT8,
+    GDF_UINT16,
+    GDF_UINT32,
+    GDF_UINT64,
     N_GDF_TYPES, 	/* additional types should go BEFORE N_GDF_TYPES */
 } gdf_dtype;
 
