@@ -21,8 +21,15 @@
 function(configure_test TEST_NAME Tests_SRCS)
     message(STATUS "${TEST_NAME} will link against: gdf arrow")
 
+    link_directories(${CUDA_LIBRARY_DIR})
+    link_directories(${CUDA_LIBRARY_STUBS_DIR})
+
     cuda_add_executable(${TEST_NAME} ${Tests_SRCS})
+
     target_link_libraries(${TEST_NAME} gmock_main gmock GTest::GTest gdf arrow)
+    target_link_libraries(${TEST_NAME} ${CUDA_CUDA_LIB})
+    target_link_libraries(${TEST_NAME} ${CUDA_NVRTC_LIB})
+
     set_target_properties(${TEST_NAME} PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/gtests/")
 
@@ -38,6 +45,7 @@ enable_testing()
 # -------------------
 message(STATUS "******** Configuring tests ********")
 
+add_subdirectory(binary-operation)
 add_subdirectory(foo-sample)
 add_subdirectory(datetime)
 add_subdirectory(hashing)

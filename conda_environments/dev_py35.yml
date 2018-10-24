@@ -10,7 +10,7 @@ dependencies:
 - numpy=1.12.1=py35_0
 - openssl=1.0.2k=2
 - pip=9.0.1=py35_1
-- py=1.4.33=py35_0
+- py=1.5.2
 - pycparser=2.17=py35_0
 - pytest=3.0.7=py35_0
 - python=3.5.3=1

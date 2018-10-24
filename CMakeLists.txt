@@ -31,6 +31,7 @@ set(CMAKE_CXX_STANDARD 11)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Configuration/")
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
 
 # specify the cross compilers
@@ -70,6 +71,9 @@ if(CUDA_FOUND)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Werror cross-execution-space-call;-Xcompiler -Wall,-Werror)
 
     message(STATUS "CUDA_NVCC_FLAGS: ${CUDA_NVCC_FLAGS}")
+
+    include(ConfigCuda RESULT_VARIABLE result)
+    message(STATUS "ConfigCuda: ${result}")
 else()
     message(FATAL_ERROR "CUDA not found, please check your settings.")
 endif()
@@ -88,12 +92,16 @@ else()
 endif()
 
 include_directories(
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cub"
+    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/jitify"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/moderngpu/src"
     "${CUDA_INCLUDE_DIRS}"
     "${ARROW_INCLUDEDIR}"
 )
+
+link_directories(${CUDA_LIBRARY_DIR} ${CUDA_LIBRARY_STUBS_DIR})
 
 IF(CUDA_VERSION_MAJOR GREATER 7)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_60,code=sm_60)
@@ -123,7 +131,18 @@ if(HT_LEGACY_ALLOCATOR)
 endif()
 
 
-cuda_add_library(gdf SHARED
+## Benchmark
+include(ConfigBenchmark RESULT_VARIABLE result)
+message(STATUS "ConfigBenchmark: ${result}")
+
+
+## Binary Operations
+add_subdirectory(src/binary-operation)
+get_directory_property(binary_operation_source_files DIRECTORY src/binary-operation DEFINITION source_files)
+
+
+## Variable 'libgdf_source_files' with all source files.
+set(libgdf_source_files
     src/binaryops.cu
     src/bitmaskops.cu
     src/column.cpp
@@ -149,7 +168,30 @@ cuda_add_library(gdf SHARED
     src/io/convert/gdf-to-csr.cu      
     src/validops.cu
     src/nvtx_utils.cpp
+    ${binary_operation_source_files}
 )
+
+
+cuda_add_library(gdf SHARED ${libgdf_source_files})
+
+
+## Position Independent Code for shared library
+set_target_properties(gdf PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(gdf PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+
+## Build static library
+## By default is disabled.
+## Add -DLIBGDF_STATIC_LIB=ON as cmake parameter to create the static library.
+option(LIBGDF_STATIC_LIB "Build static library for libgdf" OFF)
+if(LIBGDF_STATIC_LIB)
+    message(STATUS "libgdf static library enabled")
+    cuda_add_library(gdf_static STATIC ${libgdf_source_files})
+    set_target_properties(gdf_static PROPERTIES OUTPUT_NAME gdf)
+else()
+    message(STATUS "libgdf static library disabled")
+endif()
+
 
 # Switch to enable NVTX ranges for profiling
 option(USE_NVTX "Build with NVTX" ON)
@@ -158,13 +200,26 @@ if(USE_NVTX)
   find_library(NVTX_LIBRARY nvToolsExt HINTS /usr/local/cuda/lib64)
   target_link_libraries(gdf ${NVTX_LIBRARY})
   set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS}; -DUSE_NVTX)
+
+  if(LIBGDF_STATIC_LIB)
+    target_link_libraries(gdf_static ${NVTX_LIBRARY})
+  endif()
 endif(USE_NVTX)
+
 
 if (ARROW_NUMERIC_VERSION EQUAL 900)
   # arrow-0.9 requires boost_regex
-  target_link_libraries(gdf arrow boost_regex)
+  target_link_libraries(gdf arrow boost_regex ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
+
+  if(LIBGDF_STATIC_LIB)
+    target_link_libraries(gdf_static arrow boost_regex ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
+  endif()
 else()
-  target_link_libraries(gdf arrow)
+  target_link_libraries(gdf arrow ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
+
+  if(LIBGDF_STATIC_LIB)
+    target_link_libraries(gdf_static arrow ${CUDA_CUDA_LIB} ${CUDA_NVRTC_LIB})
+  endif()
 endif()
 
 # Command to symlink files into the build directory
@@ -197,6 +252,9 @@ add_custom_command(TARGET pytest POST_BUILD
 # The install target
 install(TARGETS gdf LIBRARY DESTINATION lib)
 install(DIRECTORY include/gdf DESTINATION include)
+if(LIBGDF_STATIC_LIB)
+    install(TARGETS gdf_static ARCHIVE DESTINATION lib)
+endif()
 
 # Configure the C++ tests
 find_package(GTest QUIET)

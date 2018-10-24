@@ -66,7 +66,7 @@ not necessary.
 
 You can install Boost C++ 1.58 from sources as well: https://www.boost.org/doc/libs/1_58_0/more/getting_started/unix-variants.html
 
-To run the python tests it is recommended to setup a conda environment for 
+To run the python tests it is recommended to setup a conda environment for
 the dependencies.
 
 ```bash
@@ -114,6 +114,12 @@ $ cmake -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
 To build the C/C++ code, run `make`.  This should produce a shared library
 named `libgdf.so` or `libgdf.dylib`.
 
+To build the static library for libgdf just run cmake with:
+```bash
+$ cmake -DLIBGDF_STATIC_LIB=ON -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX ..
+```
+Note: By default the option LIBGDF_STATIC_LIB is disabled (default value OFF).
+
 If you run into compile errors about missing header files:
 
 ```bash
@@ -138,3 +144,36 @@ conda environment activated), run below to exceute test:
 ```bash
 $ make pytest   # this auto trigger target "copy_python"
 ```
+
+### Benchmark
+
+It is used [Google Benchmark](https://github.com/google/benchmark) for this purpose.
+Refer to that repository in order to get more information related to its functionality.
+
+In order to enable the benchmark functionality, which by default is disabled,
+it is required to add the option BENCHMARK in the command line when 'cmake' is executed.
+It is also recommended to use release build type.
+
+```bash
+$ cmake -DCMAKE_BUILD_TYPE=Release -DBENCHMARK=ON path/to/libgdf
+```
+
+When the build process is completed, the benchmark binary files will be located in the 'bench' folder.
+In order to get the different input arguments for a benchmark binary file,
+add the argument '--help' in the command line when the file is executed.
+
+The benchmark is applied to the following features:
+* Binary Operations (NVRTC - Jitify).
+
+###### Binary Operations
+
+Recommended input arguments when this benchmark is executed.
+```bash
+$ BinaryOperationsBench --benchmark_counters_tabular=true
+```
+
+### Benchmark - Troubleshoot
+
+When a message related to CPU scaling (`***WARNING*** CPU scaling is enabled`) appeared,
+refer to the section [Disable CPU frequency scaling](https://github.com/google/benchmark#disable-cpu-frequency-scaling)
+in the Google Benchmark documentation.
