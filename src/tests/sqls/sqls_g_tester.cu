@@ -27,6 +27,7 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/reduce.h>
 #include <thrust/functional.h>
+#include "thrust_rmm_allocator.h"
 
 #include <iostream>
 #include <vector>
@@ -48,11 +49,12 @@
 #include <gdf/cffi/functions.h>
 
 #include "gtest/gtest.h"
+#include "gdf_test_fixtures.h"
 
 #include "sqls_rtti_comp.hpp"
 
 template<typename T>
-using Vector = thrust::device_vector<T>;
+using Vector = thrust::device_vector<T, rmm_allocator<T>>;
 
 ///using IndexT = int;//okay...
 using IndexT = size_t;
@@ -66,8 +68,8 @@ void print_v(const Vector<T, Allocator>& v, std::ostream& os)
 }
 
 template<typename T,
-	 typename Allocator,
-	 template<typename, typename> class Vector>
+   typename Allocator,
+   template<typename, typename> class Vector>
 __host__
 void print_v(const Vector<T, Allocator>& v, typename Vector<T, Allocator>::const_iterator pos, std::ostream& os)
 { 
@@ -76,8 +78,8 @@ void print_v(const Vector<T, Allocator>& v, typename Vector<T, Allocator>::const
 }
 
 template<typename T,
-	 typename Allocator,
-	 template<typename, typename> class Vector>
+   typename Allocator,
+   template<typename, typename> class Vector>
 __host__
 void print_v(const Vector<T, Allocator>& v, size_t n, std::ostream& os)
 { 
@@ -96,18 +98,20 @@ bool compare(const Vector<T>& d_v, const std::vector<T>& baseline, T eps)
   thrust::copy_n(d_v.begin(), n, h_v.begin());//D-H okay...
   
   return std::inner_product(h_v.begin(), h_v.end(),
-			    baseline.begin(),
-			    true,
-			    [](bool b1, bool b2){
-			      return b1 && b2;
-			    },
-			    [eps](T v1, T v2){
-			      return (std::abs(v1-v2) < eps);
-			    });
+          baseline.begin(),
+          true,
+          [](bool b1, bool b2){
+            return b1 && b2;
+          },
+          [eps](T v1, T v2){
+            auto diff = (v1 <= v2) ? v2-v1 : v1-v2; // can't use std::abse due to type ambiguity
+            return (diff < eps);
+          });
 }
 
+struct gdf_group_by : public GdfTest {};
 
-TEST(gdf_group_by_sum, UsageTestSum)
+TEST_F(gdf_group_by, UsageTestSum)
 {
   std::vector<int> vc1{1,1,1,1,1,1};
   std::vector<int> vi1{1,3,3,5,5,0};
@@ -153,6 +157,7 @@ TEST(gdf_group_by_sum, UsageTestSum)
 
   c_agg.dtype = GDF_FLOAT64;
   c_agg.data = dd1.data().get();
+  c_agg.valid = nullptr;
   c_agg.size = nrows;
 
   c_vout.dtype = GDF_FLOAT64;
@@ -204,6 +209,7 @@ TEST(gdf_group_by_sum, UsageTestSum)
   d_keys.assign(nrows, 0);
   gdf_column c_indx;
   c_indx.data = d_keys.data().get();
+  c_indx.valid = nullptr;
   c_indx.size = nrows;
   c_indx.dtype = GDF_INT32;
   //}
@@ -256,7 +262,7 @@ TEST(gdf_group_by_sum, UsageTestSum)
   EXPECT_EQ( flag, true ) << "GROUP-BY SUM aggregation returns unexpected result";
 }
 
-TEST(gdf_group_by_count, UsageTestCount)
+TEST_F(gdf_group_by, UsageTestCount)
 {
   std::vector<int> vc1{1,1,1,1,1,1};
   std::vector<int> vi1{1,3,3,5,5,0};
@@ -273,7 +279,7 @@ TEST(gdf_group_by_count, UsageTestCount)
  
   Vector<IndexT> d_indx(sz, 0);
   Vector<IndexT> d_keys(sz, 0);
-  Vector<IndexT> d_vals(sz, 0);
+  Vector<int32_t> d_vals(sz, 0);
 
   size_t ncols = 3;
   size_t& nrows = sz;
@@ -301,6 +307,7 @@ TEST(gdf_group_by_count, UsageTestCount)
 
   c_agg.dtype = GDF_FLOAT64;
   c_agg.data = dd1.data().get();
+  c_agg.valid = nullptr;
   c_agg.size = nrows;
 
   c_vout.dtype = GDF_INT32;
@@ -352,6 +359,7 @@ TEST(gdf_group_by_count, UsageTestCount)
   d_keys.assign(nrows, 0);
   gdf_column c_indx;
   c_indx.data = d_keys.data().get();
+  c_indx.valid = nullptr;
   c_indx.size = nrows;
   c_indx.dtype = GDF_INT32;
   //}
@@ -393,16 +401,16 @@ TEST(gdf_group_by_count, UsageTestCount)
   //d_vals: 1,1,2,2,
 
   std::vector<IndexT> vk{5,0,2,4};
-  std::vector<IndexT> vals{1,1,2,2};
+  std::vector<int32_t> vals{1,1,2,2};
 
   flag = compare(d_keys, vk, szeps);
   EXPECT_EQ( flag, true ) << "GROUP-BY row indices return unexpected result";
 
-  flag = compare(d_vals, vals, szeps);
+  flag = compare(d_vals, vals, ieps);
   EXPECT_EQ( flag, true ) << "GROUP-BY COUNT aggregation returns unexpected result";
 }
 
-TEST(gdf_group_by_avg, UsageTestAvg)
+TEST_F(gdf_group_by, UsageTestAvg)
 {
   std::vector<int> vc1{1,1,1,1,1,1};
   std::vector<int> vi1{1,3,3,5,5,0};
@@ -447,6 +455,7 @@ TEST(gdf_group_by_avg, UsageTestAvg)
 
   c_agg.dtype = GDF_FLOAT64;
   c_agg.data = dd1.data().get();
+  c_agg.valid = nullptr;
   c_agg.size = nrows;
 
   c_vout.dtype = GDF_FLOAT64;
@@ -498,6 +507,7 @@ TEST(gdf_group_by_avg, UsageTestAvg)
   d_keys.assign(nrows, 0);
   gdf_column c_indx;
   c_indx.data = d_keys.data().get();
+  c_indx.valid = nullptr;
   c_indx.size = nrows;
   c_indx.dtype = GDF_INT32;
   //}
@@ -548,7 +558,7 @@ TEST(gdf_group_by_avg, UsageTestAvg)
   EXPECT_EQ( flag, true ) << "GROUP-BY AVG aggregation returns unexpected result";
 }
 
-TEST(gdf_group_by_min, UsageTestMin)
+TEST_F(gdf_group_by, UsageTestMin)
 {
   std::vector<int> vc1{1,1,1,1,1,1};
   std::vector<int> vi1{1,3,3,5,5,0};
@@ -602,13 +612,14 @@ TEST(gdf_group_by_min, UsageTestMin)
   //int flag_sorted = 0;
 
   std::vector<double> v_col{2., 4., 5., 7., 11., 3.};
-  thrust::device_vector<double> d_col = v_col;
+  Vector<double> d_col = v_col;
 
   std::cout<<"aggregate = min on column:\n";
   print_v(d_col, std::cout);
 
   c_agg.dtype = GDF_FLOAT64;
   c_agg.data = d_col.data().get();
+  c_agg.valid = nullptr;
 
   //input
   //{
@@ -649,6 +660,7 @@ TEST(gdf_group_by_min, UsageTestMin)
   d_keys.assign(nrows, 0);
   gdf_column c_indx;
   c_indx.data = d_keys.data().get();
+  c_indx.valid = nullptr;
   c_indx.size = nrows;
   c_indx.dtype = GDF_INT32;
   //}
@@ -699,7 +711,7 @@ TEST(gdf_group_by_min, UsageTestMin)
   EXPECT_EQ( flag, true ) << "GROUP-BY MIN aggregation returns unexpected result";
 }
 
-TEST(gdf_group_by_max, UsageTestMax)
+TEST_F(gdf_group_by, UsageTestMax)
 {
   std::vector<int> vc1{1,1,1,1,1,1};
   std::vector<int> vi1{1,3,3,5,5,0};
@@ -753,13 +765,14 @@ TEST(gdf_group_by_max, UsageTestMax)
   //int flag_sorted = 0;
 
   std::vector<double> v_col{2., 4., 5., 7., 11., 3.};
-  thrust::device_vector<double> d_col = v_col;
+  Vector<double> d_col = v_col;
 
   std::cout<<"aggregate = max on column:\n";
   print_v(d_col, std::cout);
 
   c_agg.dtype = GDF_FLOAT64;
   c_agg.data = d_col.data().get();
+  c_agg.valid = nullptr;
 
   //input
   //{
@@ -800,6 +813,7 @@ TEST(gdf_group_by_max, UsageTestMax)
   d_keys.assign(nrows, 0);
   gdf_column c_indx;
   c_indx.data = d_keys.data().get();
+  c_indx.valid = nullptr;
   c_indx.size = nrows;
   c_indx.dtype = GDF_INT32;
   //}

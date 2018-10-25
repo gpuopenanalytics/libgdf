@@ -23,13 +23,18 @@
 #include <thrust/device_vector.h>
 #include <thrust/copy.h>
 
+#include "thrust_rmm_allocator.h"
+
 #include "quantiles.hpp"
 
+// thrust::device_vector set to use rmmAlloc and rmmFree.
+template <typename T>
+using Vector = thrust::device_vector<T, rmm_allocator<T>>;
 
 namespace{ //unknown
   template<typename VType,
            typename RetT = double>
-    void f_quantile_tester(thrust::device_vector<VType>& d_in)
+    void f_quantile_tester(Vector<VType>& d_in)
   {
     using FctrType = std::function<RetT(VType, VType, double)>;
 
@@ -97,7 +102,7 @@ namespace{ //unknown
       }
     else
       {
-        thrust::device_vector<ColType> dv(n);
+        Vector<ColType> dv(n);
         thrust::copy_n(thrust::device, /*TODO: stream*/p_dv, n, dv.begin());
         cudaDeviceSynchronize();
         p_dv = dv.data().get();
@@ -126,7 +131,7 @@ namespace{ //unknown
       }
     else
       {
-        thrust::device_vector<ColType> dv(n);
+        Vector<ColType> dv(n);
         thrust::copy_n(thrust::device, /*TODO: stream*/p_dv, n, dv.begin());
         cudaDeviceSynchronize();
         p_dv = dv.data().get();
@@ -145,6 +150,7 @@ gdf_error gdf_quantile_exact(	gdf_column*         col_in,       //input column;
                                                                   //(2) for possible types bigger than double, in the future;
                                 gdf_context*        ctxt)         //context info
 {
+  GDF_REQUIRE(!col_in->valid, GDF_VALIDITY_UNSUPPORTED);
   gdf_error ret = GDF_SUCCESS;
   assert( col_in->size > 0 );
   
@@ -208,6 +214,7 @@ gdf_error gdf_quantile_aprrox(	gdf_column*  col_in,       //input column;
                                 void*        t_erased_res, //type-erased result of same type as column;
                                 gdf_context* ctxt)         //context info
 {
+  GDF_REQUIRE(!col_in->valid, GDF_VALIDITY_UNSUPPORTED);
   gdf_error ret = GDF_SUCCESS;
   assert( col_in->size > 0 );
   

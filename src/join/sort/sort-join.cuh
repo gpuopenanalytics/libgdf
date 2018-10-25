@@ -109,12 +109,13 @@ compute_joined_indices(const _join_bounds &bounds,
     const int* lower_data = bounds.lower.data();
     const int* upper_data = bounds.upper.data();
 
-    // for outer join: allocate extra space for appending the right indices
+    // for full join: allocate extra space for appending the right indices
     int output_npairs = join_count + append_count;
     int *output_l_ptr, *output_r_ptr;
-    CUDA_RT_CALL( cudaMalloc(&output_l_ptr, output_npairs*sizeof(int)) );
-    CUDA_RT_CALL( cudaMalloc(&output_r_ptr, output_npairs*sizeof(int)) );
-
+    // TODO: error checking?
+    rmmAlloc((void**)&output_l_ptr, output_npairs*sizeof(int), 0); // TODO non-default stream?
+    rmmAlloc((void**)&output_r_ptr, output_npairs*sizeof(int), 0);
+    
     if (isInner){
         // Use load-balancing search on the segments. The output is a pair with
         // a_index = seg and b_index = lower_data[seg] + rank.
@@ -148,7 +149,7 @@ compute_joined_indices(const _join_bounds &bounds,
 }
 
 template<typename launch_arg_t = empty_t, typename T>
-void outer_join_append_right(T *output_l_data,
+void full_join_append_right(T *output_l_data,
                              T *output_r_data,
                              const mem_t<int> &matches,
                              int append_count, int join_count,
@@ -163,7 +164,7 @@ void outer_join_append_right(T *output_l_data,
 
 template<typename launch_arg_t = empty_t,
          typename a_it, typename b_it, typename comp_t>
-mem_t<int> outer_join_count_matches(a_it a, int a_count, b_it b, int b_count,
+mem_t<int> full_join_count_matches(a_it a, int a_count, b_it b, int b_count,
                                      comp_t comp, context_t &context,
                                      int &append_count)
 {
@@ -223,7 +224,7 @@ left_join(a_it a, int a_count, b_it b, int b_count,
 template<typename launch_arg_t = empty_t,
   typename a_it, typename b_it, typename comp_t>
 std::pair<gdf_column, gdf_column>
-outer_join(a_it a, int a_count, b_it b, int b_count,
+full_join(a_it a, int a_count, b_it b, int b_count,
            comp_t comp, context_t& context)
 {
     _join_bounds bounds = compute_join_bounds(a, a_count, b, b_count, comp,
@@ -232,11 +233,11 @@ outer_join(a_it a, int a_count, b_it b, int b_count,
     mem_t<int> scanned_sizes = scan_join_bounds(bounds, a_count, b_count, context, false,
                                                 join_count);
     int append_count;
-    mem_t<int> matches = outer_join_count_matches(a, a_count, b, b_count,
+    mem_t<int> matches = full_join_count_matches(a, a_count, b, b_count,
                                                   comp, context, append_count );
     auto output = compute_joined_indices(bounds, scanned_sizes, a_count,
                                                join_count, context, false, append_count);
-    outer_join_append_right(
+    full_join_append_right(
             static_cast<int*>(output.first.data),
             static_cast<int*>(output.second.data),
             matches, append_count, join_count, context);

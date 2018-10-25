@@ -25,13 +25,17 @@
 
 PROJECT(libgdf)
 
-cmake_minimum_required(VERSION 2.8)  # not sure about version required
+cmake_minimum_required(VERSION 3.11)
 
 set(CMAKE_CXX_STANDARD 11)
 message(STATUS "Using C++ standard: c++${CMAKE_CXX_STANDARD}")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
 message(STATUS "CMAKE_MODULE_PATH:" "${CMAKE_MODULE_PATH}")
+
+# specify the cross compilers
+set(CMAKE_C_COMPILER $ENV{CC})
+set(CMAKE_CXX_COMPILER $ENV{CXX})
 
 IF(CMAKE_COMPILER_IS_GNUCXX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
@@ -60,6 +64,7 @@ if(CUDA_FOUND)
     # Suppress SHFL warnings caused by modern GPU.
     # TODO: remove this when modern GPU is removed or fixed to use shfl_sync
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};
+        -Werror cross-execution-space-call;
         -Wno-deprecated-declarations;
         -Xptxas --disable-warnings)
     # set warnings as errors
@@ -87,6 +92,7 @@ include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cub"
     "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/moderngpu/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cnmem/include"
     "${CUDA_INCLUDE_DIRS}"
     "${ARROW_INCLUDEDIR}"
 )
@@ -118,6 +124,12 @@ if(HT_LEGACY_ALLOCATOR)
   set(CUDA_NVCC_FLAGS  ${CUDA_NVCC_FLAGS};-DHT_LEGACY_ALLOCATOR)
 endif()
 
+cuda_add_library(rmm SHARED
+    src/memory/memory.cpp
+    src/memory/memory_manager.cpp
+    thirdparty/cnmem/src/cnmem.cpp
+)
+target_link_libraries(rmm cuda)
 
 cuda_add_library(gdf SHARED
     src/binaryops.cu
@@ -159,9 +171,9 @@ endif(USE_NVTX)
 
 if (ARROW_NUMERIC_VERSION EQUAL 900)
   # arrow-0.9 requires boost_regex
-  target_link_libraries(gdf arrow boost_regex)
+  target_link_libraries(gdf arrow boost_regex rmm)
 else()
-  target_link_libraries(gdf arrow)
+  target_link_libraries(gdf arrow rmm)
 endif()
 
 # Command to symlink files into the build directory
@@ -171,19 +183,20 @@ add_custom_command(  # link the include directory
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_custom_command(  # link the python directory
-    OUTPUT libgdf_cffi setup.py tests
+    OUTPUT libgdf_cffi librmm_cffi setup.py tests
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/python/libgdf_cffi libgdf_cffi
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/python/librmm_cffi librmm_cffi
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/python/tests tests
     COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/python/setup.py setup.py)
 
-add_custom_command(  # trigger cffi to build the wrapper
-    OUTPUT libgdf_cffi/libgdf_cffi.py
+add_custom_command(  # trigger cffi to build the wrappers
+    OUTPUT libgdf_cffi/libgdf_cffi.py librmm_cffi/librmm_cffi.py
     COMMAND python setup.py build_ext --inplace
-    DEPENDS setup.py libgdf_cffi include)
+    DEPENDS setup.py libgdf_cffi librmm_cffi include)
 
 add_custom_target(   # target to link the python files and trigger cffi
     copy_python
-    DEPENDS libgdf_cffi/libgdf_cffi.py)
+    DEPENDS libgdf_cffi/libgdf_cffi.py librmm_cffi/librmm_cffi.py)
 
 # The test target
 add_custom_target(pytest DEPENDS copy_python)
@@ -192,7 +205,7 @@ add_custom_command(TARGET pytest POST_BUILD
                    WORKING_DIRECTORY --cache-clear tests)
 
 # The install target
-install(TARGETS gdf LIBRARY DESTINATION lib)
+install(TARGETS gdf rmm LIBRARY DESTINATION lib)
 install(DIRECTORY include/gdf DESTINATION include)
 
 # Configure the C++ tests
