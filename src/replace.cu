@@ -129,16 +129,17 @@ NotSameDType(const gdf_column *column,
 
 }  // namespace
 
-/// \brief Replace `to_replace` data of `column` with `values`
+/// \brief For each value in `to_replace`, find all instances of that value
+///        in `column` and replace it with the corresponding value in `values`.
 /// \param[in/out] column data
 /// \param[in] to_replace contains values of column that will be replaced
 /// \param[in] values contains the replacement values
 ///
 /// Note that `to_replace` and `values` are related by the index
 gdf_error
-gdf_replace(gdf_column *      column,
-            const gdf_column *to_replace,
-            const gdf_column *values) {
+gdf_find_and_replace_all(gdf_column *      column,
+                         const gdf_column *to_replace,
+                         const gdf_column *values) {
     if (NotEqualReplacementSize(to_replace, values)) {
         return GDF_COLUMN_SIZE_MISMATCH;
     }
@@ -146,7 +147,7 @@ gdf_replace(gdf_column *      column,
     if (NotSameDType(column, to_replace, values)) { return GDF_CUDA_ERROR; }
 
     switch (column->dtype) {
-#define WHEN(DTYPE)                                                            \
+#define REPLACE_CASE(DTYPE)                                                    \
     case GDF_##DTYPE: {                                                        \
         using value_type = gdf_dtype_traits<GDF_##DTYPE>::value_type;          \
         return Replace(static_cast<value_type *>(column->data),                \
@@ -156,17 +157,17 @@ gdf_replace(gdf_column *      column,
                        static_cast<std::ptrdiff_t>(values->size));             \
     }
 
-        WHEN(INT8);
-        WHEN(INT16);
-        WHEN(INT32);
-        WHEN(INT64);
-        WHEN(FLOAT32);
-        WHEN(FLOAT64);
-        WHEN(DATE32);
-        WHEN(DATE64);
-        WHEN(TIMESTAMP);
+        REPLACE_CASE(INT8);
+        REPLACE_CASE(INT16);
+        REPLACE_CASE(INT32);
+        REPLACE_CASE(INT64);
+        REPLACE_CASE(FLOAT32);
+        REPLACE_CASE(FLOAT64);
+        REPLACE_CASE(DATE32);
+        REPLACE_CASE(DATE64);
+        REPLACE_CASE(TIMESTAMP);
 
-#undef WHEN
+#undef REPLACE_CASE
 
     case GDF_invalid:
     default: return GDF_UNSUPPORTED_DTYPE;
