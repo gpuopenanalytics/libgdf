@@ -98,7 +98,8 @@ BM_GPU_LoopReplace(benchmark::State &state) {
     gdf_column values = MakeGdfColumn(values_vector);
 
     for (auto _ : state) {
-        const gdf_error status = gdf_replace(&column, &to_replace, &values);
+        const gdf_error status =
+          gdf_find_and_replace_all(&column, &to_replace, &values);
         state.PauseTiming();
         if (status != GDF_SUCCESS) { state.SkipWithError("Failed replace"); }
         state.ResumeTiming();

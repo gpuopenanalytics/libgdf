@@ -15,8 +15,4 @@
 # limitations under the License.
 #=============================================================================
 
-
-if (GDF_BENCHMARK)
-
 GDF_ADD_BENCHMARK(replace-benchmark replace-benchmark.cu)
-endif()
