@@ -29,8 +29,6 @@ MakeDeviceVector(const std::initializer_list<T> list) {
     return device_data;
 }
 
-
-
 // This is the main test feature
 template <class T>
 class ReplaceTest : public testing::Test {
@@ -47,7 +45,8 @@ protected:
         to_replace = MakeGdfColumn(to_replace_data);
         values     = MakeGdfColumn(values_data);
 
-        const gdf_error status = gdf_replace(&column, &to_replace, &values);
+        const gdf_error status =
+          gdf_find_and_replace_all(&column, &to_replace, &values);
 
         EXPECT_EQ(GDF_SUCCESS, status);
 
@@ -79,7 +78,6 @@ TYPED_TEST(ReplaceTest, ReplaceEvenPosition) {
     EXPECT_EQ(6, results[7]);
 }
 
-
 // Similar test as ReplaceEvenPosition, but with unordered data
 TYPED_TEST(ReplaceTest, Unordered) {
     thrust::device_ptr<TypeParam> results =
@@ -90,7 +88,6 @@ TYPED_TEST(ReplaceTest, Unordered) {
     EXPECT_EQ(6, results[6]);
     EXPECT_EQ(2, results[7]);
 }
-
 
 // Testing with Empty Replace
 TYPED_TEST(ReplaceTest, EmptyReplace) {
@@ -127,58 +124,56 @@ TYPED_TEST(ReplaceTest, EmptyData) {
     this->test({}, {10, 11, 12}, {15, 16, 17});
 }
 
-
 // Test with much larger data sets
 TEST(LargeScaleReplaceTest, LargeScaleReplaceTest) {
+    const int DATA_SIZE    = 1000000;
+    const int REPLACE_SIZE = 10000;
 
-	{
-		const int DATA_SIZE = 1000000;
-		const int REPLACE_SIZE = 10000;
+    srand((unsigned) time(NULL));
 
-		srand((unsigned)time(NULL));
+    std::vector<std::int32_t> column_data(DATA_SIZE);
+    for (int i = 0; i < DATA_SIZE; i++) {
+        column_data[i] = rand() % (2 * REPLACE_SIZE);
+    }
 
-		std::vector<std::int32_t> column_data(DATA_SIZE);
-		for (int i = 0; i < DATA_SIZE; i++){
-			column_data[i] = rand() % (2*REPLACE_SIZE);
-		}
+    std::vector<std::int32_t> from(DATA_SIZE);
+    std::vector<std::int32_t> to(DATA_SIZE);
+    int                       count = 0;
+    for (int i = 0; i < 7; i++) {
+        for (int j = 0; j < REPLACE_SIZE; j += 7) {
+            from[i + j] = count;
+            count++;
+            to[i + j] = count;
+        }
+    }
 
-		std::vector<std::int32_t> from(DATA_SIZE);
-		std::vector<std::int32_t> to(DATA_SIZE);
-		int count = 0;
-		for (int i = 0; i < 7; i++){
-			for (int j = 0; j < REPLACE_SIZE; j += 7){
-				from[i+j] = count;
-				count++;
-				to[i+j] = count;
-			}
-		}
+    thrust::device_vector<std::int32_t> device_data(column_data);
+    gdf_column                          data_gdf = MakeGdfColumn(device_data);
+    thrust::device_vector<std::int32_t> device_from(from);
+    gdf_column                          from_gdf = MakeGdfColumn(device_from);
+    thrust::device_vector<std::int32_t> device_to(to);
+    gdf_column                          to_gdf = MakeGdfColumn(device_to);
 
-		thrust::device_vector<std::int32_t> device_data(column_data);
-		gdf_column data_gdf = MakeGdfColumn(device_data);
-		thrust::device_vector<std::int32_t> device_from(from);
-		gdf_column from_gdf = MakeGdfColumn(device_from);
-		thrust::device_vector<std::int32_t> device_to(to);
-		gdf_column to_gdf = MakeGdfColumn(device_to);
+    const gdf_error status =
+      gdf_find_and_replace_all(&data_gdf, &from_gdf, &to_gdf);
 
-		const gdf_error status = gdf_replace(&data_gdf, &from_gdf, &to_gdf);
+    EXPECT_EQ(GDF_SUCCESS, status);
 
-		EXPECT_EQ(GDF_SUCCESS, status);
+    std::vector<std::int32_t> replaced_data(DATA_SIZE);
+    thrust::copy(device_data.begin(), device_data.end(), replaced_data.begin());
 
-		std::vector<std::int32_t> replaced_data(DATA_SIZE);
-		thrust::copy(device_data.begin(), device_data.end(), replaced_data.begin());
-
-		count = 0;
-		for (int i = 0; i < DATA_SIZE; i++){
-			if (column_data[i] < REPLACE_SIZE){
-				EXPECT_EQ(column_data[i] + 1, replaced_data[i]);
-				if (column_data[i] + 1 != replaced_data[i]){
-					std::cout<<"failed at "<<i<<"  column_data[i]: "<<column_data[i]<<"  replaced_data[i]: "<<replaced_data[i]<<std::endl;
-							count++;
-					if (count > 20){
-						break;
-					}
-				}
-			}
-		}
-	}
+    count = 0;
+    for (int i = 0; i < DATA_SIZE; i++) {
+        if (column_data[i] < REPLACE_SIZE) {
+            EXPECT_EQ(column_data[i] + 1, replaced_data[i]);
+            if (column_data[i] + 1 != replaced_data[i]) {
+                std::cout << "failed at " << i
+                          << "  column_data[i]: " << column_data[i]
+                          << "  replaced_data[i]: " << replaced_data[i]
+                          << std::endl;
+                count++;
+                if (count > 20) { break; }
+            }
+        }
+    }
 }
