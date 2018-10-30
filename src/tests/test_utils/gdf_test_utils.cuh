@@ -23,15 +23,35 @@
 #include <gdf/utils.h>
 #include <memory>
 #include "../../util/bit_util.cuh"
+using namespace gdf::util;
 
 // Type for a unique_ptr to a gdf_column with a custom deleter
 // Custom deleter is defined at construction
-using gdf_col_pointer = typename std::unique_ptr<gdf_column, 
+using gdf_col_pointer = typename std::unique_ptr<gdf_column,
                                                  std::function<void(gdf_column*)>>;
 
+
+
+// Prints a vector and valids
+template <typename T>
+void print_vector_and_valid(T * v,
+                        gdf_valid_type * valid,
+                        const size_t num_rows)
+{
+  auto functor = [&valid, &v](int index) -> std::string {
+    if (gdf_is_valid(valid, index))
+      return std::to_string((int)v[index]);
+    return std::string("@");
+  };
+  std::vector<int> indexes(num_rows);
+  std::iota(std::begin(indexes), std::end(indexes), 0);
+  std::transform(indexes.begin(), indexes.end(), std::ostream_iterator<std::string>(std::cout, ", "), functor);
+  std::cout << std::endl;
+}
+
 template <typename col_type>
-void print_typed_column(col_type * col_data, 
-                        gdf_valid_type * validity_mask, 
+void print_typed_column(col_type * col_data,
+                        gdf_valid_type * validity_mask,
                         const size_t num_rows)
 {
 
@@ -40,33 +60,36 @@ void print_typed_column(col_type * col_data,
 
 
   const size_t num_masks = gdf_get_num_chars_bitmask(num_rows);
+  std::cout << "column :\n";
+
   std::vector<gdf_valid_type> h_mask(num_masks);
-  if(nullptr != validity_mask)
-  {
-    cudaMemcpy(h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
-  }
+  cudaMemcpy(h_mask.data(), validity_mask, num_masks * sizeof(gdf_valid_type), cudaMemcpyDeviceToHost);
+  print_vector_and_valid(h_data.data(), h_mask.data(), num_rows);
 
-
-  for(size_t i = 0; i < num_rows; ++i)
-  {
-    // If the element is valid, print it's value
-    if(true == gdf_is_valid(h_mask.data(), i))
+  std::cout << "\n";
+  if (validity_mask != nullptr) {
+    auto gdf_valid_to_str_lambda = [](gdf_valid_type *valid, size_t column_size)
     {
-      std::cout << h_data[i] << " ";
-    }
-    // Otherwise, print an @ to represent a null value
-    else
-    {
-      std::cout << "@" << " ";
-    }
+        size_t n_bytes = gdf_get_num_chars_bitmask(column_size);
+        std::string response;
+        for (size_t i = 0; i < n_bytes; i++)
+        {
+            size_t length = n_bytes != i + 1 ? GDF_VALID_BITSIZE : column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
+            auto result = chartobin(valid[i], length);
+            response += std::string(result) + '|';
+        }
+        return response;
+    };
+    auto res = gdf_valid_to_str_lambda(h_mask.data(), num_rows);
+    std::cout << "mask : " << std::endl;
+    std::cout << res << std::endl;
   }
   std::cout << std::endl;
 }
 
-void print_gdf_column(gdf_column const * the_column)
+static inline void print_gdf_column(gdf_column const * the_column)
 {
   const size_t num_rows = the_column->size;
-
   const gdf_dtype gdf_col_type = the_column->dtype;
   switch(gdf_col_type)
   {
@@ -148,8 +171,8 @@ gdf_col_pointer create_gdf_column(std::vector<col_type> const & host_vector,
   // Create a new instance of a gdf_column with a custom deleter that will free
   // the associated device memory when it eventually goes out of scope
   auto deleter = [](gdf_column* col){
-                                      col->size = 0; 
-                                      if(nullptr != col->data){cudaFree(col->data);} 
+                                      col->size = 0;
+                                      if(nullptr != col->data){cudaFree(col->data);}
                                       if(nullptr != col->valid){cudaFree(col->valid);}
                                     };
   gdf_col_pointer the_column{new gdf_column, deleter};
@@ -159,7 +182,7 @@ gdf_col_pointer create_gdf_column(std::vector<col_type> const & host_vector,
   cudaMemcpy(the_column->data, host_vector.data(), host_vector.size() * sizeof(col_type), cudaMemcpyHostToDevice);
 
 
-  // If a validity bitmask vector was passed in, allocate device storage 
+  // If a validity bitmask vector was passed in, allocate device storage
   // and copy its contents from the host vector
   if(valid_vector.size() > 0)
   {
@@ -185,7 +208,7 @@ gdf_col_pointer create_gdf_column(std::vector<col_type> const & host_vector,
 // a gdf_column and append it to a vector of gdf_columns
 template<typename valid_initializer_t, std::size_t I = 0, typename... Tp>
   inline typename std::enable_if<I == sizeof...(Tp), void>::type
-convert_tuple_to_gdf_columns(std::vector<gdf_col_pointer> &gdf_columns,std::tuple<std::vector<Tp>...>& t, 
+convert_tuple_to_gdf_columns(std::vector<gdf_col_pointer> &gdf_columns,std::tuple<std::vector<Tp>...>& t,
                              valid_initializer_t bit_initializer)
 {
   //bottom of compile-time recursion
@@ -221,7 +244,7 @@ convert_tuple_to_gdf_columns(std::vector<gdf_col_pointer> &gdf_columns,std::tupl
 // Converts a tuple of host vectors into a vector of gdf_columns
 
 template<typename valid_initializer_t, typename... Tp>
-std::vector<gdf_col_pointer> initialize_gdf_columns(std::tuple<std::vector<Tp>...> & host_columns, 
+std::vector<gdf_col_pointer> initialize_gdf_columns(std::tuple<std::vector<Tp>...> & host_columns,
                                                     valid_initializer_t bit_initializer)
 {
   std::vector<gdf_col_pointer> gdf_columns;
@@ -230,12 +253,12 @@ std::vector<gdf_col_pointer> initialize_gdf_columns(std::tuple<std::vector<Tp>..
 }
 
 
-// Overload for default initialization of validity bitmasks which 
+// Overload for default initialization of validity bitmasks which
 // sets every element to valid
 template<typename... Tp>
 std::vector<gdf_col_pointer> initialize_gdf_columns(std::tuple<std::vector<Tp>...> & host_columns )
 {
-  return initialize_gdf_columns(host_columns, 
+  return initialize_gdf_columns(host_columns,
                                 [](const size_t row, const size_t col){return true;});
 }
 

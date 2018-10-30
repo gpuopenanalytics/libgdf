@@ -81,21 +81,10 @@ gdf_size_type get_number_of_bytes_for_valid (gdf_size_type column_size) {
 // note: functor inherits from unary_function
 struct modulus_bit_width : public thrust::unary_function<gdf_size_type,gdf_size_type>
 {
-	gdf_size_type n_bytes;
-	gdf_size_type column_size;
-	
-	modulus_bit_width (gdf_size_type b_nytes, gdf_size_type column_size) {
-		this->n_bytes = n_bytes;
-		this->column_size = column_size;
-	}
 	__host__ __device__
 	gdf_size_type operator()(gdf_size_type x) const
 	{
-		gdf_size_type col_position = x / 8;	
-        gdf_size_type length_col = n_bytes != col_position+1 ? GDF_VALID_BITSIZE : column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
-		//return x % GDF_VALID_BITSIZE;
-		return (length_col - 1) - (x % 8);
-		// x << 
+		return x % GDF_VALID_BITSIZE;
 	}
 };
 
@@ -129,17 +118,17 @@ struct shift_right: public thrust::unary_function<gdf_valid_type,gdf_valid_type>
   gdf_valid_type operator()(gdf_valid_type x) const
   {
 	    //if you want to force the shift to be fill bits with 0 you need to use an unsigned type
-	  /*if (not_too_many) { // is the last 
-		return  x; 
+	  /*if (not_too_many) { // is the last
+		return  x;
 	  }*/
 	  return *((unsigned char *) &x) >> num_bits;
 
   }
 };
- 
+
 struct bit_or: public thrust::unary_function<thrust::tuple<gdf_valid_type,gdf_valid_type>,gdf_valid_type>
 {
-	 
+
 
 	__host__ __device__
 	gdf_valid_type operator()(thrust::tuple<gdf_valid_type,gdf_valid_type> x) const
@@ -147,7 +136,7 @@ struct bit_or: public thrust::unary_function<thrust::tuple<gdf_valid_type,gdf_va
 		return thrust::get<0>(x) | thrust::get<1>(x);
 	}
 };
- 
+
 
 typedef thrust::transform_iterator<modulus_bit_width, thrust::counting_iterator<gdf_size_type> > bit_position_iterator;
 
@@ -173,7 +162,7 @@ struct is_bit_set
 
 		return ((thrust::get<0>(value) >> position) & 1);
 	}
-}; 
+};
 
 struct bit_mask_pack_op : public thrust::unary_function<int64_t,gdf_valid_type>
 {
@@ -181,12 +170,11 @@ struct bit_mask_pack_op : public thrust::unary_function<int64_t,gdf_valid_type>
 		gdf_valid_type operator()(const int64_t expanded)
 		{
 			gdf_valid_type result = 0;
-			for(unsigned int i = 0; i < GDF_VALID_BITSIZE; i++){
-				// 0, 8, 16, ....,48,  56
-				unsigned char byte = (expanded >> ( (GDF_VALID_BITSIZE - 1 - i )  * 8));
-				result |= (byte & 1) << i;
-			}
-			return (result);
+		 	for(size_t i = 0; i < GDF_VALID_BITSIZE; i++){
+				unsigned char byte = (expanded >> (i * 8));
+			 	result |= (byte & 1) << i;
+		 	}
+		 	return result;
 		}
 };
 
@@ -215,7 +203,7 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 
 	size_t n_bytes = get_number_of_bytes_for_valid(stencil->size);
 
-	bit_position_iterator bit_position_iter(thrust::make_counting_iterator<gdf_size_type>(0), modulus_bit_width(n_bytes, stencil->size));
+	bit_position_iterator bit_position_iter(thrust::make_counting_iterator<gdf_size_type>(0), modulus_bit_width());
 	gdf_valid_iterator valid_iterator(thrust::detail::make_normal_iterator(thrust::device_pointer_cast(stencil->valid)),GDF_VALID_BITSIZE);
 	//TODO: can probably make this happen with some kind of iterator so it can work on any width size
 
@@ -231,7 +219,7 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 					valid_iterator,
 					thrust::make_transform_iterator<modulus_bit_width, thrust::counting_iterator<gdf_size_type> >(
 							thrust::make_counting_iterator<gdf_size_type>(0),
-							modulus_bit_width(n_bytes, stencil->size))
+							modulus_bit_width())
 			));
 
 	//NOTE!!!! the output column is getting set to a specific size  but we are NOT compacting the allocation,
@@ -292,7 +280,7 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 					valid_iterator,
 					thrust::make_transform_iterator<modulus_bit_width, thrust::counting_iterator<gdf_size_type> >(
 							thrust::make_counting_iterator<gdf_size_type>(0),
-							modulus_bit_width(n_bytes, stencil->size))
+							modulus_bit_width())
 			)
 	);
 
@@ -325,7 +313,7 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 
 	return GDF_SUCCESS;
 
-} 
+}
 
 size_t  get_last_byte_length(size_t column_size) {
     size_t n_bytes = get_number_of_bytes_for_valid(column_size);
@@ -349,7 +337,7 @@ size_t  get_right_byte_length(size_t column_size, size_t iter, size_t left_lengt
     }
     return length;
 }
- 
+
 
  bool last_with_too_many_bits(size_t column_size, size_t iter, size_t left_length) {
     size_t n_bytes = get_number_of_bytes_for_valid(column_size);
@@ -386,17 +374,17 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 
 	cudaMemcpyAsync(output->data, lhs->data, type_width * lhs->size, cudaMemcpyDeviceToDevice, stream);
 	cudaMemcpyAsync( (void *)( (int8_t*) (output->data) + type_width * lhs->size), rhs->data, type_width * rhs->size, cudaMemcpyDeviceToDevice, stream);
-	
+
 	int left_num_chars = get_number_of_bytes_for_valid(lhs->size);
 	int right_num_chars = get_number_of_bytes_for_valid(rhs->size);
-  	int output_num_chars = get_number_of_bytes_for_valid(output->size); 
-					
+  	int output_num_chars = get_number_of_bytes_for_valid(output->size);
+
 	thrust::device_ptr<gdf_valid_type> left_device_bits = thrust::device_pointer_cast((gdf_valid_type *)lhs->valid);
 	thrust::device_ptr<gdf_valid_type> right_device_bits = thrust::device_pointer_cast((gdf_valid_type *)rhs->valid);
 	thrust::device_ptr<gdf_valid_type> output_device_bits = thrust::device_pointer_cast((gdf_valid_type *)output->valid);
 
 	thrust::copy(left_device_bits, left_device_bits + left_num_chars, output_device_bits);
-	
+
 	gdf_valid_type shift_bits = (GDF_VALID_BITSIZE - (lhs->size % GDF_VALID_BITSIZE));
 	if(shift_bits == 8){
 		shift_bits = 0;
@@ -405,14 +393,14 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 		size_t prev_len = get_last_byte_length(lhs->size);
 
 		// copy all the rnbytes bytes  from right column
-		if (shift_bits == 0) { 
+		if (shift_bits == 0) {
 			thrust::copy(right_device_bits, right_device_bits + right_num_chars, output_device_bits + left_num_chars);
 		}
-		else { 
+		else {
 			thrust::host_vector<gdf_valid_type> last_byte (2);
 			thrust::copy (left_device_bits + left_num_chars - 1, left_device_bits + left_num_chars, last_byte.begin());
 			thrust::copy (right_device_bits, right_device_bits + 1, last_byte.begin() + 1);
-			        
+
 			size_t curr_len = get_right_byte_length(rhs->size, 0, prev_len);
 
 			if (1 != right_num_chars) {
@@ -423,7 +411,7 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 			last_byte[0] = concat_bins(last_byte[0], last_byte[1], prev_len, curr_len, flag, last_right_byte_length);
 
 			thrust::copy( last_byte.begin(), last_byte.begin() + 1, output_device_bits + left_num_chars - 1);
-			
+
 			if(right_num_chars > 1)  {
 				using first_iterator_type = thrust::transform_iterator<shift_left,thrust::device_vector<gdf_valid_type>::iterator>;
 				using second_iterator_type = thrust::transform_iterator<shift_right,thrust::device_vector<gdf_valid_type>::iterator>;
@@ -433,22 +421,22 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 				auto too_many_bits = last_with_too_many_bits(rhs->size, right_num_chars, prev_len);
 				size_t last_byte_length = get_last_byte_length(rhs->size);
 
-				if (last_byte_length >= (GDF_VALID_BITSIZE - shift_bits)) { //  
+				if (last_byte_length >= (GDF_VALID_BITSIZE - shift_bits)) { //
 					thrust::host_vector<gdf_valid_type> last_byte (right_device_bits + right_num_chars - 1, right_device_bits + right_num_chars);
 					last_byte[0] = last_byte[0] << GDF_VALID_BITSIZE - last_byte_length;
 					thrust::copy( last_byte.begin(), last_byte.begin() + 1, right_device_bits + right_num_chars - 1);
 				}
-				
+
 				zipped_offset  zipped_offset_iter(
 						thrust::make_tuple(
 								thrust::make_transform_iterator<shift_left, thrust::device_vector<gdf_valid_type>::iterator >(
 										right_device_bits,
 										shift_left(shift_bits)),
-								
+
 								thrust::make_transform_iterator<shift_right, thrust::device_vector<gdf_valid_type>::iterator >(
 										right_device_bits + 1,
 										shift_right(GDF_VALID_BITSIZE - shift_bits, !too_many_bits))
-						)	
+						)
 				);
 				//so what this does is give you an iterator which gives you a tuple where you have your char, and the char after you, so you can get the last bits!
 				using transformed_or = thrust::transform_iterator<bit_or, zipped_offset>;
@@ -471,7 +459,7 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 					thrust::copy (right_device_bits + right_num_chars - 1, right_device_bits + right_num_chars, last_byte.begin() + 1);
 					last_byte[0] = last_byte[0] << last_byte_length | last_byte[1];
 					thrust::copy( last_byte.begin(), last_byte.begin() + 1, output_device_bits + output_num_chars - 1);
-				} 
+				}
 			}
 		}
 		if( last_with_too_many_bits(rhs->size, right_num_chars, prev_len)){
@@ -488,5 +476,3 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 	cudaStreamDestroy(stream);
 	return GDF_SUCCESS;
 }
-
-

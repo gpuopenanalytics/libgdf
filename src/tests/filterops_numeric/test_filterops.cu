@@ -43,7 +43,7 @@ TEST(FilterOperationsTest, usage_example) {
     gdf_comparison_operator gdf_operator = GDF_EQUALS;
 
     gdf_column lhs = gen_gdb_column<LeftValueType>(column_size, init_value); // 4, 2, 0
-    
+
     gdf_column rhs = gen_gdb_column<RightValueType>(column_size, 0.01 + max_size - init_value); // 0, 2, 4
 
     gdf_column output = gen_gdb_column<int8_t>(column_size, 0);
@@ -52,13 +52,13 @@ TEST(FilterOperationsTest, usage_example) {
     EXPECT_TRUE(error == GDF_SUCCESS);
 
     std::cout << "Left" << std::endl;
-    print_column<LeftValueType>(&lhs);
+    print_column(&lhs);
 
     std::cout << "Right" << std::endl;
-    print_column<RightValueType>(&rhs);
+    print_column(&rhs);
 
     std::cout << "Output" << std::endl;
-    print_column<int8_t>(&output);
+    print_column(&output);
 
     check_column_for_comparison_operation<LeftValueType, RightValueType>(&lhs, &rhs, &output, gdf_operator);
 
@@ -112,10 +112,10 @@ TEST(FilterOperationsTest, WithInt8AndOthers)
 {
     test_filterops_using_templates<int8_t, int8_t>();
     test_filterops_using_templates<int8_t, int16_t>();
-    
+
     test_filterops_using_templates<int8_t, int32_t>();
     test_filterops_using_templates<int8_t, int64_t>();
-    test_filterops_using_templates<int8_t, float>(); 
+    test_filterops_using_templates<int8_t, float>();
     test_filterops_using_templates<int8_t, double>();
 }
 
@@ -127,7 +127,7 @@ TEST(FilterOperationsTest, WithInt16AndOthers)
     test_filterops_using_templates<int16_t, int64_t>();
     test_filterops_using_templates<int16_t, float>();
     test_filterops_using_templates<int16_t, double>();
-   
+
 }
 
 TEST(FilterOperationsTest, WithInt32AndOthers)
@@ -138,7 +138,7 @@ TEST(FilterOperationsTest, WithInt32AndOthers)
     test_filterops_using_templates<int32_t, int64_t>();
     test_filterops_using_templates<int32_t, float>();
     test_filterops_using_templates<int32_t, double>();
-   
+
 }
 
 TEST(FilterOperationsTest, WithInt64AndOthers)
@@ -149,7 +149,7 @@ TEST(FilterOperationsTest, WithInt64AndOthers)
     test_filterops_using_templates<int64_t, int64_t>();
     test_filterops_using_templates<int64_t, float>();
     test_filterops_using_templates<int64_t, double>();
-   
+
 }
 
 TEST(FilterOperationsTest, WithFloat32AndOthers)
@@ -160,7 +160,7 @@ TEST(FilterOperationsTest, WithFloat32AndOthers)
     test_filterops_using_templates<float, int64_t>();
     test_filterops_using_templates<float, float>();
     test_filterops_using_templates<float, double>();
-   
+
 }
 
 TEST(FilterOperationsTest, WithFloat64AndOthers)
@@ -171,5 +171,5 @@ TEST(FilterOperationsTest, WithFloat64AndOthers)
     test_filterops_using_templates<double, int64_t>();
     test_filterops_using_templates<double, float>();
     test_filterops_using_templates<double, double>();
-   
+
 }
