@@ -76,7 +76,7 @@ namespace jit {
         if (!result) {
             return result;
         }
-        if (out->size != vax->size) {
+        if (out->size < vax->size) {
             return Option(false, GDF_COLUMN_SIZE_MISMATCH);
         }
         return Option(true, GDF_SUCCESS);
@@ -95,7 +95,7 @@ namespace jit {
         if (!result) {
             return result;
         }
-        if ((out->size != vax->size) || (out->size != vay->size)) {
+        if ((out->size < vax->size) || (out->size < vay->size) || (vay->size != vax->size)) {
             return Option(false, GDF_COLUMN_SIZE_MISMATCH);
         }
         return Option(true, GDF_SUCCESS);

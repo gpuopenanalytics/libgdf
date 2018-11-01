@@ -34,6 +34,7 @@
 #include <thrust/iterator/iterator_adaptor.h>
 #include <thrust/iterator/transform_iterator.h>
 
+#include <cub/cub.cuh>
 //std lib
 #include <map>
 
@@ -74,7 +75,7 @@ private:
 typedef repeat_iterator<thrust::detail::normal_iterator<thrust::device_ptr<gdf_valid_type> > > gdf_valid_iterator;
 
 gdf_size_type get_number_of_bytes_for_valid (gdf_size_type column_size) {
-    return sizeof(gdf_valid_type) * (column_size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
+	return sizeof(gdf_valid_type) * (column_size + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE;
 }
 
 
@@ -97,11 +98,11 @@ struct shift_left: public thrust::unary_function<gdf_valid_type,gdf_valid_type>
 
 	}
 
-  __host__ __device__
-  gdf_valid_type operator()(gdf_valid_type x) const
-  {
-    return x << num_bits;
-  }
+	__host__ __device__
+	gdf_valid_type operator()(gdf_valid_type x) const
+	{
+		return x << num_bits;
+	}
 };
 
 struct shift_right: public thrust::unary_function<gdf_valid_type,gdf_valid_type>
@@ -110,20 +111,20 @@ struct shift_right: public thrust::unary_function<gdf_valid_type,gdf_valid_type>
 	gdf_valid_type num_bits;
 	bool not_too_many;
 	shift_right(gdf_valid_type num_bits, bool not_too_many)
-		: num_bits(num_bits), not_too_many(not_too_many){
+	: num_bits(num_bits), not_too_many(not_too_many){
 
 	}
 
-  __host__ __device__
-  gdf_valid_type operator()(gdf_valid_type x) const
-  {
-	    //if you want to force the shift to be fill bits with 0 you need to use an unsigned type
-	  /*if (not_too_many) { // is the last
+	__host__ __device__
+	gdf_valid_type operator()(gdf_valid_type x) const
+	{
+		//if you want to force the shift to be fill bits with 0 you need to use an unsigned type
+		/*if (not_too_many) { // is the last
 		return  x;
 	  }*/
-	  return *((unsigned char *) &x) >> num_bits;
+		return *((unsigned char *) &x) >> num_bits;
 
-  }
+	}
 };
 
 struct bit_or: public thrust::unary_function<thrust::tuple<gdf_valid_type,gdf_valid_type>,gdf_valid_type>
@@ -167,17 +168,30 @@ struct is_bit_set
 struct bit_mask_pack_op : public thrust::unary_function<int64_t,gdf_valid_type>
 {
 	__host__ __device__
-		gdf_valid_type operator()(const int64_t expanded)
-		{
-			gdf_valid_type result = 0;
-		 	for(size_t i = 0; i < GDF_VALID_BITSIZE; i++){
-				unsigned char byte = (expanded >> (i * 8));
-			 	result |= (byte & 1) << i;
-		 	}
-		 	return result;
+	gdf_valid_type operator()(const int64_t expanded)
+	{
+		gdf_valid_type result = 0;
+		for(size_t i = 0; i < GDF_VALID_BITSIZE; i++){
+			unsigned char byte = (expanded >> (i * 8));
+			result |= (byte & 1) << i;
 		}
+		return result;
+	}
 };
 
+struct is_valid_functor: public thrust::unary_function<int64_t,bool> {
+
+
+	int8_t * data;
+	is_valid_functor(void * _data){
+		data = (int8_t *) _data;
+	}
+	__device__
+	int8_t operator()(const size_t index){
+		return data[index];
+		//return data[index / 8] & (1 << (index % 8));
+	}
+};
 
 std::map<gdf_dtype, int16_t> column_type_width = {{GDF_INT8, sizeof(int8_t)}, {GDF_INT16, sizeof(int16_t)},{GDF_INT32, sizeof(int32_t)}, {GDF_INT64, sizeof(int64_t)},
 		{GDF_FLOAT32, sizeof(float)}, {GDF_FLOAT64, sizeof(double)} };
@@ -186,6 +200,8 @@ std::map<gdf_dtype, int16_t> column_type_width = {{GDF_INT8, sizeof(int8_t)}, {G
 //storing a map from gdf_type to width
 //TODO: add a way for the space where we store temp bitmaps for compaction be allocated
 //on the outside
+
+#include <thrust/iterator/discard_iterator.h>
 gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * output){
 	//OK: add a rquire here that output and lhs are the same size
 	GDF_REQUIRE(output->size == lhs->size, GDF_COLUMN_SIZE_MISMATCH);
@@ -195,117 +211,154 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 	auto searched_item = column_type_width.find(lhs->dtype);
 	int16_t width = searched_item->second; //width in bytes
 
-	searched_item = column_type_width.find(stencil->dtype);
-	int16_t stencil_width= searched_item->second; //width in bytes
+	//searched_item = column_type_width.find(stencil->dtype);
+	//int16_t stencil_width= searched_item->second; //width in bytes
 
 	cudaStream_t stream;
 	cudaStreamCreate(&stream);
 
 	size_t n_bytes = get_number_of_bytes_for_valid(stencil->size);
 
-	bit_position_iterator bit_position_iter(thrust::make_counting_iterator<gdf_size_type>(0), modulus_bit_width());
-	gdf_valid_iterator valid_iterator(thrust::detail::make_normal_iterator(thrust::device_pointer_cast(stencil->valid)),GDF_VALID_BITSIZE);
-	//TODO: can probably make this happen with some kind of iterator so it can work on any width size
-
-	//zip the stencil and the valid iterator together
-	typedef thrust::tuple<thrust::detail::normal_iterator<thrust::device_ptr<int8_t> >,gdf_valid_iterator, bit_position_iterator > zipped_stencil_tuple;
-	typedef thrust::zip_iterator<zipped_stencil_tuple> zipped_stencil_iterator;
-
-	//what kind of shit is that you might wonder?
-	//well basically we are zipping up an iterator to the stencil, one to the bit masks, and one which lets us get the bit position based on our index
-	zipped_stencil_iterator zipped_stencil_iter(
-			thrust::make_tuple(
-					thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int8_t * )stencil->data)),
-					valid_iterator,
-					thrust::make_transform_iterator<modulus_bit_width, thrust::counting_iterator<gdf_size_type> >(
-							thrust::make_counting_iterator<gdf_size_type>(0),
-							modulus_bit_width())
-			));
 
 	//NOTE!!!! the output column is getting set to a specific size  but we are NOT compacting the allocation,
 	//whoever calls that should handle that
+
+	//temp storage for cub call
+	int  *d_num_selected_out;
+	cudaMalloc(&d_num_selected_out,sizeof(int));
+	void     *d_temp_storage = NULL;
+	size_t   temp_storage_bytes = 0;
+
 	if(width == 1){
-		thrust::detail::normal_iterator<thrust::device_ptr<int8_t> > input_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int8_t *) lhs->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int8_t> > output_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int8_t *) output->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int8_t> > output_end =
-				thrust::copy_if(thrust::cuda::par.on(stream),input_start,input_start + lhs->size,zipped_stencil_iter,output_start,is_stencil_true<thrust::detail::normal_iterator<thrust::device_ptr<int8_t> >::value_type >());
-		output->size = output_end - output_start;
+		typedef int8_t data_type;
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+		// Allocate temporary storage
+		cudaError_t err = cudaMalloc(&d_temp_storage, temp_storage_bytes);
+		if(err != cudaSuccess){
+			std::cout<<"couldnt allocate temp space"<<std::endl;
+		}
+		// Run selection
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+
+		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaStreamSynchronize(stream);
+
 	}else if(width == 2){
-		thrust::detail::normal_iterator<thrust::device_ptr<int16_t> > input_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int16_t *) lhs->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int16_t> > output_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int16_t *) output->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int16_t> > output_end =
-				thrust::copy_if(thrust::cuda::par.on(stream),input_start,input_start + lhs->size,zipped_stencil_iter,output_start,is_stencil_true<thrust::detail::normal_iterator<thrust::device_ptr<int8_t> >::value_type >());
-		output->size = output_end - output_start;
+		typedef int16_t data_type;
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+		// Allocate temporary storage
+		cudaError_t err = cudaMalloc(&d_temp_storage, temp_storage_bytes);
+		if(err != cudaSuccess){
+			std::cout<<"couldnt allocate temp space"<<std::endl;
+		}
+		// Run selection
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+
+		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaStreamSynchronize(stream);
 	}else if(width == 4){
-		thrust::detail::normal_iterator<thrust::device_ptr<int32_t> > input_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int32_t *) lhs->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int32_t> > output_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int32_t *) output->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int32_t> > output_end =
-				thrust::copy_if(thrust::cuda::par.on(stream),input_start,input_start + lhs->size,zipped_stencil_iter,output_start,is_stencil_true<thrust::detail::normal_iterator<thrust::device_ptr<int8_t> >::value_type >());
-		output->size = output_end - output_start;
+		typedef int32_t data_type;
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+		// Allocate temporary storage
+		cudaError_t err = cudaMalloc(&d_temp_storage, temp_storage_bytes);
+		if(err != cudaSuccess){
+			std::cout<<"couldnt allocate temp space"<<std::endl;
+		}
+		// Run selection
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+
+		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaStreamSynchronize(stream);
 	}else if(width == 8){
-		thrust::detail::normal_iterator<thrust::device_ptr<int64_t> > input_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int64_t *) lhs->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int64_t> > output_start =
-				thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int64_t *) output->data));
-		thrust::detail::normal_iterator<thrust::device_ptr<int64_t> > output_end =
-				thrust::copy_if(thrust::cuda::par.on(stream),input_start,input_start + lhs->size,zipped_stencil_iter,output_start,is_stencil_true<thrust::detail::normal_iterator<thrust::device_ptr<int8_t> >::value_type >());
-		output->size = output_end - output_start;
+		typedef int64_t data_type;
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+		// Allocate temporary storage
+		cudaError_t err = cudaMalloc(&d_temp_storage, temp_storage_bytes);
+		if(err != cudaSuccess){
+			std::cout<<"couldnt allocate temp space"<<std::endl;
+		}
+		// Run selection
+		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
+				(data_type *) lhs->data,
+				(int8_t *) stencil->data,
+				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
+
+		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaStreamSynchronize(stream);
 	}
+	/*
+	if(false){
+		gdf_size_type num_values = lhs->size;
+			//TODO:BRING OVER THE BITMASK!!!
+			//need to store a prefix sum
+			//align to size 8
+			thrust::device_vector<gdf_valid_type> valid_bit_mask; //we are expanding the bit mask to an int8 because I can't envision an algorithm that operates on the bitmask that
+			if(num_values % GDF_VALID_BITSIZE != 0){
+				valid_bit_mask.resize(num_values + (GDF_VALID_BITSIZE - (num_values % GDF_VALID_BITSIZE))); //align this allocation on GDF_VALID_BITSIZE so we don't have to bounds check
+			}else{
+				valid_bit_mask.resize(num_values);
+			}
 
-	gdf_size_type num_values = lhs->size;
-	//TODO:BRING OVER THE BITMASK!!!
-	//need to store a prefix sum
-	//align to size 8
-	thrust::device_vector<gdf_valid_type> valid_bit_mask; //we are expanding the bit mask to an int8 because I can't envision an algorithm that operates on the bitmask that
-	if(num_values % GDF_VALID_BITSIZE != 0){
-		valid_bit_mask.resize(num_values + (GDF_VALID_BITSIZE - (num_values % GDF_VALID_BITSIZE))); //align this allocation on GDF_VALID_BITSIZE so we don't have to bounds check
-	}else{
-		valid_bit_mask.resize(num_values);
+			// doesn't require the use for a prefix sum which will have size 8 * num rows which is much larger than this
+
+			typedef thrust::tuple<gdf_valid_iterator, bit_position_iterator > mask_tuple;
+			typedef thrust::zip_iterator<mask_tuple> zipped_mask;
+
+
+			zipped_mask  zipped_mask_iter(
+					thrust::make_tuple(
+							valid_iterator,
+							thrust::make_transform_iterator<modulus_bit_width, thrust::counting_iterator<gdf_size_type> >(
+									thrust::make_counting_iterator<gdf_size_type>(0),
+									modulus_bit_width())
+					)
+			);
+
+			typedef thrust::transform_iterator<is_bit_set, zipped_mask > bit_set_iterator;
+			bit_set_iterator bit_set_iter = thrust::make_transform_iterator<is_bit_set,zipped_mask>(
+					zipped_mask_iter,
+					is_bit_set()
+			);
+
+			//copy the bitmask to device_vector of int8
+			thrust::copy(thrust::cuda::par.on(stream), bit_set_iter, bit_set_iter + num_values, valid_bit_mask.begin());
+
+			//remove the values that don't pass the stencil
+			thrust::remove_if(thrust::cuda::par.on(stream),valid_bit_mask.begin(), valid_bit_mask.begin() + num_values,zipped_stencil_iter, is_stencil_true<thrust::detail::normal_iterator<thrust::device_ptr<int8_t> >::value_type >());
+
+			//recompact the values and store them in the output bitmask
+			//we can group them into pieces of 8 because we aligned this earlier on when we made the device_vector
+			thrust::detail::normal_iterator<thrust::device_ptr<int64_t> > valid_bit_mask_group_8_iter =
+					thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int64_t *) valid_bit_mask.data().get()));
+
+
+			//you may notice that we can write out more bytes than our valid_num_bytes, this only happens when we are not aligned to  GDF_VALID_BITSIZE bytes, becasue the
+			//arrow standard requires 64 byte alignment, this is a safe assumption to make
+			thrust::transform(thrust::cuda::par.on(stream), valid_bit_mask_group_8_iter, valid_bit_mask_group_8_iter + ((num_values + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE),
+					thrust::detail::make_normal_iterator(thrust::device_pointer_cast(output->valid)),bit_mask_pack_op());
 	}
-
-	// doesn't require the use for a prefix sum which will have size 8 * num rows which is much larger than this
-
-	typedef thrust::tuple<gdf_valid_iterator, bit_position_iterator > mask_tuple;
-	typedef thrust::zip_iterator<mask_tuple> zipped_mask;
-
-
-	zipped_mask  zipped_mask_iter(
-			thrust::make_tuple(
-					valid_iterator,
-					thrust::make_transform_iterator<modulus_bit_width, thrust::counting_iterator<gdf_size_type> >(
-							thrust::make_counting_iterator<gdf_size_type>(0),
-							modulus_bit_width())
-			)
-	);
-
-	typedef thrust::transform_iterator<is_bit_set, zipped_mask > bit_set_iterator;
-	bit_set_iterator bit_set_iter = thrust::make_transform_iterator<is_bit_set,zipped_mask>(
-			zipped_mask_iter,
-			is_bit_set()
-	);
-
-	//copy the bitmask to device_vector of int8
-	thrust::copy(thrust::cuda::par.on(stream), bit_set_iter, bit_set_iter + num_values, valid_bit_mask.begin());
-
-	//remove the values that don't pass the stencil
-	thrust::remove_if(thrust::cuda::par.on(stream),valid_bit_mask.begin(), valid_bit_mask.begin() + num_values,zipped_stencil_iter, is_stencil_true<thrust::detail::normal_iterator<thrust::device_ptr<int8_t> >::value_type >());
-
-	//recompact the values and store them in the output bitmask
-	//we can group them into pieces of 8 because we aligned this earlier on when we made the device_vector
-	thrust::detail::normal_iterator<thrust::device_ptr<int64_t> > valid_bit_mask_group_8_iter =
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast((int64_t *) valid_bit_mask.data().get()));
-
-
-	//you may notice that we can write out more bytes than our valid_num_bytes, this only happens when we are not aligned to  GDF_VALID_BITSIZE bytes, becasue the
-	//arrow standard requires 64 byte alignment, this is a safe assumption to make
-	thrust::transform(thrust::cuda::par.on(stream), valid_bit_mask_group_8_iter, valid_bit_mask_group_8_iter + ((num_values + GDF_VALID_BITSIZE - 1) / GDF_VALID_BITSIZE),
-			thrust::detail::make_normal_iterator(thrust::device_pointer_cast(output->valid)),bit_mask_pack_op());
+	 */
 
 	cudaStreamSynchronize(stream);
 
@@ -316,51 +369,51 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 }
 
 size_t  get_last_byte_length(size_t column_size) {
-    size_t n_bytes = get_number_of_bytes_for_valid(column_size);
-    size_t length = column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
-    if (n_bytes == 1 ) {
-        length = column_size;
-    }
-    return  length;
+	size_t n_bytes = get_number_of_bytes_for_valid(column_size);
+	size_t length = column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
+	if (n_bytes == 1 ) {
+		length = column_size;
+	}
+	return  length;
 }
 
 size_t  get_right_byte_length(size_t column_size, size_t iter, size_t left_length) {
-    size_t n_bytes = get_number_of_bytes_for_valid(column_size);
-    size_t length = column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
-    if (iter == n_bytes - 1) { // the last one
-        if (left_length + length > GDF_VALID_BITSIZE) {
-            length = GDF_VALID_BITSIZE - left_length;
-        }
-    }
-    else {
-        length = GDF_VALID_BITSIZE - left_length;
-    }
-    return length;
+	size_t n_bytes = get_number_of_bytes_for_valid(column_size);
+	size_t length = column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
+	if (iter == n_bytes - 1) { // the last one
+		if (left_length + length > GDF_VALID_BITSIZE) {
+			length = GDF_VALID_BITSIZE - left_length;
+		}
+	}
+	else {
+		length = GDF_VALID_BITSIZE - left_length;
+	}
+	return length;
 }
 
 
- bool last_with_too_many_bits(size_t column_size, size_t iter, size_t left_length) {
-    size_t n_bytes = get_number_of_bytes_for_valid(column_size);
-    size_t length = column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
-    if (iter == n_bytes) { // the last one
-        // the last one has to many bits
-        if (left_length + length > GDF_VALID_BITSIZE) {
-            return true;
-        }
-    }
-    return false;
+bool last_with_too_many_bits(size_t column_size, size_t iter, size_t left_length) {
+	size_t n_bytes = get_number_of_bytes_for_valid(column_size);
+	size_t length = column_size - GDF_VALID_BITSIZE * (n_bytes - 1);
+	if (iter == n_bytes) { // the last one
+		// the last one has to many bits
+		if (left_length + length > GDF_VALID_BITSIZE) {
+			return true;
+		}
+	}
+	return false;
 }
 
 
- gdf_valid_type concat_bins (gdf_valid_type A, gdf_valid_type B, int len_a, int len_b, bool has_next, size_t right_length){
-    A = A << len_b;
-    if (!has_next) {
-        B = B << len_a;
-        B = B >> len_a;
-    } else {
-        B = B >> right_length - len_b;
-    }
-    return  (A | B);
+gdf_valid_type concat_bins (gdf_valid_type A, gdf_valid_type B, int len_a, int len_b, bool has_next, size_t right_length){
+	A = A << len_b;
+	if (!has_next) {
+		B = B << len_a;
+		B = B >> len_a;
+	} else {
+		B = B >> right_length - len_b;
+	}
+	return  (A | B);
 }
 
 gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
@@ -377,7 +430,7 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 
 	int left_num_chars = get_number_of_bytes_for_valid(lhs->size);
 	int right_num_chars = get_number_of_bytes_for_valid(rhs->size);
-  	int output_num_chars = get_number_of_bytes_for_valid(output->size);
+	int output_num_chars = get_number_of_bytes_for_valid(output->size);
 
 	thrust::device_ptr<gdf_valid_type> left_device_bits = thrust::device_pointer_cast((gdf_valid_type *)lhs->valid);
 	thrust::device_ptr<gdf_valid_type> right_device_bits = thrust::device_pointer_cast((gdf_valid_type *)rhs->valid);
@@ -433,9 +486,9 @@ gdf_error gpu_concat(gdf_column *lhs, gdf_column *rhs, gdf_column *output)
 										right_device_bits,
 										shift_left(shift_bits)),
 
-								thrust::make_transform_iterator<shift_right, thrust::device_vector<gdf_valid_type>::iterator >(
-										right_device_bits + 1,
-										shift_right(GDF_VALID_BITSIZE - shift_bits, !too_many_bits))
+										thrust::make_transform_iterator<shift_right, thrust::device_vector<gdf_valid_type>::iterator >(
+												right_device_bits + 1,
+												shift_right(GDF_VALID_BITSIZE - shift_bits, !too_many_bits))
 						)
 				);
 				//so what this does is give you an iterator which gives you a tuple where you have your char, and the char after you, so you can get the last bits!

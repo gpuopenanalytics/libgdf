@@ -73,9 +73,11 @@ TEST(FilterOperationsTest, usage_example) {
 }
 
 
-template <typename LeftValueType, typename RightValueType>
+template <typename LeftValueType>
 void test_filterops_using_templates(gdf_comparison_operator gdf_operator = GDF_EQUALS)
 {
+
+	typedef LeftValueType RightValueType;
     //0, ..., 100,
     //100, 10000, 10000, 100000
     for (int column_size = 0; column_size < 10; column_size += 1)
@@ -110,66 +112,34 @@ void test_filterops_using_templates(gdf_comparison_operator gdf_operator = GDF_E
 
 TEST(FilterOperationsTest, WithInt8AndOthers)
 {
-    test_filterops_using_templates<int8_t, int8_t>();
-    test_filterops_using_templates<int8_t, int16_t>();
-
-    test_filterops_using_templates<int8_t, int32_t>();
-    test_filterops_using_templates<int8_t, int64_t>();
-    test_filterops_using_templates<int8_t, float>();
-    test_filterops_using_templates<int8_t, double>();
+    test_filterops_using_templates<int8_t>();
 }
 
 TEST(FilterOperationsTest, WithInt16AndOthers)
 {
-    test_filterops_using_templates<int16_t, int8_t>();
-    test_filterops_using_templates<int16_t, int16_t>();
-    test_filterops_using_templates<int16_t, int32_t>();
-    test_filterops_using_templates<int16_t, int64_t>();
-    test_filterops_using_templates<int16_t, float>();
-    test_filterops_using_templates<int16_t, double>();
+    test_filterops_using_templates<int16_t>();
 
 }
 
 TEST(FilterOperationsTest, WithInt32AndOthers)
 {
-    test_filterops_using_templates<int32_t, int8_t>();
-    test_filterops_using_templates<int32_t, int16_t>();
-    test_filterops_using_templates<int32_t, int32_t>();
-    test_filterops_using_templates<int32_t, int64_t>();
-    test_filterops_using_templates<int32_t, float>();
-    test_filterops_using_templates<int32_t, double>();
+    test_filterops_using_templates<int32_t>();
 
 }
 
 TEST(FilterOperationsTest, WithInt64AndOthers)
 {
-    test_filterops_using_templates<int64_t, int8_t>();
-    test_filterops_using_templates<int64_t, int16_t>();
-    test_filterops_using_templates<int64_t, int32_t>();
-    test_filterops_using_templates<int64_t, int64_t>();
-    test_filterops_using_templates<int64_t, float>();
-    test_filterops_using_templates<int64_t, double>();
-
+    test_filterops_using_templates<int64_t>();
 }
 
 TEST(FilterOperationsTest, WithFloat32AndOthers)
 {
-    test_filterops_using_templates<float, int8_t>();
-    test_filterops_using_templates<float, int16_t>();
-    test_filterops_using_templates<float, int32_t>();
-    test_filterops_using_templates<float, int64_t>();
-    test_filterops_using_templates<float, float>();
-    test_filterops_using_templates<float, double>();
+    test_filterops_using_templates<float>();
 
 }
 
 TEST(FilterOperationsTest, WithFloat64AndOthers)
 {
-    test_filterops_using_templates<double, int8_t>();
-    test_filterops_using_templates<double, int16_t>();
-    test_filterops_using_templates<double, int32_t>();
-    test_filterops_using_templates<double, int64_t>();
-    test_filterops_using_templates<double, float>();
-    test_filterops_using_templates<double, double>();
+    test_filterops_using_templates<double>();
 
 }
