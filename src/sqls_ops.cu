@@ -1398,25 +1398,25 @@ gdf_error gdf_order_by_asc_desc(
 		gdf_column * output_indices,
 		gdf_valid_type * asc_desc_bitmask){
 
-	std::cout<<"i mean this is the first fucking line...."<<std::endl;
+
 	//TODO: don't assume type of output is size_t
 	typedef size_t IndexT;
 	//TODO: make these allocations happen with the new memory manager when we can
 	//also we are kind of assuming they will just work, yeesh!
 	thrust::device_vector<size_t> test(2);
 
-	std::cout<<"can do basic shit...."<<std::endl;
+
 	thrust::device_vector<void*> d_cols(num_inputs);
 	thrust::device_vector<int>   d_types(num_inputs, 0);
 
 	void** d_col_data = d_cols.data().get();
 	int* d_col_types = d_types.data().get();
 
-	std::cout<<"about to run soa"<<std::endl;
+
 
 	soa_col_info(input_columns, num_inputs,  d_col_data, d_col_types);
 
-	std::cout<<"about to run mul col order by"<<std::endl;
+
 	multi_col_order_by_asc_desc(
 			d_col_data,
 			d_col_types,
