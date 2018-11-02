@@ -811,15 +811,16 @@ void multi_col_order_by_asc_desc(
 		cudaStream_t   stream = NULL){
 
 	LesserRTTI<IndexT> f(d_col_data, d_col_types, num_inputs,asc_desc_bitmask);
-	std::cout<<"about to sequence"<<std::endl;
+
 	thrust::sequence(thrust::cuda::par.on(stream), d_indx, d_indx+nrows, 0);
-	std::cout<<"sequenced"<<std::endl;
+
 	thrust::sort(thrust::cuda::par.on(stream),
 			d_indx, d_indx+nrows,
 			[f] __host__ __device__ (IndexT i1, IndexT i2){
+
 		return f.asc_desc_comparison(i1, i2);
 	});
 
-	std::cout<<"sorted"<<std::endl;
+
 }
 
