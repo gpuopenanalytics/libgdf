@@ -228,7 +228,7 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 	cudaMalloc(&d_num_selected_out,sizeof(int));
 	void     *d_temp_storage = NULL;
 	size_t   temp_storage_bytes = 0;
-
+	int out_size;
 	if(width == 1){
 		typedef int8_t data_type;
 		cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes,
@@ -246,7 +246,8 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 				(int8_t *) stencil->data,
 				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
 
-		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaMemcpyAsync(&out_size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		output->size = out_size;
 		cudaStreamSynchronize(stream);
 
 	}else if(width == 2){
@@ -266,7 +267,8 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 				(int8_t *) stencil->data,
 				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
 
-		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaMemcpyAsync(&out_size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		output->size = out_size;
 		cudaStreamSynchronize(stream);
 	}else if(width == 4){
 		typedef int32_t data_type;
@@ -285,7 +287,8 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 				(int8_t *) stencil->data,
 				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
 
-		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaMemcpyAsync(&out_size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		output->size = out_size;
 		cudaStreamSynchronize(stream);
 	}else if(width == 8){
 		typedef int64_t data_type;
@@ -304,7 +307,8 @@ gdf_error gpu_apply_stencil(gdf_column *lhs, gdf_column * stencil, gdf_column * 
 				(int8_t *) stencil->data,
 				(data_type *) output->data, d_num_selected_out, lhs->size,stream);
 
-		cudaMemcpyAsync(&output->size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		cudaMemcpyAsync(&out_size,d_num_selected_out,sizeof(int),cudaMemcpyDeviceToHost,stream);
+		output->size = out_size;
 		cudaStreamSynchronize(stream);
 	}
 	/*
