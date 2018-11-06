@@ -18,3 +18,4 @@ python/libgdf_cffi/libgdf_cffi.py
 
 ## eclipse
 .project
+build-optimized

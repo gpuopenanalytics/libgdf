@@ -99,17 +99,7 @@ include_directories(
 
 link_directories(${CUDA_LIBRARY_DIR} ${CUDA_LIBRARY_STUBS_DIR})
 
-IF(CUDA_VERSION_MAJOR GREATER 7)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_60,code=sm_60)
-ENDIF(CUDA_VERSION_MAJOR GREATER 7)
-
-IF(CUDA_VERSION_MAJOR GREATER 8)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_70,code=sm_70)
-ENDIF(CUDA_VERSION_MAJOR GREATER 8)
-
-IF(CMAKE_BUILD_TYPE MATCHES DEBUG)
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g;-G;)
-ENDIF(CMAKE_BUILD_TYPE MATCHES DEBUG)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-gencode;arch=compute_61,code=sm_61)
 
 # switch between hash-join and sort-join
 option(HASH_JOIN "hash-based join" ON)
@@ -161,7 +151,7 @@ set(libgdf_source_files
     #src/windowedops.cu
     src/quantiles.cu
     src/io/csv/csv-reader.cu
-    src/io/convert/gdf-to-csr.cu      
+    src/io/convert/gdf-to-csr.cu
     src/validops.cu
     src/nvtx_utils.cpp
     ${binary_operation_source_files}
